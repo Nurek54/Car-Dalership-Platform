@@ -1,0 +1,56 @@
+src/main/java/com/salon/billing
+│
+├── domain
+│   ├── model
+│   │   ├── shared
+│   │   │   ├── Money.java
+│   │   │   └── OrderId.java
+│   │   ├── payment
+│   │   │   ├── Payment.java                (Aggregate Root)
+│   │   │   ├── PaymentId.java
+│   │   │   └── PaymentCategory.java
+│   │   ├── document
+│   │   │   ├── AccountingDocument.java      (Aggregate Root)
+│   │   │   ├── DocumentLine.java            (encja lokalna)
+│   │   │   ├── DocumentId.java
+│   │   │   ├── LineId.java
+│   │   │   ├── DocumentType.java
+│   │   │   ├── DocumentState.java
+│   │   │   └── TaxDetails.java
+│   │   └── settlement
+│   │       ├── OrderSettlement.java         (Aggregate Root)
+│   │       ├── SettlementId.java
+│   │       └── SettlementState.java
+│   ├── service
+│   │   ├── PaymentClassificationService.java
+│   │   └── SettlementCalculationService.java
+│   └── event
+│       ├── DomainEvent.java
+│       ├── DepositRegisteredEvent.java
+│       ├── AdvanceRegisteredEvent.java
+│       └── InvoiceIssuedEvent.java
+│
+├── application
+│   ├── port
+│   │   ├── in                               (porty wejściowe = Use Case'y)
+│   │   │   ├── RegisterPaymentUseCase.java
+│   │   │   ├── RegisterPaymentCommand.java
+│   │   │   ├── IssueDocumentUseCase.java
+│   │   │   ├── IssueDocumentCommand.java
+│   │   │   ├── CalculateSettlementUseCase.java
+│   │   │   └── CalculateSettlementCommand.java
+│   │   └── out                              (porty wyjściowe = interfejsy)
+│   │       ├── PaymentRepository.java
+│   │       ├── DocumentRepository.java
+│   │       ├── SettlementRepository.java
+│   │       ├── EventPublisherPort.java
+│   │       ├── KsefPort.java
+│   │       ├── KsefSendResult.java
+│   │       ├── PaymentGatewayPort.java
+│   │       └── ExternalIntegrationPort.java
+│   └── service
+│       ├── PaymentAppService.java
+│       ├── DocumentAppService.java
+│       └── SettlementAppService.java
+│
+└── infrastructure                           (adaptery — patrz sekcja 5; tu na razie pusto)

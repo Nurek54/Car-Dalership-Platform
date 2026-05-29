@@ -1,4 +1,4 @@
-package com.salon.billing.domain.model.shared;
+package main.java.com.salon.billing.domain.model.shared;
 
 import java.math.BigDecimal;
 

@@ -1,4 +1,16 @@
 package main.java.com.salon.billing.domain.model.document;
 
-public class DocumentId {
+import java.util.UUID;
+
+public record DocumentId(UUID value) {
+
+    public DocumentId {
+        if (value == null) {
+            throw new IllegalArgumentException("DocumentId nie może być nullem.");
+        }
+    }
+
+    public static DocumentId generate() {
+        return new DocumentId(UUID.randomUUID());
+    }
 }

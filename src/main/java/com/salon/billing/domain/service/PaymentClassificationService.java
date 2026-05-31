@@ -5,7 +5,7 @@ import main.java.com.salon.billing.domain.model.shared.Money;
 import java.math.BigDecimal;
 
 /**
- * Serwis dziedzinowy: trzyma regułę "ile wynosi wymagany zadatek?".
+ * Serwis dziedzinowy (LOGIKA BIZNESOWA): trzyma regułę "ile wynosi wymagany zadatek?".
  *
  * Ta reguła nie należy do pojedynczej wpłaty (Payment), dlatego wyciągamy ją
  * do serwisu dziedzinowego. Sama wpłata wie tylko, jak się sklasyfikować
@@ -19,7 +19,7 @@ public class PaymentClassificationService {
 
     public Money calculateRequiredDeposit(Money orderValue) {
         if (orderValue == null) {
-            throw new IllegalArgumentException("orderValue nie może być nullem.");
+            throw new IllegalArgumentException("orderValue must not be null.");
         }
         BigDecimal requiredAmount = orderValue.amount().multiply(DEPOSIT_RATE);
         return new Money(requiredAmount, orderValue.currency());

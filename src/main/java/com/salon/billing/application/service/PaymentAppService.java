@@ -1,4 +1,4 @@
-package main.java.com.salon.billing.domain.service;
+package main.java.com.salon.billing.application.service;
 
 import main.java.com.salon.billing.application.port.in.RegisterPaymentCommand;
 import main.java.com.salon.billing.application.port.in.RegisterPaymentUseCase;
@@ -16,9 +16,9 @@ import main.java.com.salon.billing.domain.service.PaymentClassificationService;
 import java.time.Instant;
 
 /**
- * Realizuje UC-ROZ-01. TYLKO orkiestracja:
+ * Realizuje UC-ROZ-01. TYLKO orkiestracja (warstwa aplikacji):
  * pobiera/zapisuje agregaty, woła ich metody biznesowe, publikuje zdarzenia.
- * Żadnej logiki biznesowej tutaj — ta jest w domenie.
+ * Żadnej logiki biznesowej tutaj — ta jest w domenie (agregat + serwis dziedzinowy).
  *
  * Zależności wstrzykiwane przez konstruktor (bez frameworka).
  */
@@ -33,6 +33,19 @@ public class PaymentAppService implements RegisterPaymentUseCase {
                              EventPublisherPort eventPublisher,
                              PaymentGatewayPort paymentGateway,
                              PaymentClassificationService classificationService) {
+        // Walidacja wstrzykiwanych zależności — nie pozwalamy zbudować serwisu z nullem.
+        if (paymentRepository == null) {
+            throw new IllegalArgumentException("paymentRepository must not be null.");
+        }
+        if (eventPublisher == null) {
+            throw new IllegalArgumentException("eventPublisher must not be null.");
+        }
+        if (paymentGateway == null) {
+            throw new IllegalArgumentException("paymentGateway must not be null.");
+        }
+        if (classificationService == null) {
+            throw new IllegalArgumentException("classificationService must not be null.");
+        }
         this.paymentRepository = paymentRepository;
         this.eventPublisher = eventPublisher;
         this.paymentGateway = paymentGateway;
@@ -42,6 +55,10 @@ public class PaymentAppService implements RegisterPaymentUseCase {
     @Override
     // @Transactional w projekcie ze Springiem (tu otwieramy transakcję).
     public void registerPayment(RegisterPaymentCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("command must not be null.");
+        }
+
         // 1. Dane wejściowe -> obiekty domenowe.
         OrderId orderId = new OrderId(command.orderId());
         Money amount = new Money(command.amount(), command.currency());
@@ -62,7 +79,7 @@ public class PaymentAppService implements RegisterPaymentUseCase {
             paymentGateway.acknowledgePayment(command.gatewayTransactionId());
         }
 
-        // 6. Publikacja zdarzenia.
+        // 6. Publikacja zdarzenia (czasownik w czasie przeszłym — sekcja 3.4).
         if (payment.isDeposit()) {
             // Zadatek -> ZadatekZaksiegowany (odblokowanie realizacji zamówienia).
             DepositRegisteredEvent event = new DepositRegisteredEvent(

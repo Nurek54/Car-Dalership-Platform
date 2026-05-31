@@ -6,7 +6,7 @@ public record DocumentId(UUID value) {
 
     public DocumentId {
         if (value == null) {
-            throw new IllegalArgumentException("DocumentId nie może być nullem.");
+            throw new IllegalArgumentException("DocumentId must not be null.");
         }
     }
 

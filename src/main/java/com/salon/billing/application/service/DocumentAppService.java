@@ -1,4 +1,4 @@
-package main.java.com.salon.billing.domain.service;
+package main.java.com.salon.billing.application.service;
 
 import main.java.com.salon.billing.application.port.in.IssueDocumentCommand;
 import main.java.com.salon.billing.application.port.in.IssueDocumentUseCase;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Realizuje UC-ROZ-02.
+ * Realizuje UC-ROZ-02 (warstwa aplikacji — orkiestracja).
  */
 public class DocumentAppService implements IssueDocumentUseCase {
 
@@ -31,6 +31,15 @@ public class DocumentAppService implements IssueDocumentUseCase {
     public DocumentAppService(DocumentRepository documentRepository,
                               KsefPort ksefPort,
                               EventPublisherPort eventPublisher) {
+        if (documentRepository == null) {
+            throw new IllegalArgumentException("documentRepository must not be null.");
+        }
+        if (ksefPort == null) {
+            throw new IllegalArgumentException("ksefPort must not be null.");
+        }
+        if (eventPublisher == null) {
+            throw new IllegalArgumentException("eventPublisher must not be null.");
+        }
         this.documentRepository = documentRepository;
         this.ksefPort = ksefPort;
         this.eventPublisher = eventPublisher;
@@ -39,10 +48,13 @@ public class DocumentAppService implements IssueDocumentUseCase {
     @Override
     // @Transactional w projekcie ze Springiem.
     public UUID issueDocument(IssueDocumentCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("command must not be null.");
+        }
         // A2: brak pozycji (części/roboczogodzin) -> blokujemy wystawienie.
         if (command.lines() == null || command.lines().isEmpty()) {
             throw new IllegalArgumentException(
-                    "Dokument wymaga co najmniej jednej pozycji — uzupełnij dane zlecenia.");
+                    "Document requires at least one line — complete the service order data.");
         }
 
         // 2. Budujemy pozycje, nadając kolejne numery LineId (1, 2, 3, ...).

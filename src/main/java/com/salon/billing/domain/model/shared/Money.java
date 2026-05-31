@@ -15,10 +15,10 @@ public record Money(BigDecimal amount, String currency) {
     // Konstruktor kompaktowy — pilnuje niezmienników przy każdym tworzeniu obiektu.
     public Money {
         if (amount == null) {
-            throw new IllegalArgumentException("Kwota (amount) nie może być nullem.");
+            throw new IllegalArgumentException("Amount must not be null.");
         }
         if (currency == null || currency.isBlank()) {
-            throw new IllegalArgumentException("Waluta (currency) jest wymagana.");
+            throw new IllegalArgumentException("Currency is required.");
         }
         // Uwaga: NIE blokujemy wartości ujemnych — saldo końcowe może być ujemne (nadpłata).
     }
@@ -50,11 +50,11 @@ public record Money(BigDecimal amount, String currency) {
     // Prosta straż: nie wolno mieszać walut.
     private void checkSameCurrency(Money other) {
         if (other == null) {
-            throw new IllegalArgumentException("Druga kwota nie może być nullem.");
+            throw new IllegalArgumentException("The other amount must not be null.");
         }
         if (!this.currency.equals(other.currency)) {
             throw new IllegalArgumentException(
-                    "Różne waluty: " + this.currency + " oraz " + other.currency);
+                    "Currency mismatch: " + this.currency + " and " + other.currency);
         }
     }
 }

@@ -11,4 +11,20 @@ public record CalculateSettlementCommand(String orderId,
                                          BigDecimal vehicleValue,
                                          BigDecimal totalDeposits,
                                          String currency) {
+
+    // Walidacja danych wejściowych komendy.
+    public CalculateSettlementCommand {
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
+        }
+        if (vehicleValue == null) {
+            throw new IllegalArgumentException("vehicleValue must not be null.");
+        }
+        if (totalDeposits == null) {
+            throw new IllegalArgumentException("totalDeposits must not be null.");
+        }
+        if (currency == null || currency.isBlank()) {
+            throw new IllegalArgumentException("currency is required.");
+        }
+    }
 }

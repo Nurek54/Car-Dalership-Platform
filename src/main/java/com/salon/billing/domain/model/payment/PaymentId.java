@@ -7,7 +7,7 @@ public record PaymentId(UUID value) {
 
     public PaymentId {
         if (value == null) {
-            throw new IllegalArgumentException("PaymentId nie może być nullem.");
+            throw new IllegalArgumentException("PaymentId must not be null.");
         }
     }
 

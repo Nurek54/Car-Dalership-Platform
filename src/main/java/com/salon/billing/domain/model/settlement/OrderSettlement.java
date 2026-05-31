@@ -28,22 +28,22 @@ public class OrderSettlement {
                            Money financingAmount,
                            Money tradeInValue) {
         if (id == null) {
-            throw new IllegalArgumentException("id nie może być nullem.");
+            throw new IllegalArgumentException("id must not be null.");
         }
         if (orderId == null) {
-            throw new IllegalArgumentException("orderId nie może być nullem.");
+            throw new IllegalArgumentException("orderId must not be null.");
         }
         if (vehicleValue == null) {
-            throw new IllegalArgumentException("vehicleValue nie może być nullem.");
+            throw new IllegalArgumentException("vehicleValue must not be null.");
         }
         if (totalDeposits == null) {
-            throw new IllegalArgumentException("totalDeposits nie może być nullem.");
+            throw new IllegalArgumentException("totalDeposits must not be null.");
         }
         if (financingAmount == null) {
-            throw new IllegalArgumentException("financingAmount nie może być nullem.");
+            throw new IllegalArgumentException("financingAmount must not be null.");
         }
         if (tradeInValue == null) {
-            throw new IllegalArgumentException("tradeInValue nie może być nullem.");
+            throw new IllegalArgumentException("tradeInValue must not be null.");
         }
 
         this.id = id;
@@ -71,7 +71,7 @@ public class OrderSettlement {
     // UC-ROZ-03, A1: saldo ujemne = nadpłata -> wymaga korekty księgowej.
     public void checkForOverpayment() {
         if (this.finalBalance == null) {
-            throw new IllegalStateException("Najpierw policz saldo (calculateBalance).");
+            throw new IllegalStateException("Calculate the balance first (calculateBalance).");
         }
         if (this.finalBalance.isNegative()) {
             this.state = SettlementState.REQUIRES_CORRECTION;
@@ -85,10 +85,10 @@ public class OrderSettlement {
     // Zamknięcie rozliczenia (scenariusz główny, po wygenerowaniu dokumentu).
     public void markAsSettled() {
         if (this.finalBalance == null) {
-            throw new IllegalStateException("Najpierw policz saldo (calculateBalance).");
+            throw new IllegalStateException("Calculate the balance first (calculateBalance).");
         }
         if (this.state == SettlementState.REQUIRES_CORRECTION) {
-            throw new IllegalStateException("Rozliczenie wymaga korekty — nie można go zamknąć.");
+            throw new IllegalStateException("Settlement requires correction — it cannot be closed.");
         }
         this.state = SettlementState.SETTLED;
     }

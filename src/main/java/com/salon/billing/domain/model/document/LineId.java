@@ -5,7 +5,7 @@ public record LineId(Long value) {
 
     public LineId {
         if (value == null) {
-            throw new IllegalArgumentException("LineId nie może być nullem.");
+            throw new IllegalArgumentException("LineId must not be null.");
         }
     }
 }

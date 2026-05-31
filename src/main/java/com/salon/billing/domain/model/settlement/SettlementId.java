@@ -6,7 +6,7 @@ public record SettlementId(UUID value) {
 
     public SettlementId {
         if (value == null) {
-            throw new IllegalArgumentException("SettlementId nie może być nullem.");
+            throw new IllegalArgumentException("SettlementId must not be null.");
         }
     }
 

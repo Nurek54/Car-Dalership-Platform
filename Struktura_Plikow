@@ -1,0 +1,106 @@
+=====================================================================
+  SALON SAMOCHODOWY — STRUKTURA PROJEKTU (DDD + Architektura Heksagonalna)
+  Pakiet bazowy: src.salon   (zamiast dawnego main.java.com.salon)
+=====================================================================
+
+KORZEŃ PROJEKTU (Sources Root = KORZEŃ projektu, dzięki temu pakiet zaczyna się od "src")
+.
+├── src/
+│   └── salon/
+│       │
+│       ├── shared/                                  <-- WSPÓLNY RDZEŃ (Shared Kernel)
+│       │   ├── model/
+│       │   │   ├── Money.java                       (VO; ma of(...) i getAmount())
+│       │   │   ├── OrderId.java                     (VO; używany przez Rozliczenia i Sprzedaż)
+│       │   │   └── SpecificationId.java             (VO; pomost Katalog -> Sprzedaż)
+│       │   ├── event/
+│       │   │   └── DomainEvent.java                 (marker: eventId() + occurredOn())
+│       │   ├── application/
+│       │   │   └── EventPublisherPort.java          (port wyjściowy: publish(DomainEvent))
+│       │   └── infrastructure/messaging/            <-- PRAWDZIWY RabbitMQ (NIE mock)
+│       │       ├── RabbitMqConfig.java              (exchange, kolejki, dane połączenia)
+│       │       ├── RabbitMqConnection.java          (połączenie + kanał + deklaracja exchange)
+│       │       ├── EventSerializer.java             (kontrakt serializacji)
+│       │       ├── RecordEventSerializer.java       (rekord -> JSON, jedyna refleksja w projekcie)
+│       │       ├── EventJson.java                   (mini JSON: build + parse, bez bibliotek)
+│       │       ├── RabbitMqEventPublisherAdapter.java  (implementuje EventPublisherPort -> basicPublish)
+│       │       ├── RabbitMqMessageHandler.java      (kontrakt obsługi odebranego zdarzenia)
+│       │       └── RabbitMqEventConsumer.java       (basicConsume + routing po typie zdarzenia)
+│       │
+│       ├── billing/                                 <-- KONTEKST: Fakturowanie i Rozliczenia (UC-ROZ)
+│       │   ├── domain/
+│       │   │   ├── model/
+│       │   │   │   ├── payment/{Payment, PaymentId(String), PaymentCategory}
+│       │   │   │   ├── document/{AccountingDocument(addLineItem!), DocumentLine, DocumentId(String),
+│       │   │   │   │             LineId, DocumentType, DocumentState, TaxDetails}
+│       │   │   │   └── settlement/{OrderSettlement(applyDeposit/Financing/TradeIn), SettlementId(String),
+│       │   │   │                   SettlementState}
+│       │   │   ├── service/{PaymentClassificationService, SettlementCalculationService}
+│       │   │   └── event/{DepositRegisteredEvent, AdvanceRegisteredEvent, InvoiceIssuedEvent}  (z eventId)
+│       │   ├── application/
+│       │   │   ├── port/in/{RegisterPaymentUseCase+Command, IssueDocumentUseCase+Command(String),
+│       │   │   │            CalculateSettlementUseCase+Command}
+│       │   │   ├── port/out/{PaymentRepository, DocumentRepository, SettlementRepository,
+│       │   │   │             KsefPort, KsefSendResult, PaymentGatewayPort, ExternalIntegrationPort}
+│       │   │   └── service/{PaymentAppService, DocumentAppService, SettlementAppService}
+│       │   └── infrastructure/
+│       │       ├── mock/{InMemory*Repository x3, KsefMockAdapter, PaymentGatewayMockAdapter,
+│       │       │         ExternalIntegrationMockAdapter, InProcessEventPublisherAdapter}
+│       │       ├── persistence/{Payment/Document/SettlementDatabaseAdapter}  (szkielety JPA)
+│       │       └── messaging/{OrderReadyForSettlementEvent, SettlementEventListener}  (wyzwala UC-ROZ-03)
+│       │
+│       ├── sales/                                   <-- KONTEKST: Sprzedaż i CRM (UC-SPR)
+│       │   ├── domain/
+│       │   │   ├── model/offer/{Offer, OfferId, CustomerId, OfferState, Discount, DiscountLimit}
+│       │   │   ├── model/order/{Order, OrderState, CancellationReason}
+│       │   │   └── event/{OrderActivatedEvent, DepositRetainedAsIncomeEvent, DepositRefundOrderedEvent}
+│       │   ├── application/
+│       │   │   ├── port/in/{CreateOfferUseCase+Command, CancelOrderUseCase+Command,
+│       │   │   │            ActivateOrderOnDepositUseCase}
+│       │   │   ├── port/out/{OfferRepository, OrderRepository}
+│       │   │   └── service/{OfferAppService, OrderAppService}
+│       │   └── infrastructure/
+│       │       ├── mock/{InMemoryOfferRepository, InMemoryOrderRepository}
+│       │       └── messaging/SalesDepositListener.java   <-- NASŁUCHUJE DepositRegisteredEvent Z KOLEJKI
+│       │
+│       ├── catalog/                                 <-- KONTEKST: Katalog i Konfigurator (UC-KAT)
+│       │   ├── domain/
+│       │   │   ├── model/catalog/{ProductCatalog, CatalogId, ModelYear, OptionCode, CatalogState,
+│       │   │   │                  CatalogOption, CatalogRule, RuleType}
+│       │   │   ├── model/specification/{VehicleSpecification, SpecificationState, RuleViolationException}
+│       │   │   └── service/RuleValidationDomainService.java
+│       │   ├── application/
+│       │   │   ├── port/in/{BuildSpecificationUseCase, UpdateCatalogUseCase}
+│       │   │   ├── port/out/{CatalogRepository, SpecificationRepository, ImporterApiPort}
+│       │   │   └── service/{SpecificationAppService, CatalogAppService}
+│       │   └── infrastructure/mock/{InMemoryCatalogRepository, InMemorySpecificationRepository,
+│       │                            ImporterApiMockAdapter}
+│       │
+│       └── bootstrap/                               <-- URUCHAMIALNE main()
+│           ├── OfflineDemo.java                      (cała domena, BEZ brokera)
+│           └── MessagingDemo.java                    (zadatek PRZECHODZI PRZEZ RabbitMQ do Sprzedaży)
+│
+├── test/                                            <-- Test Sources Root (osobny katalog)
+│   ├── com/salon/billing/infrastructure/messaging/
+│   │   └── SettlementEventListenerTest.java          (JUnit5; pakiet com.salon.billing...)
+│   └── unit/
+│       ├── invoicing_and_billing_context/{AccountingDocumentTest, OrderSettlementTest, PaymentTest}
+│       ├── sales_and_crm_context/{OfferTest, OrderTest}
+│       └── catalog_and_configurator_context/{ProductCatalogTest, VehicleSpecificationTest}
+│
+├── lib/        (amqp-client.jar + slf4j; w wersji z Maven nie jest potrzebny — patrz pom.xml)
+├── pom.xml
+└── schemat plikow   (ten plik)
+
+---------------------------------------------------------------------
+JAK URUCHOMIĆ PRZEPŁYW PRZEZ KOLEJKĘ (MessagingDemo)
+---------------------------------------------------------------------
+1. Wystartuj broker (Docker):
+      docker run -d --name salon-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+   (panel: http://localhost:15672 , login guest / guest)
+2. Uruchom main: src.salon.bootstrap.MessagingDemo
+   Zobaczysz: [RabbitMqPublisher] -> ... DepositRegisteredEvent
+              [RabbitMqConsumer:sales.inbox] <- ...
+              [SalesDepositListener] ... -> activating order
+              Stan zamówienia: IN_PROGRESS
+Bez brokera uruchom src.salon.bootstrap.OfflineDemo (cała domena działa lokalnie).

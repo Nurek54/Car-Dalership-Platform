@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Car-Dalership-Platform.iml" filepath="$PROJECT_DIR$/Car-Dalership-Platform.iml" />
+      <module fileurl="file://$PROJECT_DIR$/dealership-system.iml" filepath="$PROJECT_DIR$/dealership-system.iml" />
     </modules>
   </component>
 </project>

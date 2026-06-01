@@ -1,0 +1,29 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: salon-rabbit
+    ports:
+      - "5672:5672"      # AMQP — port aplikacji
+      - "15672:15672"    # panel webowy (guest / guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Aplikacja (MessagingDemo) w kontenerze. Startuje DOPIERO gdy broker jest zdrowy.
+  # Uwaga: MessagingDemo to demo — wykonuje przepływ i KOŃCZY się (kontener wychodzi z kodem 0).
+  app:
+    build: .
+    container_name: salon-app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: rabbitmq   # nazwa serwisu w sieci compose, NIE localhost
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest

@@ -7,7 +7,7 @@ public record OrderId(String value) {
 
     public OrderId {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("OrderId nie może być pusty.");
+            throw new IllegalArgumentException("OrderId must not be blank.");
         }
     }
 }

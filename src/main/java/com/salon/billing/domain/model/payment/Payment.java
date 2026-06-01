@@ -18,13 +18,13 @@ public class Payment {
 
     public Payment(PaymentId id, OrderId orderId, Money amount) {
         if (id == null) {
-            throw new IllegalArgumentException("id nie może być nullem.");
+            throw new IllegalArgumentException("id must not be null.");
         }
         if (orderId == null) {
-            throw new IllegalArgumentException("orderId nie może być nullem.");
+            throw new IllegalArgumentException("orderId must not be null.");
         }
         if (amount == null) {
-            throw new IllegalArgumentException("amount nie może być nullem.");
+            throw new IllegalArgumentException("amount must not be null.");
         }
         this.id = id;
         this.orderId = orderId;
@@ -38,7 +38,7 @@ public class Payment {
      */
     public void categorizePayment(Money requiredDeposit) {
         if (requiredDeposit == null) {
-            throw new IllegalArgumentException("requiredDeposit nie może być nullem.");
+            throw new IllegalArgumentException("requiredDeposit must not be null.");
         }
         if (this.amount.isGreaterThanOrEqualTo(requiredDeposit)) {
             this.category = PaymentCategory.DEPOSIT;

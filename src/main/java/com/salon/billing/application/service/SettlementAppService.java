@@ -1,4 +1,4 @@
-package main.java.com.salon.billing.domain.service;
+package main.java.com.salon.billing.application.service;
 
 import main.java.com.salon.billing.application.port.in.CalculateSettlementCommand;
 import main.java.com.salon.billing.application.port.in.CalculateSettlementUseCase;
@@ -13,7 +13,7 @@ import main.java.com.salon.billing.domain.service.SettlementCalculationService;
 import java.util.Optional;
 
 /**
- * Realizuje UC-ROZ-03.
+ * Realizuje UC-ROZ-03 (warstwa aplikacji — orkiestracja).
  * Zakładamy jedną walutę (np. PLN) dla całego rozliczenia.
  */
 public class SettlementAppService implements CalculateSettlementUseCase {
@@ -25,6 +25,15 @@ public class SettlementAppService implements CalculateSettlementUseCase {
     public SettlementAppService(SettlementRepository settlementRepository,
                                 ExternalIntegrationPort externalIntegration,
                                 SettlementCalculationService calculationService) {
+        if (settlementRepository == null) {
+            throw new IllegalArgumentException("settlementRepository must not be null.");
+        }
+        if (externalIntegration == null) {
+            throw new IllegalArgumentException("externalIntegration must not be null.");
+        }
+        if (calculationService == null) {
+            throw new IllegalArgumentException("calculationService must not be null.");
+        }
         this.settlementRepository = settlementRepository;
         this.externalIntegration = externalIntegration;
         this.calculationService = calculationService;
@@ -33,6 +42,10 @@ public class SettlementAppService implements CalculateSettlementUseCase {
     @Override
     // @Transactional w projekcie ze Springiem.
     public void calculateSettlement(CalculateSettlementCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("command must not be null.");
+        }
+
         // 1-3. Dane z zamówienia -> obiekty domenowe.
         OrderId orderId = new OrderId(command.orderId());
         Money vehicleValue = new Money(command.vehicleValue(), command.currency());
@@ -43,7 +56,7 @@ public class SettlementAppService implements CalculateSettlementUseCase {
         if (financing.isEmpty()) {
             // A2: brak potwierdzenia finansowania -> blokujemy rozliczenie i wydanie pojazdu.
             throw new IllegalStateException(
-                    "Brak zatwierdzonego finansowania — nie można rozliczyć ani wydać pojazdu.");
+                    "No approved financing — settlement and vehicle handover are blocked.");
         }
         Money financingAmount = financing.get();
 

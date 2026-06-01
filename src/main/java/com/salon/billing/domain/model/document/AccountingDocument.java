@@ -29,17 +29,17 @@ public class AccountingDocument {
                               TaxDetails taxDetails,
                               List<DocumentLine> lines) {
         if (id == null) {
-            throw new IllegalArgumentException("id nie może być nullem.");
+            throw new IllegalArgumentException("id must not be null.");
         }
         if (type == null) {
-            throw new IllegalArgumentException("type nie może być nullem.");
+            throw new IllegalArgumentException("type must not be null.");
         }
         if (taxDetails == null) {
-            throw new IllegalArgumentException("taxDetails nie może być nullem.");
+            throw new IllegalArgumentException("taxDetails must not be null.");
         }
         // Niezmiennik 1..* — dokument bez pozycji nie ma sensu (powiązane z UC-ROZ-02, A2).
         if (lines == null || lines.isEmpty()) {
-            throw new IllegalArgumentException("Dokument musi mieć co najmniej jedną pozycję.");
+            throw new IllegalArgumentException("Document must have at least one line.");
         }
 
         this.id = id;
@@ -70,7 +70,7 @@ public class AccountingDocument {
     public void markAsKsefPending() {
         if (this.state != DocumentState.DRAFT) {
             throw new IllegalStateException(
-                    "Jako PENDING_KSEF można oznaczyć tylko dokument w stanie DRAFT.");
+                    "Only a document in DRAFT state can be marked as PENDING_KSEF.");
         }
         this.state = DocumentState.PENDING_KSEF;
     }
@@ -78,10 +78,10 @@ public class AccountingDocument {
     // UC-ROZ-02, krok 6: KSeF potwierdził rejestrację i zwrócił numer.
     public void confirmKsefRegistration(String ksefReference) {
         if (ksefReference == null || ksefReference.isBlank()) {
-            throw new IllegalArgumentException("Numer KSeF nie może być pusty.");
+            throw new IllegalArgumentException("KSeF reference must not be blank.");
         }
         if (this.state == DocumentState.ISSUED) {
-            throw new IllegalStateException("Dokument jest już wystawiony.");
+            throw new IllegalStateException("Document is already issued.");
         }
         this.ksefReference = ksefReference;
         this.state = DocumentState.ISSUED;

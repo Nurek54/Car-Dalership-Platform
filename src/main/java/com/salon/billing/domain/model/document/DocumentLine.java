@@ -15,13 +15,13 @@ public class DocumentLine {
 
     public DocumentLine(LineId id, String description, Money cost) {
         if (id == null) {
-            throw new IllegalArgumentException("id pozycji nie może być nullem.");
+            throw new IllegalArgumentException("Line id must not be null.");
         }
         if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("Opis pozycji (description) jest wymagany.");
+            throw new IllegalArgumentException("Line description (description) is required.");
         }
         if (cost == null) {
-            throw new IllegalArgumentException("Koszt pozycji (cost) nie może być nullem.");
+            throw new IllegalArgumentException("Line cost (cost) must not be null.");
         }
         this.id = id;
         this.description = description;

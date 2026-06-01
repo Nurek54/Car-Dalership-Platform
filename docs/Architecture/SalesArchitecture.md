@@ -1,99 +1,116 @@
 flowchart TB
 
-%% =====================================================
-%% STYLE DEFINITIONS
-%% =====================================================
-classDef inbound fill:#D6EAF8,stroke:#1B4F72,color:#000,stroke-width:2px
 classDef port fill:#FCF3CF,stroke:#7D6608,color:#000,stroke-width:2px
 classDef app fill:#D5F5E3,stroke:#145A32,color:#000,stroke-width:2px
 classDef domain fill:#FADBD8,stroke:#922B21,color:#000,stroke-width:2px
 classDef repository fill:#EBDEF0,stroke:#5B2C6F,color:#000,stroke-width:2px
-classDef adapter fill:#EAECEE,stroke:#424949,color:#000,stroke-width:2px
 
 %% =====================================================
-%% PAYMENT FLOW
+%% ORDER & SIGNATURE FLOW
 %% =====================================================
-subgraph PAYMENT["💳 Payment Processing"]
+subgraph ORDER_FLOW["📝 Order & Contract Management"]
 direction TB
 
-    PRest[BillingRestAdapter]
-    PPort[RegisterPaymentUseCase]
-    PApp[PaymentAppService]
+    CPort[ManageOrderUseCase]
+    CApp[OrderAppService]
 
-    PDomainSvc[PaymentClassificationService]
-    POrderPort[[OrderInformationPort]]
+    Order[(Order)]
 
-    Payment[(Payment)]
+    CRepo[[OrderRepository]]
+    CSignPort[[ESignaturePort]]
+    CEventPort[[EventPublisher]]
 
-    PRepo[[PaymentRepository]]
-    PEvent[[EventPublisher]]
-
-    PDb[(DatabaseAdapter)]
-    PBus[(EventBusAdapter)]
-    PSalesApi[(SalesModuleRestAdapter)]
-
-    PRest --> PPort
-    PPort --> PApp
-
-    PApp --> PDomainSvc
-    PApp --> Payment
-
-    %% Relacje Usługi Dziedziny (po angielsku)
-    PDomainSvc -. queries rules .-> POrderPort
-    PDomainSvc -. verifies amount .-> Payment
-
-    PApp --> PRepo
-    PApp --> PEvent
-
-    PDb -. implements .-> PRepo
-    PBus -. implements .-> PEvent
-    PSalesApi -. implements .-> POrderPort
+    CPort --> CApp
+    CApp --> Order
+    CApp --> CRepo
+    CApp --> CSignPort
+    CApp --> CEventPort
 
 end
 
 %% =====================================================
-%% SETTLEMENT FLOW
+%% ORDER FULFILLMENT FLOW (Fast/Long Track)
 %% =====================================================
-subgraph SETTLEMENT["🧾 Settlement Calculation"]
+subgraph FULFILLMENT["🚚 Order Fulfillment"]
 direction TB
 
-    SRest[BillingRestAdapter]
-    SPort[CalculateSettlementUseCase]
-    SApp[SettlementAppService]
+    FPort[ProcessFulfillmentUseCase]
+    FApp[OrderFulfillmentAppService]
 
-    SDomainSvc[SettlementCalculationService]
-    SFinPort[[FinancingIntegrationPort]]
+    FDomainSvc[VehicleMatchingDomainService]
+    OrderFul[(Order)]
 
-    Settlement[(OrderSettlement)]
+    FRepo[[OrderRepository]]
+    FFactoryPort[[FactoryIntegrationAclPort]]
+    FInvPort[[InventoryQueryPort]]
 
-    SRepo[[SettlementRepository]]
+    FPort --> FApp
 
-    SDb[(DatabaseAdapter)]
-    SFinApi[(FinancingACLAdapter)]
+    FApp --> FDomainSvc
+    FApp --> OrderFul
 
-    SRest --> SPort
-    SPort --> SApp
+    FDomainSvc -. queries available VINs .-> FInvPort
+    FDomainSvc -. matches & allocates .-> OrderFul
 
-    SApp --> SDomainSvc
-    SApp --> Settlement
-
-    %% Relacje Usługi Dziedziny (po angielsku)
-    SDomainSvc -. fetches leasing values .-> SFinPort
-    SDomainSvc -. calculates balance for .-> Settlement
-
-    SApp --> SRepo
-
-    SDb -. implements .-> SRepo
-    SFinApi -. implements .-> SFinPort
+    FApp --> FRepo
+    FApp --> FFactoryPort
 
 end
 
 %% =====================================================
-%% NODE COLORS
+%% OFFER PROCESS FLOW
 %% =====================================================
-class PRest,SRest inbound
-class PPort,SPort port
-class PApp,SApp app
-class PDomainSvc,SDomainSvc,Payment,Settlement domain
-class PRepo,SRepo,PEvent,POrderPort,SFinPort repository
-class PDb,PBus,SDb,PSalesApi,SFinApi adapter
+subgraph OFFER_FLOW["📄 Offer & Discount Processing"]
+direction TB
+
+    OPort[CreateOfferUseCase]
+    OApp[OfferAppService]
+
+    Offer[(Offer)]
+
+    ORepo[[OfferRepository]]
+    ODocPort[[DocumentGeneratorPort]]
+
+    OPort --> OApp
+    OApp --> Offer
+    OApp --> ORepo
+    OApp --> ODocPort
+
+end
+
+%% =====================================================
+%% TRADE-IN & DEMO FLOW
+%% =====================================================
+subgraph TRADE_IN_DEMO["🚗 Trade-in & Test Drives"]
+direction TB
+
+    TPort[ManageAncillaryServicesUseCase]
+    TApp[AncillarySalesAppService]
+
+    TradeIn[(TradeInAppraisal)]
+    TestDrive[(TestDriveAgreement)]
+
+    TRepo[[TradeInRepository]]
+    DRepo[[TestDriveRepository]]
+
+    TPort --> TApp
+
+    TApp --> TradeIn
+    TApp --> TestDrive
+
+    TApp --> TRepo
+    TApp --> DRepo
+
+end
+
+%% =====================================================
+%% DOMAIN EVENTS
+%% =====================================================
+Event{{DomainEvent}}
+Order -. generates .-> Event
+OrderFul -. generates .-> Event
+
+class OPort,CPort,FPort,TPort port
+class OApp,CApp,FApp,TApp app
+class FDomainSvc,Offer,Order,OrderFul,TradeIn,TestDrive,Event domain
+class ORepo,ODocPort,CRepo,CSignPort,CEventPort,FRepo,FFactoryPort,FInvPort,TRepo,DRepo repository

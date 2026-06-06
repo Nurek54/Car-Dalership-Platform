@@ -20,12 +20,12 @@ direction TB
         ARCHIVED
     }
     class CatalogOption {
-        <<Entity>>
+        <<ValueObject>>
         -OptionCode code
         -Money basePrice
     }
     class CatalogRule {
-        <<Entity>>
+        <<ValueObject>>
         -OptionCode sourceCode
         -OptionCode targetCode
         -RuleType type
@@ -39,6 +39,11 @@ direction TB
     ProductCatalog *-- "1" CatalogId
     ProductCatalog *-- "1" ModelYear
     ProductCatalog *-- "1" CatalogState
-    ProductCatalog *-- "1..*" CatalogOption : kompozycja lokalna
-    ProductCatalog *-- "0..*" CatalogRule : kompozycja lokalna
+    ProductCatalog *-- "1..*" CatalogOption : kompozycja lokalna (obiekty wartości)
+    ProductCatalog *-- "0..*" CatalogRule : kompozycja lokalna (obiekty wartości)
     CatalogRule *-- "1" RuleType
+
+    %% NOTE: CatalogOption and CatalogRule are modelled as Value Objects.
+    %% ProductCatalog is immutable once activated; options/rules do not
+    %% possess an independent lifecycle and therefore should not expose
+    %% artificial persistence identifiers in the domain model.

@@ -37,3 +37,12 @@ class Money {
     OrderSettlement *-- "1" OrderId : kompozycja (referencja)
     OrderSettlement *-- "1" SettlementState : kompozycja
     OrderSettlement *-- "5" Money : kompozycja (wartości finansowe)
+
+    %% Factory for creating a robust OrderSettlement instance. The
+    %% factory is responsible for assembling all monetary inputs
+    %% (deposits, financing, trade-in values) and for returning a
+    %% settlement that meets domain invariants (balanced final state).
+    %% class OrderSettlementFactory {
+    %%    <<Factory>>
+    %%    +createFromOrderData(OrderId orderId, SettlementSnapshot snapshot) OrderSettlement
+    %%}

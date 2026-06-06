@@ -33,10 +33,10 @@ class Money {
 +String currency
 }
 
-    OrderSettlement *-- "1" SettlementId : kompozycja (tożsamość)
-    OrderSettlement *-- "1" OrderId : kompozycja (referencja)
-    OrderSettlement *-- "1" SettlementState : kompozycja
-    OrderSettlement *-- "5" Money : kompozycja (wartości finansowe)
+    OrderSettlement *-- "1" SettlementId
+    OrderSettlement *-- "1" OrderId : referencja
+    OrderSettlement *-- "1" SettlementState
+    OrderSettlement *-- "5" Money
 
     %% Factory for creating a robust OrderSettlement instance. The
     %% factory is responsible for assembling all monetary inputs

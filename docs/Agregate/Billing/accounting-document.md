@@ -43,13 +43,13 @@ class Money {
 +String currency
 }
 
-    AccountingDocument *-- "1" DocumentId : kompozycja (tożsamość)
-    AccountingDocument *-- "1" DocumentType : kompozycja
-    AccountingDocument *-- "1" DocumentState : kompozycja
-    AccountingDocument *-- "1" Money : kompozycja (totalAmount)
-    AccountingDocument *-- "1" TaxDetails : kompozycja
-    AccountingDocument *-- "1..*" DocumentLine : kompozycja (obiekty wartości)
-    DocumentLine *-- "1" Money : kompozycja (cost)
+    AccountingDocument *-- "1" DocumentId
+    AccountingDocument *-- "1" DocumentType
+    AccountingDocument *-- "1" DocumentState
+    AccountingDocument *-- "1" Money
+    AccountingDocument *-- "1" TaxDetails
+    AccountingDocument *-- "1..*" DocumentLine
+    DocumentLine *-- "1" Money
 
     %% NOTE: DocumentLine is modelled as a Value Object. The persistence
     %% layer may generate a surrogate `LineId`, but this identifier is an

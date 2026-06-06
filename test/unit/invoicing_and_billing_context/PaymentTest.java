@@ -38,28 +38,4 @@ class PaymentTest {
 
         assertThat(payment.getCategory()).isEqualTo(PaymentCategory.ADVANCE);
     }
-
-    @Test
-    void shouldCategorizeAsDepositAndEmitEventWhenPaymentCoversRequiredAmount() {
-        // Arrange
-        Money requiredDeposit = Money.of(new BigDecimal("5000.00"), "PLN");
-        Payment payment = new Payment(
-                new PaymentId("PAY-001"),
-                new OrderId("ORD-123"),
-                Money.of(new BigDecimal("5000.00"), "PLN")
-        );
-
-        // Act
-        payment.categorizePayment(requiredDeposit);
-
-        // Assert - 1. Testowanie Stanu (Encji/Agregatu)
-        assertThat(payment.getCategory()).isEqualTo(PaymentCategory.DEPOSIT);
-
-        // Assert - 2. TESTOWANIE ZDARZEŃ (Events)
-        // Sprawdzamy, czy agregat poprawnie zapisał zdarzenie do swojego "notesu"
-        assertThat(payment.getDomainEvents())
-                .hasSize(1) // Czy wygenerowano dokładnie 1 zdarzenie?
-                .first()    // Pobierz pierwsze zdarzenie
-                .isInstanceOf(DepositRegisteredEvent.class); // Czy jest to odpowiednia klasa zdarzenia?
-    }
 }

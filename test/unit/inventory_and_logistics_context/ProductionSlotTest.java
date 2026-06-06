@@ -1,6 +1,8 @@
 package unit.inventory_and_logistics_context;
 
 import org.junit.jupiter.api.Test;
+import salon.shared.model.OrderId;
+
 import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.*;
 

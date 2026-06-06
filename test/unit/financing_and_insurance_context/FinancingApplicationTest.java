@@ -1,7 +1,12 @@
 package unit.financing_and_insurance_context;
 
 import org.junit.jupiter.api.Test;
+import salon.shared.model.Money;
+import salon.shared.model.OrderId;
+
 import java.math.BigDecimal;
+import static org.assertj.core.api.Assertions.*;
+
 
 class FinancingApplicationTest {
 

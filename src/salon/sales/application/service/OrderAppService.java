@@ -3,25 +3,41 @@ package salon.sales.application.service;
 import salon.sales.application.port.in.ActivateOrderOnDepositUseCase;
 import salon.sales.application.port.in.CancelOrderCommand;
 import salon.sales.application.port.in.CancelOrderUseCase;
+import salon.sales.application.port.in.CreateOrderCommand;
+import salon.sales.application.port.out.OfferRepository;
 import salon.sales.application.port.out.OrderRepository;
+import salon.sales.domain.exceptions.OfferExpiredException;
+import salon.sales.domain.model.offer.Offer;
+import salon.sales.domain.model.offer.OfferId;
+import salon.sales.domain.model.offer.OfferState;
 import salon.sales.domain.model.order.Order;
 import salon.shared.application.EventPublisherPort;
 import salon.shared.event.DomainEvent;
 import salon.shared.model.OrderId;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 /**
- * Realizuje UC-SPR-02 (aktywacja po zadatku) i UC-SPR-03 (anulowanie).
- * Publikuje zdarzenia WYGENEROWANE PRZEZ AGREGAT — decyzja "jakie zdarzenie" siedzi w domenie
- * (Order.activate / Order.cancelOrder), serwis nie zagląda już do stanu/powodu anulacji.
+ * Realizuje UC-SPR-02 (konwersja oferty, aktywacja po zadatku) i UC-SPR-03 (anulowanie).
+ * Publikuje zdarzenia WYGENEROWANE PRZEZ AGREGAT — decyzja "jakie zdarzenie" siedzi w domenie.
+ *
+ * OfferRepository jest potrzebne tylko dla createOrderFromOffer. Stary, 2-argumentowy
+ * konstruktor zostaje (zgodność z demami); createOrderFromOffer wymaga wariantu 3-arg.
  */
 public class OrderAppService implements CancelOrderUseCase, ActivateOrderOnDepositUseCase {
 
     private final OrderRepository orderRepository;
+    private final OfferRepository offerRepository; // może być null (konstruktor 2-arg)
     private final EventPublisherPort eventPublisher;
 
     public OrderAppService(OrderRepository orderRepository, EventPublisherPort eventPublisher) {
+        this(orderRepository, null, eventPublisher);
+    }
+
+    public OrderAppService(OrderRepository orderRepository,
+                           OfferRepository offerRepository,
+                           EventPublisherPort eventPublisher) {
         if (orderRepository == null) {
             throw new IllegalArgumentException("orderRepository must not be null.");
         }
@@ -29,7 +45,43 @@ public class OrderAppService implements CancelOrderUseCase, ActivateOrderOnDepos
             throw new IllegalArgumentException("eventPublisher must not be null.");
         }
         this.orderRepository = orderRepository;
+        this.offerRepository = offerRepository;
         this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * UC-SPR-02: konwersja Oferty w Zamówienie. Zwraca identyfikator nowego zamówienia.
+     * Reguła: oferta po terminie ważności -> OfferExpiredException.
+     */
+    public String createOrderFromOffer(CreateOrderCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("command must not be null.");
+        }
+        if (offerRepository == null) {
+            throw new IllegalStateException(
+                    "OrderAppService was built without an OfferRepository — "
+                            + "use the 3-arg constructor to enable createOrderFromOffer.");
+        }
+
+        Optional<Offer> foundOffer = offerRepository.findById(new OfferId(command.offerId()));
+        if (foundOffer.isEmpty()) {
+            throw new IllegalStateException("Offer not found: " + command.offerId());
+        }
+        Offer offer = foundOffer.get();
+
+        if (offer.getState() == OfferState.EXPIRED
+                || offer.getValidityDate().isBefore(LocalDate.now())) {
+            throw new OfferExpiredException("Offer " + command.offerId() + " has expired.");
+        }
+
+        Order order = Order.createFromOffer(offer);     // wymaga oferty w stanie PUBLISHED
+        order.confirmSignature(command.customerSignature());
+        orderRepository.save(order);
+
+        offer.markAsConverted();
+        offerRepository.save(offer);
+
+        return order.getId().value();
     }
 
     // UC-SPR-02, krok 5: ZadatekZaksiegowany -> aktywacja zamówienia + ogłoszenie ZamowienieAktywowane.
@@ -47,6 +99,24 @@ public class OrderAppService implements CancelOrderUseCase, ActivateOrderOnDepos
         order.activate();
         orderRepository.save(order);
 
+        publishEventsOf(order);
+    }
+
+    /**
+     * Aktywacja zamówienia po odebraniu DepositRegisteredEvent (BillingEventSubscriberAdapter).
+     * W odróżnieniu od activateOnDeposit — brak zamówienia traktujemy jako błąd (wiadomość do DLQ).
+     */
+    public void activateOrder(String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
+        }
+        Optional<Order> found = orderRepository.findById(new OrderId(orderId));
+        if (found.isEmpty()) {
+            throw new IllegalStateException("Order not found for activation: " + orderId);
+        }
+        Order order = found.get();
+        order.activate();
+        orderRepository.save(order);
         publishEventsOf(order);
     }
 

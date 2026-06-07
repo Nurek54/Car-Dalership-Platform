@@ -4,6 +4,7 @@ import salon.billing.application.port.out.PaymentRepository;
 import salon.billing.domain.model.payment.Payment;
 import salon.billing.domain.model.payment.PaymentId;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -20,5 +21,10 @@ public class PaymentDatabaseAdapter implements PaymentRepository {
     @Override
     public Optional<Payment> findById(PaymentId id) {
         throw new UnsupportedOperationException("TODO: implement JPA lookup for Payment.");
+    }
+
+    @Override
+    public List<Payment> findAll() {
+        throw new UnsupportedOperationException("TODO: implement JPA listing for Payment.");
     }
 }

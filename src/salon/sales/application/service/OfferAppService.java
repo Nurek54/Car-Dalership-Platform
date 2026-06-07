@@ -8,8 +8,12 @@ import salon.sales.domain.model.offer.Discount;
 import salon.sales.domain.model.offer.DiscountLimit;
 import salon.sales.domain.model.offer.Offer;
 import salon.sales.domain.model.offer.OfferId;
+import salon.sales.domain.model.offer.OfferState;
 import salon.shared.model.Money;
 import salon.shared.model.SpecificationId;
+
+import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Realizuje UC-SPR-01 (orkiestracja). Tworzy ofertę, opcjonalnie wycenia i przyznaje rabat,
@@ -49,5 +53,49 @@ public class OfferAppService implements CreateOfferUseCase {
 
         offerRepository.save(offer);
         return offer.getId();
+    }
+
+    /**
+     * Cron (ExpiredOffersCronJobAdapter, UC-SPR-01 A2): oferty po terminie ważności -> EXPIRED.
+     */
+    public void processExpiredOffers() {
+        LocalDate today = LocalDate.now();
+        List<Offer> all = offerRepository.findAll();
+        for (int i = 0; i < all.size(); i++) {
+            Offer offer = all.get(i);
+            if (isOpen(offer) && offer.getValidityDate().isBefore(today)) {
+                offer.expire();
+                offerRepository.save(offer);
+            }
+        }
+    }
+
+    /**
+     * Reakcja na CatalogVersionPublishedEvent: nowa wersja cennika unieważnia otwarte oferty
+     * zbudowane na poprzednich cenach.
+     *
+     * UWAGA: agregat Offer nie przechowuje dziś CatalogId, więc konserwatywnie unieważniamy
+     * WSZYSTKIE otwarte oferty. Docelowo: dodać snapshot CatalogId do Offer i filtrować po nim.
+     */
+    public void invalidateOffersForOlderCatalogs(String catalogId) {
+        if (catalogId == null || catalogId.isBlank()) {
+            throw new IllegalArgumentException("catalogId must not be blank.");
+        }
+        List<Offer> all = offerRepository.findAll();
+        for (int i = 0; i < all.size(); i++) {
+            Offer offer = all.get(i);
+            if (isOpen(offer)) {
+                offer.expire();
+                offerRepository.save(offer);
+            }
+        }
+    }
+
+    // "Otwarta" oferta to taka, którą można jeszcze unieważnić (nie CONVERTED i nie EXPIRED).
+    private boolean isOpen(Offer offer) {
+        OfferState state = offer.getState();
+        return state == OfferState.DRAFT
+                || state == OfferState.PUBLISHED
+                || state == OfferState.PENDING_DIRECTOR_APPROVAL;
     }
 }

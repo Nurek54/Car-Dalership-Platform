@@ -7,8 +7,8 @@ import java.util.Optional;
 /**
  * Aggregate Root: cennik produktowy (UC-KAT). Trzyma opcje wyposażenia i reguły zależności.
  *
- * Cykl życia: ACTIVE -> ARCHIVED (po wydaniu nowej wersji cennika). Po archiwizacji cennik
- * jest "zamrożony" — nie dodajemy do niego opcji ani reguł.
+ * Cykl życia: SCHEDULED -> ACTIVE -> ARCHIVED. Po archiwizacji cennik jest "zamrożony" —
+ * nie dodajemy do niego opcji ani reguł.
  */
 public class ProductCatalog {
 
@@ -45,6 +45,11 @@ public class ProductCatalog {
         return new ProductCatalog(CatalogId.generate(), new ModelYear(modelYear), 1, CatalogState.ACTIVE);
     }
 
+    // Fabryka: cennik zaplanowany (wejdzie w życie później) — aktywowany przez Cron.
+    public static ProductCatalog createScheduled(String modelYear) {
+        return new ProductCatalog(CatalogId.generate(), new ModelYear(modelYear), 1, CatalogState.SCHEDULED);
+    }
+
     public void addOption(CatalogOption option) {
         if (option == null) {
             throw new IllegalArgumentException("option must not be null.");
@@ -63,6 +68,14 @@ public class ProductCatalog {
             throw new IllegalStateException("Cannot modify an ARCHIVED catalog.");
         }
         this.rules.add(rule);
+    }
+
+    // Cron (CatalogActivationCronJobAdapter, UC-KAT-02): zaplanowany cennik staje się aktywny.
+    public void activate() {
+        if (this.state != CatalogState.SCHEDULED) {
+            throw new IllegalStateException("Only a SCHEDULED catalog can be activated, was: " + this.state);
+        }
+        this.state = CatalogState.ACTIVE;
     }
 
     // WF-KAT: wydanie nowej wersji archiwizuje starą.

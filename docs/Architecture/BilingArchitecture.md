@@ -7,6 +7,7 @@ classDef port fill:#FCF3CF,stroke:#7D6608,color:#000,stroke-width:2px
 classDef app fill:#D5F5E3,stroke:#145A32,color:#000,stroke-width:2px
 classDef domain fill:#FADBD8,stroke:#922B21,color:#000,stroke-width:2px
 classDef repository fill:#EBDEF0,stroke:#5B2C6F,color:#000,stroke-width:2px
+classDef factory fill:#D6EAF8,stroke:#1B4F72,color:#000,stroke-width:2px
 
 %% =====================================================
 %% PAYMENT FLOW
@@ -47,10 +48,12 @@ direction TB
     DPort[IssueDocumentUseCase]
     DApp[DocumentAppService]
     Document[(AccountingDocument)]
+    DocumentFactory[(AccountingDocumentFactory)]
     DRepo[[DocumentRepository]]
 
     DPort --> DApp
-    DApp --> Document
+    DApp --> DocumentFactory
+    DocumentFactory --> Document
     DApp --> DRepo
 
 end
@@ -68,13 +71,15 @@ direction TB
     SFinPort[[FinancingIntegrationPort]]
 
     Settlement[(OrderSettlement)]
+    OrderSettlementFactory[(OrderSettlementFactory)]
 
     SRepo[[SettlementRepository]]
 
     SPort --> SApp
 
     SApp --> SDomainSvc
-    SApp --> Settlement
+    SApp --> OrderSettlementFactory
+    OrderSettlementFactory --> Settlement
 
     SDomainSvc -. fetches leasing values .-> SFinPort
     SDomainSvc -. calculates balance for .-> Settlement
@@ -97,3 +102,4 @@ class PPort,DPort,SPort port
 class PApp,DApp,SApp app
 class PDomainSvc,SDomainSvc,Payment,Document,Settlement,Event domain
 class PRepo,DRepo,SRepo,PEvent,POrderPort,SFinPort repository
+class OrderSettlementFactory,DocumentFactory factory

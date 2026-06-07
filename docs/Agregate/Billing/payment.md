@@ -28,7 +28,7 @@ ADVANCE
 FINAL_PAYMENT
 }
 
-    Payment *-- "1" PaymentId : kompozycja (tożsamość)
-    Payment *-- "1" OrderId : kompozycja (referencja)
-    Payment *-- "1" Money : kompozycja
-    Payment *-- "1" PaymentCategory : kompozycja
+    Payment *-- "1" PaymentId
+    Payment *-- "1" OrderId : referencja
+    Payment *-- "1" Money
+    Payment *-- "1" PaymentCategory

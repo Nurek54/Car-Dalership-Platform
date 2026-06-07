@@ -33,14 +33,9 @@ class TaxDetails {
 +String nip
 }
 class DocumentLine {
-<<Entity>>
--LineId id
+<<ValueObject>>
 -String description
 -Money cost
-}
-class LineId {
-<<ValueObject>>
-+Long value
 }
 class Money {
 <<ValueObject>>
@@ -48,11 +43,23 @@ class Money {
 +String currency
 }
 
-    AccountingDocument *-- "1" DocumentId : kompozycja (tożsamość)
-    AccountingDocument *-- "1" DocumentType : kompozycja
-    AccountingDocument *-- "1" DocumentState : kompozycja
-    AccountingDocument *-- "1" Money : kompozycja (totalAmount)
-    AccountingDocument *-- "1" TaxDetails : kompozycja
-    AccountingDocument *-- "1..*" DocumentLine : kompozycja (encje lokalne)
-    DocumentLine *-- "1" LineId : kompozycja
-    DocumentLine *-- "1" Money : kompozycja (cost)
+    AccountingDocument *-- "1" DocumentId
+    AccountingDocument *-- "1" DocumentType
+    AccountingDocument *-- "1" DocumentState
+    AccountingDocument *-- "1" Money
+    AccountingDocument *-- "1" TaxDetails
+    AccountingDocument *-- "1..*" DocumentLine
+    DocumentLine *-- "1" Money
+
+    %% NOTE: DocumentLine is modelled as a Value Object. The persistence
+    %% layer may generate a surrogate `LineId`, but this identifier is an
+    %% infrastructure concern and must not leak into the domain model.
+
+    %% Factory for creating AccountingDocument instances from validated
+    %% input snapshots; factory ensures all invariants and composes
+    %% value objects (lines, amounts, tax details) before returning the
+    %% fully-initialised aggregate root.
+    %% class AccountingDocumentFactory {
+    %%    <<Factory>>
+    %%    +createIssue(DocumentSnapshot snapshot) AccountingDocument
+    %%}

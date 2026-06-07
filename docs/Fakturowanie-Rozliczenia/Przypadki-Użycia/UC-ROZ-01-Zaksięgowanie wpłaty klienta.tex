@@ -1,0 +1,52 @@
+\textbf{UC-ROZ-01: Zaksięgowanie wpłaty klienta}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-ROZ-01 \\
+\hline
+
+Nazwa & Zaksięgowanie wpłaty klienta \\
+\hline
+
+Opis &
+Proces rejestracji wpływu środków oraz automatycznej klasyfikacji wpłaty jako zadatek, wpłata lub płatność końcowa. \\
+\hline
+
+Aktor główny & Księgowy / Bramka płatnicza \\
+\hline
+
+Aktorzy pomocniczy & Kontekst Sprzedaży i CRM, System Bankowy \\
+\hline
+
+Warunki wstępne &
+W systemie istnieje aktywne zamówienie lub faktura proforma przypisana do klienta. \\
+\hline
+
+Warunki końcowe &
+System rejestruje wpłatę, aktualizuje saldo rachunku oraz emituje zdarzenie dziedzinowe \textit{ZadatekZaksiegowany}. \\
+\hline
+
+Scenariusz główny &
+\begin{enumerate}
+\item System odbiera powiadomienie z bramki płatniczej lub Księgowy rejestruje wpłatę ręcznie w interfejsie użytkownika.
+\item System identyfikuje zamówienie na podstawie identyfikatora płatności lub tytułu przelewu.
+\item System weryfikuje kwotę wpłaty i przypisuje jej odpowiednią kategorię biznesową: Zadatek, Wpłata lub Płatność końcowa.
+\item System rejestruje operację finansową w ewidencji księgowej.
+\item System aktualizuje saldo przypisane do zamówienia.
+\item System emituje zdarzenie dziedzinowe \textit{ZadatekZaksiegowany}, które odblokowuje dalszą realizację zamówienia w Module Sprzedaży.
+\end{enumerate}
+\\
+\hline
+
+Scenariusze alternatywne &
+\begin{itemize}
+\item [A1] Nierozpoznany tytuł przelewu: W kroku 2 system nie może powiązać wpłaty z istniejącym zamówieniem. System przenosi wpłatę do kolejki „Wpłaty do ręcznej weryfikacji”, a Księgowy dokonuje manualnego przypisania operacji.
+\item [A2] Niedopłata: W kroku 3 system wykrywa, że wpłacona kwota jest niższa niż wymagane minimum zadatku. System księguje środki jako Wpłate, nie emituje zdarzenia \textit{ZadatekZaksiegowany} oraz wysyła powiadomienie do Handlowca.
+\end{itemize}
+\\
+\hline
+
+\end{longtable}

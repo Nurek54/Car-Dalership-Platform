@@ -5,14 +5,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Zdarzenie PRZYCHODZĄCE (integracyjne): sygnał, że zamówienie jest gotowe do rozliczenia
- * (wyzwalacz UC-ROZ-03). Przychodzi asynchronicznie z innego kontekstu (np. Sprzedaż).
- * eventId służy do deduplikacji po stronie Subskrybenta (sekcja 3.4.2).
+ * Zdarzenie PRZYCHODZĄCE (integracyjne): złożenie nowego zamówienia gotowego do rozliczenia
+ * (wyzwalacz inicjalizacji UC-FIR-03). Przychodzi asynchronicznie z innego kontekstu (Sprzedaż).
+ * eventId służy do deduplikacji po stronie Subskrybenta.
  */
 public record OrderReadyForSettlementEvent(UUID eventId,
                                            String orderId,
-                                           BigDecimal vehicleValue,
-                                           BigDecimal totalDeposits,
+                                           BigDecimal contractValue,
                                            String currency,
                                            Instant occurredOn) {
 }

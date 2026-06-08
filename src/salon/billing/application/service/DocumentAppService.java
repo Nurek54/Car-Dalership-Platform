@@ -1,90 +1,151 @@
 package salon.billing.application.service;
 
-import salon.billing.application.port.in.IssueDocumentCommand;
-import salon.billing.application.port.in.IssueDocumentUseCase;
+import salon.billing.application.port.in.GenerateAdvanceCommand;
+import salon.billing.application.port.in.GenerateAdvanceUseCase;
+import salon.billing.application.port.in.GenerateInvoiceCommand;
+import salon.billing.application.port.in.GenerateInvoiceUseCase;
 import salon.billing.application.port.out.DocumentRepository;
-import salon.billing.application.port.out.KsefPort;
-import salon.billing.application.port.out.KsefSendResult;
+import salon.billing.application.port.out.NotificationPort;
+import salon.billing.application.port.out.PdfGeneratorPort;
+import salon.billing.application.port.out.SettlementRepository;
 import salon.billing.domain.model.document.AccountingDocument;
-import salon.billing.domain.model.document.DocumentId;
-import salon.billing.domain.model.document.DocumentLine;
-import salon.billing.domain.model.document.LineId;
-import salon.billing.domain.model.document.TaxDetails;
+import salon.billing.domain.model.document.AccountingDocumentFactory;
+import salon.billing.domain.model.document.BuyerDetails;
+import salon.billing.domain.model.document.SellerDetails;
+import salon.billing.domain.model.settlement.Settlement;
+import salon.billing.domain.service.InvoiceCalculationDomainService;
 import salon.shared.application.EventPublisherPort;
 import salon.shared.event.DomainEvent;
 import salon.shared.model.Money;
+import salon.shared.model.OrderId;
 
 /**
- * Realizuje UC-ROZ-02 (warstwa aplikacji — orkiestracja).
- * Zdarzenie FakturaWystawiona generuje agregat (przy confirmKsefRegistration) — serwis tylko je
- * ściąga i publikuje. Na ścieżce PENDING_KSEF agregat nie rejestruje zdarzenia, więc nic nie leci.
+ * Realizuje UC-FIR-01 i UC-FIR-02 (warstwa aplikacji — orkiestracja).
+ *
+ * Czysty orkiestrator: NIE zawiera instrukcji warunkowych biznesowych ani operacji matematycznych.
+ * Matematykę księgową wykonuje InvoiceCalculationDomainService (na podstawie stanu Settlement),
+ * walidację terminów płatności i konstrukcję agregatu — AccountingDocumentFactory. Serwis jedynie
+ * koordynuje wywołania między domeną a portami wyjściowymi (repo, PDF, notyfikacje, magistrala).
  */
-public class DocumentAppService implements IssueDocumentUseCase {
+public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoiceUseCase {
 
+    private final SettlementRepository settlementRepository;
     private final DocumentRepository documentRepository;
-    private final KsefPort ksefPort;
+    private final InvoiceCalculationDomainService invoiceCalculation;
+    private final AccountingDocumentFactory documentFactory;
+    private final PdfGeneratorPort pdfGenerator;
+    private final NotificationPort notification;
     private final EventPublisherPort eventPublisher;
+    private final SellerDetails seller;
 
-    public DocumentAppService(DocumentRepository documentRepository,
-                              KsefPort ksefPort,
-                              EventPublisherPort eventPublisher) {
+    public DocumentAppService(SettlementRepository settlementRepository,
+                              DocumentRepository documentRepository,
+                              InvoiceCalculationDomainService invoiceCalculation,
+                              AccountingDocumentFactory documentFactory,
+                              PdfGeneratorPort pdfGenerator,
+                              NotificationPort notification,
+                              EventPublisherPort eventPublisher,
+                              SellerDetails seller) {
+        if (settlementRepository == null) {
+            throw new IllegalArgumentException("settlementRepository must not be null.");
+        }
         if (documentRepository == null) {
             throw new IllegalArgumentException("documentRepository must not be null.");
         }
-        if (ksefPort == null) {
-            throw new IllegalArgumentException("ksefPort must not be null.");
+        if (invoiceCalculation == null) {
+            throw new IllegalArgumentException("invoiceCalculation must not be null.");
+        }
+        if (documentFactory == null) {
+            throw new IllegalArgumentException("documentFactory must not be null.");
+        }
+        if (pdfGenerator == null) {
+            throw new IllegalArgumentException("pdfGenerator must not be null.");
+        }
+        if (notification == null) {
+            throw new IllegalArgumentException("notification must not be null.");
         }
         if (eventPublisher == null) {
             throw new IllegalArgumentException("eventPublisher must not be null.");
         }
+        if (seller == null) {
+            throw new IllegalArgumentException("seller must not be null.");
+        }
+        this.settlementRepository = settlementRepository;
         this.documentRepository = documentRepository;
-        this.ksefPort = ksefPort;
+        this.invoiceCalculation = invoiceCalculation;
+        this.documentFactory = documentFactory;
+        this.pdfGenerator = pdfGenerator;
+        this.notification = notification;
         this.eventPublisher = eventPublisher;
+        this.seller = seller;
     }
 
     @Override
-    // @Transactional w projekcie ze Springiem.
-    public String issueDocument(IssueDocumentCommand command) {
+    // UC-FIR-01: dokument zadatku.
+    public String generateAdvance(GenerateAdvanceCommand command) {
         if (command == null) {
             throw new IllegalArgumentException("command must not be null.");
         }
-        if (command.lines() == null || command.lines().isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Document requires at least one line — complete the service order data.");
+        OrderId orderId = new OrderId(command.orderId());
+        Settlement settlement = loadSettlement(orderId);
+
+        Money advanceAmount = this.invoiceCalculation.calculateAdvanceAmount(settlement);
+        BuyerDetails buyer = new BuyerDetails(command.buyerName(), command.buyerNip());
+
+        AccountingDocument document = this.documentFactory.create(
+                orderId, buyer, this.seller, advanceAmount,
+                "Zadatek - zamowienie " + orderId.value(), command.authorizedIssuer());
+
+        AccountingDocument issued = issueAndDeliver(document);
+
+        // UC-FIR-01: agregat salda żąda wpłaty zadatku -> zdarzenie dla reszty systemu.
+        settlement.requestAdvancePayment();
+        this.settlementRepository.save(settlement);
+        publishEvents(settlement);
+
+        return issued.getId().value();
+    }
+
+    @Override
+    // UC-FIR-02: faktura końcowa.
+    public String generateInvoice(GenerateInvoiceCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("command must not be null.");
         }
+        OrderId orderId = new OrderId(command.orderId());
+        Settlement settlement = loadSettlement(orderId);
 
-        // 1. Tworzymy pusty dokument (DRAFT), numer księgowy = DocumentId.
-        TaxDetails taxDetails = new TaxDetails(command.buyerName(), command.nip());
-        AccountingDocument document = new AccountingDocument(
-                DocumentId.generate(), command.type(), taxDetails);
+        Money finalAmount = this.invoiceCalculation.calculateFinalInvoiceAmount(settlement);
+        BuyerDetails buyer = new BuyerDetails(command.buyerName(), command.buyerNip());
 
-        // 2. Dokładamy pozycje, nadając kolejne numery LineId (1, 2, 3, ...).
-        long nextLineNumber = 1L;
-        for (int i = 0; i < command.lines().size(); i++) {
-            IssueDocumentCommand.LineData lineData = command.lines().get(i);
-            Money cost = new Money(lineData.costAmount(), lineData.costCurrency());
-            DocumentLine line = new DocumentLine(new LineId(nextLineNumber), lineData.description(), cost);
-            document.addLineItem(line);
-            nextLineNumber = nextLineNumber + 1;
+        AccountingDocument document = this.documentFactory.create(
+                orderId, buyer, this.seller, finalAmount,
+                command.invoiceTitle(), command.authorizedIssuer());
+
+        AccountingDocument issued = issueAndDeliver(document);
+        return issued.getId().value();
+    }
+
+    private Settlement loadSettlement(OrderId orderId) {
+        return this.settlementRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No settlement for order " + orderId.value()));
+    }
+
+    // Wspólny przepływ wyjściowy: zapis -> PDF -> wystawienie -> notyfikacja -> publikacja zdarzeń.
+    private AccountingDocument issueAndDeliver(AccountingDocument document) {
+        this.documentRepository.save(document);
+        byte[] pdf = this.pdfGenerator.generatePdf(document);
+        document.markAsIssued();
+        this.documentRepository.save(document);
+        this.notification.notifyInvoiceIssued(document, pdf);
+        publishEvents(document);
+        return document;
+    }
+
+    private void publishEvents(salon.shared.event.AbstractAggregateRoot aggregate) {
+        for (DomainEvent event : aggregate.pullDomainEvents()) {
+            this.eventPublisher.publish(event);
         }
-
-        // Zapis wersji roboczej (DRAFT) — zostaje ślad, nawet gdy KSeF nie odpowie.
-        documentRepository.save(document);
-
-        // 4-6. Wysyłka do KSeF (agregat sam rejestruje zdarzenie na ścieżce potwierdzenia).
-        KsefSendResult result = ksefPort.send(document);
-        if (result.accepted()) {
-            document.confirmKsefRegistration(result.ksefReference()); // krok 6
-        } else {
-            document.markAsKsefPending(); // A1: brak odpowiedzi z KSeF
-        }
-        documentRepository.save(document);
-
-        // 8. Publikacja zdarzeń wygenerowanych przez agregat — bez "if accepted" po stronie serwisu.
-        for (DomainEvent event : document.pullDomainEvents()) {
-            eventPublisher.publish(event);
-        }
-
-        return document.getId().value();
     }
 }

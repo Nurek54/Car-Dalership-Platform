@@ -1,10 +1,19 @@
 package salon.bootstrap;
 
-import salon.billing.application.port.in.RegisterPaymentCommand;
-import salon.billing.application.service.PaymentAppService;
-import salon.billing.domain.service.PaymentClassificationService;
-import salon.billing.infrastructure.mock.InMemoryPaymentRepository;
+import salon.billing.application.port.in.GenerateAdvanceCommand;
+import salon.billing.application.service.DocumentAppService;
+import salon.billing.application.service.SettlementAppService;
+import salon.billing.domain.model.document.AccountingDocumentFactory;
+import salon.billing.domain.model.document.SellerDetails;
+import salon.billing.domain.model.settlement.SettlementFactory;
+import salon.billing.domain.service.InvoiceCalculationDomainService;
+import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
+import salon.billing.infrastructure.messaging.SettlementEventListener;
+import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
+import salon.billing.infrastructure.mock.InMemorySettlementRepository;
+import salon.billing.infrastructure.mock.NotificationMockAdapter;
 import salon.billing.infrastructure.mock.PaymentGatewayMockAdapter;
+import salon.billing.infrastructure.mock.PdfGeneratorMockAdapter;
 import salon.sales.application.service.OrderAppService;
 import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.model.order.Order;
@@ -17,20 +26,18 @@ import salon.shared.infrastructure.messaging.RecordEventSerializer;
 import salon.shared.model.OrderId;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
 
 /**
- * Demo IN-PROCESS (bez RabbitMQ) pokazujące CAŁĄ choreografię między kontekstami
- * oraz nowy wzorzec "agregat generuje zdarzenia, aplikacja je ściąga i publikuje".
+ * Demo IN-PROCESS (bez RabbitMQ) pokazujące choreografię między kontekstami
+ * oraz wzorzec "agregat generuje zdarzenia, aplikacja je ściąga i publikuje".
  *
  * Przepływ:
- *   ROZLICZENIA: registerPayment -> Payment.categorizePayment() SAM rejestruje DepositRegisteredEvent
- *      -> serwis ściąga zdarzenie (pullDomainEvents) i publikuje na magistralę
- *      -> magistrala (in-process) serializuje je tak jak RabbitMQ i kieruje do SPRZEDAŻY
- *      -> SalesDepositListener -> OrderAppService.activateOnDeposit()
- *      -> Order.activate() SAM rejestruje OrderActivatedEvent -> serwis publikuje.
- *
- * Magistrala używa tych samych klas co produkcyjny adapter (RecordEventSerializer + EventJson),
- * tylko zamiast brokera woła listener bezpośrednio — dzięki temu nie trzeba Dockera.
+ *   FAKTUROWANIE: generateAdvance -> Settlement.requestAdvancePayment() SAM rejestruje
+ *      AdvancePaymentRequestedEvent -> serwis ściąga zdarzenie (pullDomainEvents) i publikuje
+ *      na magistralę -> magistrala (in-process) serializuje je jak RabbitMQ i kieruje do SPRZEDAŻY
+ *      -> SalesDepositListener -> OrderAppService aktywuje zamówienie.
  */
 public class SalonDemo {
 
@@ -46,39 +53,41 @@ public class SalonDemo {
         order.confirmSignature("SIGN-REF-1"); // DRAFT_CREATED -> PENDING_PAYMENT
         orderRepo.save(order);
 
-        // --- ROZLICZENIA: rejestracja zadatku ---
-        PaymentAppService payments = new PaymentAppService(
-                new InMemoryPaymentRepository(),
-                bus,
-                new PaymentGatewayMockAdapter(),
-                new PaymentClassificationService());
+        // --- FAKTUROWANIE I ROZLICZENIA ---
+        InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
+        SettlementAppService settlements = new SettlementAppService(
+                settlementRepo, new SettlementFactory(), bus, new PaymentGatewayMockAdapter());
 
-        System.out.println("=== Choreografia: zadatek -> aktywacja zamówienia ===");
+        // Inicjalizacja salda dla ORD-1 (kontrakt 100 000 PLN).
+        SettlementEventListener listener = new SettlementEventListener(settlements);
+        listener.on(new OrderReadyForSettlementEvent(
+                UUID.randomUUID(), "ORD-1", new BigDecimal("100000"), "PLN", Instant.now()));
+
+        DocumentAppService docs = new DocumentAppService(
+                settlementRepo, new InMemoryDocumentRepository(),
+                new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
+                new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), bus,
+                new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
+
+        System.out.println("=== Choreografia: żądanie zadatku -> aktywacja zamówienia ===");
         System.out.println("Stan zamówienia PRZED: "
                 + orderRepo.findById(new OrderId("ORD-1")).get().getState());
 
-        System.out.println("\n-> registerPayment(ORD-1, 20000 PLN, wartość zamówienia 100000 PLN)");
-        // wymagany zadatek = 10% z 100000 = 10000; wpłata 20000 >= 10000 -> ZADATEK
-        payments.registerPayment(new RegisterPaymentCommand(
-                "ORD-1", new BigDecimal("20000"), "PLN", new BigDecimal("100000"), null));
+        System.out.println("\n-> generateAdvance(ORD-1) (UC-FIR-01)");
+        docs.generateAdvance(new GenerateAdvanceCommand(
+                "ORD-1", "Jan Kowalski", "1234567890", "ksiegowy@salon.pl"));
 
         System.out.println("\nStan zamówienia PO:    "
                 + orderRepo.findById(new OrderId("ORD-1")).get().getState());
 
-        System.out.println("\n=== Druga wpłata (zaliczka) — NIE aktywuje zamówienia ===");
-        System.out.println("-> registerPayment(ORD-2, 5000 PLN, wartość zamówienia 100000 PLN)");
-        // wpłata 5000 < wymagane 10000 -> ZALICZKA -> AdvanceRegisteredEvent (brak aktywacji)
-        payments.registerPayment(new RegisterPaymentCommand(
-                "ORD-2", new BigDecimal("5000"), "PLN", new BigDecimal("100000"), null));
-
-        System.out.println("\n[OK] Demo zakończone. Zdarzenia powstały W AGREGATACH, "
-                + "serwisy je tylko ściągnęły i opublikowały.");
+        System.out.println("\n[OK] Demo zakończone. Zdarzenie powstało W AGREGACIE, "
+                + "serwis je tylko ściągnął i opublikował.");
     }
 
     /**
      * Magistrala in-process: serializuje zdarzenie dokładnie jak adapter RabbitMQ
      * (ten sam RecordEventSerializer), a potem zamiast wysyłać do brokera — kieruje
-     * DepositRegisteredEvent do listenera Sprzedaży. Pozostałe zdarzenia tylko loguje.
+     * AdvancePaymentRequestedEvent do listenera Sprzedaży. Pozostałe zdarzenia tylko loguje.
      */
     private static final class InProcessChoreographyBus implements EventPublisherPort {
 
@@ -95,7 +104,7 @@ public class SalonDemo {
             String json = serializer.toJson(event);
             System.out.println("   [bus] -> " + json);
 
-            if (this.salesListener != null && "DepositRegisteredEvent".equals(type)) {
+            if (this.salesListener != null && "AdvancePaymentRequestedEvent".equals(type)) {
                 this.salesListener.handle(EventJson.read(json));
             }
         }

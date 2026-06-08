@@ -1,22 +1,21 @@
 package salon.bootstrap;
 
-import salon.billing.application.port.in.IssueDocumentCommand;
-import salon.billing.application.port.in.RegisterPaymentCommand;
+import salon.billing.application.port.in.GenerateInvoiceCommand;
+import salon.billing.application.port.in.ProcessPaymentCommand;
 import salon.billing.application.service.DocumentAppService;
-import salon.billing.application.service.PaymentAppService;
 import salon.billing.application.service.SettlementAppService;
-import salon.billing.domain.model.document.DocumentType;
-import salon.billing.domain.service.PaymentClassificationService;
-import salon.billing.domain.service.SettlementCalculationService;
+import salon.billing.domain.model.document.AccountingDocumentFactory;
+import salon.billing.domain.model.document.SellerDetails;
+import salon.billing.domain.model.settlement.SettlementFactory;
+import salon.billing.domain.service.InvoiceCalculationDomainService;
 import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
 import salon.billing.infrastructure.messaging.SettlementEventListener;
-import salon.billing.infrastructure.mock.ExternalIntegrationMockAdapter;
 import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
-import salon.billing.infrastructure.mock.InMemoryPaymentRepository;
 import salon.billing.infrastructure.mock.InMemorySettlementRepository;
 import salon.billing.infrastructure.mock.InProcessEventPublisherAdapter;
-import salon.billing.infrastructure.mock.KsefMockAdapter;
+import salon.billing.infrastructure.mock.NotificationMockAdapter;
 import salon.billing.infrastructure.mock.PaymentGatewayMockAdapter;
+import salon.billing.infrastructure.mock.PdfGeneratorMockAdapter;
 import salon.catalog.domain.model.catalog.CatalogOption;
 import salon.catalog.domain.model.catalog.CatalogRule;
 import salon.catalog.domain.model.catalog.OptionCode;
@@ -34,7 +33,6 @@ import salon.shared.model.SpecificationId;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -63,27 +61,39 @@ public class OfflineDemo {
         offer.applyDiscount(new Discount(new BigDecimal("8.00")), new DiscountLimit(new BigDecimal("5.00")));
         System.out.println("[OK] Stan oferty: " + offer.getState());
 
-        System.out.println("\n=== ROZLICZENIA: UC-ROZ-01 / 02 / 03 ===");
+        System.out.println("\n=== FAKTUROWANIE I ROZLICZENIA: UC-FIR-01 / 02 / 03 ===");
         InProcessEventPublisherAdapter bus = new InProcessEventPublisherAdapter();
-        PaymentAppService payments = new PaymentAppService(
-                new InMemoryPaymentRepository(), bus,
-                new PaymentGatewayMockAdapter(), new PaymentClassificationService());
-        payments.registerPayment(new RegisterPaymentCommand(
-                "ORD-1", new BigDecimal("20000"), "PLN", new BigDecimal("100000"), "TX-1"));
 
-        DocumentAppService docs = new DocumentAppService(
-                new InMemoryDocumentRepository(), new KsefMockAdapter(), bus);
-        String docId = docs.issueDocument(new IssueDocumentCommand(
-                DocumentType.VAT_INVOICE, "Jan Kowalski", "1234567890",
-                List.of(new IssueDocumentCommand.LineData("Wymiana oleju", new BigDecimal("300"), "PLN"))));
-        System.out.println("[OK] Faktura wystawiona, id=" + docId);
+        // Wspólne repozytorium salda (czytane przez oba serwisy).
+        InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
 
+        // --- UC-FIR-03: inicjalizacja salda + rejestracja wpłat ---
         SettlementAppService settlements = new SettlementAppService(
-                new InMemorySettlementRepository(), new ExternalIntegrationMockAdapter(),
-                new SettlementCalculationService());
+                settlementRepo, new SettlementFactory(), bus, new PaymentGatewayMockAdapter());
+
+        // Inicjalizacja przez zdarzenie "zamówienie gotowe do rozliczenia" (kontrakt 100 000 PLN).
         SettlementEventListener listener = new SettlementEventListener(settlements);
-        listener.on(new OrderReadyForSettlementEvent(UUID.randomUUID(), "ORD-1",
-                new BigDecimal("100000"), new BigDecimal("20000"), "PLN", Instant.now()));
-        System.out.println("[OK] Rozliczenie policzone (saldo 30000, SETTLED).");
+        listener.on(new OrderReadyForSettlementEvent(
+                UUID.randomUUID(), "ORD-1", new BigDecimal("100000"), "PLN", Instant.now()));
+
+        // Wpłata częściowa -> PARTIAL_PAYMENT.
+        settlements.processPayment(new ProcessPaymentCommand(
+                "ORD-1", "TX-1", new BigDecimal("20000"), "PLN", "GTW-1"));
+        // Dopłata do pełnej kwoty -> SETTLED + SettlementCompletedEvent.
+        settlements.processPayment(new ProcessPaymentCommand(
+                "ORD-1", "TX-2", new BigDecimal("80000"), "PLN", null));
+        System.out.println("[OK] Saldo ORD-1 rozliczone (status SETTLED).");
+
+        // --- UC-FIR-02: faktura końcowa ---
+        DocumentAppService docs = new DocumentAppService(
+                settlementRepo, new InMemoryDocumentRepository(),
+                new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
+                new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), bus,
+                new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
+
+        String invoiceId = docs.generateInvoice(new GenerateInvoiceCommand(
+                "ORD-1", "Jan Kowalski", "1234567890",
+                "Faktura koncowa ORD-1", "ksiegowy@salon.pl"));
+        System.out.println("[OK] Faktura wystawiona, id=" + invoiceId);
     }
 }

@@ -1,16 +1,15 @@
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import salon.billing.application.port.in.CalculateSettlementCommand;
-import salon.billing.application.port.in.CalculateSettlementUseCase;
-import salon.billing.application.port.out.SettlementRepository;
 import salon.billing.application.service.SettlementAppService;
-import salon.billing.domain.model.settlement.OrderSettlement;
-import salon.billing.domain.model.settlement.SettlementId;
-import salon.billing.domain.model.settlement.SettlementState;
-import salon.billing.domain.service.SettlementCalculationService;
+import salon.billing.domain.model.settlement.Settlement;
+import salon.billing.domain.model.settlement.SettlementFactory;
+import salon.billing.domain.model.settlement.SettlementStatus;
 import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
 import salon.billing.infrastructure.messaging.SettlementEventListener;
-import salon.billing.infrastructure.mock.ExternalIntegrationMockAdapter;
+import salon.billing.infrastructure.mock.InMemorySettlementRepository;
+import salon.billing.infrastructure.mock.InProcessEventPublisherAdapter;
+import salon.billing.infrastructure.mock.PaymentGatewayMockAdapter;
+import salon.shared.model.OrderId;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,85 +17,49 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SettlementEventListenerTest {
 
-    private static class RecordingUseCase implements CalculateSettlementUseCase {
-        private int callCount = 0;
-        private CalculateSettlementCommand lastCommand = null;
-
-        @Override
-        public void calculateSettlement(CalculateSettlementCommand command) {
-            this.callCount = this.callCount + 1;
-            this.lastCommand = command;
-        }
-    }
-
-    private static class CapturingSettlementRepository implements SettlementRepository {
-        private OrderSettlement lastSaved = null;
-
-        @Override
-        public void save(OrderSettlement settlement) {
-            this.lastSaved = settlement;
-        }
-
-        @Override
-        public Optional<OrderSettlement> findById(SettlementId id) {
-            return Optional.ofNullable(this.lastSaved);
-        }
-    }
+    private InMemorySettlementRepository repository;
+    private SettlementEventListener listener;
 
     private OrderReadyForSettlementEvent sampleEvent(UUID eventId) {
         return new OrderReadyForSettlementEvent(
-                eventId, "ORDER-1",
-                new BigDecimal("100000"), new BigDecimal("20000"),
-                "PLN", Instant.now());
+                eventId, "ORDER-1", new BigDecimal("100000"), "PLN", Instant.now());
+    }
+
+    private SettlementEventListener freshListener() {
+        this.repository = new InMemorySettlementRepository();
+        SettlementAppService appService = new SettlementAppService(
+                this.repository, new SettlementFactory(),
+                new InProcessEventPublisherAdapter(), new PaymentGatewayMockAdapter());
+        return new SettlementEventListener(appService);
     }
 
     @Test
-    @DisplayName("Event triggers the use case with correctly mapped data")
-    void firesUseCaseWithMappedData() {
-        RecordingUseCase useCase = new RecordingUseCase();
-        SettlementEventListener listener = new SettlementEventListener(useCase);
+    @DisplayName("Event initializes the settlement aggregate with mapped data")
+    void initializesSettlementWithMappedData() {
+        this.listener = freshListener();
 
-        listener.on(sampleEvent(UUID.randomUUID()));
+        this.listener.on(sampleEvent(UUID.randomUUID()));
 
-        assertEquals(1, useCase.callCount);
-        assertNotNull(useCase.lastCommand);
-        assertEquals("ORDER-1", useCase.lastCommand.orderId());
-        assertEquals("PLN", useCase.lastCommand.currency());
-        assertEquals(0, new BigDecimal("100000").compareTo(useCase.lastCommand.vehicleValue()));
-        assertEquals(0, new BigDecimal("20000").compareTo(useCase.lastCommand.totalDeposits()));
+        Optional<Settlement> saved = this.repository.findByOrderId(new OrderId("ORDER-1"));
+        assertTrue(saved.isPresent());
+        assertEquals(0, new BigDecimal("100000").compareTo(saved.get().getTotalAmount().amount()));
+        assertEquals("PLN", saved.get().getTotalAmount().currency());
+        assertEquals(SettlementStatus.OPEN, saved.get().getStatus());
     }
 
     @Test
     @DisplayName("Duplicate event (same eventId) is processed only once")
     void ignoresDuplicateEvent() {
-        RecordingUseCase useCase = new RecordingUseCase();
-        SettlementEventListener listener = new SettlementEventListener(useCase);
+        this.listener = freshListener();
 
         UUID eventId = UUID.randomUUID();
-        listener.on(sampleEvent(eventId));
-        listener.on(sampleEvent(eventId));
+        this.listener.on(sampleEvent(eventId));
+        this.listener.on(sampleEvent(eventId));
 
-        assertEquals(1, useCase.callCount);
-    }
-
-    @Test
-    @DisplayName("End-to-end: event drives UC-ROZ-03 and settles the order")
-    void endToEndSettlesOrder() {
-        CapturingSettlementRepository repository = new CapturingSettlementRepository();
-        SettlementAppService appService = new SettlementAppService(
-                repository,
-                new ExternalIntegrationMockAdapter(),
-                new SettlementCalculationService());
-        SettlementEventListener listener = new SettlementEventListener(appService);
-
-        listener.on(sampleEvent(UUID.randomUUID()));
-
-        assertNotNull(repository.lastSaved);
-        assertEquals(0, new BigDecimal("30000").compareTo(repository.lastSaved.getFinalBalance().amount()));
-        assertEquals(SettlementState.SETTLED, repository.lastSaved.getState());
+        assertEquals(1, this.repository.findAll().size());
     }
 }

@@ -1,6 +1,6 @@
 package integration.driving_adapetrs.cron_job_adapter.billing;
 
-import salon.billing.application.service.PaymentAppService;
+import salon.billing.application.service.SettlementAppService;
 
 /**
  * Adapter sterujący (driving) — zadanie cykliczne wysyłki przypomnień o niepełnych wpłatach.
@@ -11,19 +11,19 @@ import salon.billing.application.service.PaymentAppService;
  */
 public class PaymentReminderCronJobAdapter {
 
-    private final PaymentAppService paymentAppService;
+    private final SettlementAppService settlementAppService;
 
-    public PaymentReminderCronJobAdapter(PaymentAppService paymentAppService) {
-        if (paymentAppService == null) {
-            throw new IllegalArgumentException("paymentAppService must not be null.");
+    public PaymentReminderCronJobAdapter(SettlementAppService settlementAppService) {
+        if (settlementAppService == null) {
+            throw new IllegalArgumentException("settlementAppService must not be null.");
         }
-        this.paymentAppService = paymentAppService;
+        this.settlementAppService = settlementAppService;
     }
 
     // Wyzwalane przez harmonogram: rozeslij przypomnienia o zaległych/niepełnych wpłatach.
     public void sendRemindersJob() {
         try {
-            paymentAppService.processPaymentReminders();
+            settlementAppService.processPaymentReminders();
         } catch (Exception e) {
             // Połykamy i logujemy — inaczej wyjątek ubije wątek Spring Schedulera.
             System.err.println("[PaymentReminderCronJobAdapter] Wysyłka przypomnień nie powiodła się: "

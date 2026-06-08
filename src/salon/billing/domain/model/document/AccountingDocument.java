@@ -1,130 +1,176 @@
 package salon.billing.domain.model.document;
 
-import salon.billing.domain.event.InvoiceIssuedEvent;
+import salon.billing.domain.event.InvoiceCreatedEvent;
 import salon.shared.event.AbstractAggregateRoot;
 import salon.shared.model.Money;
+import salon.shared.model.OrderId;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Aggregate Root: dokument księgowy (faktura VAT / paragon).
+ * Aggregate Root: dokument księgowy (faktura / dokument zadatku) — UC-FIR-02.
+ *
+ * Oddzielony od agregatu Settlement, co pozwala na niezależne wersjonowanie dokumentów i unika
+ * blokad bazy podczas jednoczesnej rejestracji wpłaty i wystawiania faktury.
  *
  * Niezmienniki:
- *  - pozycje dodajemy WYŁĄCZNIE metodą addLineItem (kontrolowany cykl życia),
- *  - suma (totalAmount) jest liczona z pozycji, nie podawana z zewnątrz,
- *  - dokumentu w stanie ISSUED nie wolno już modyfikować (korekta = nowy agregat),
- *  - stanem steruje wyłącznie maszyna stanów (metody biznesowe).
- *
- * Zdarzenia domenowe: zdarzenie FakturaWystawiona powstaje DOKŁADNIE w momencie potwierdzenia
- * rejestracji w KSeF (confirmKsefRegistration) — czyli tylko na ścieżce faktycznego wystawienia.
+ *  - dokument powstaje wyłącznie przez statyczną fabrykę {@link #createInvoice},
+ *  - kwota (totalAmount) jest gotowym obiektem wartości wyliczonym poza agregatem
+ *    (InvoiceCalculationDomainService) — agregat jej nie przelicza,
+ *  - termin płatności (dueDate) wynika z polityki firmy: 7 dni dla osób fizycznych,
+ *    14 dni dla podmiotów gospodarczych (na podstawie BuyerDetails.isCorporate()),
+ *  - dokument w stanie ISSUED jest "zamrożony".
  */
 public class AccountingDocument extends AbstractAggregateRoot {
 
+    private static final int DUE_DAYS_INDIVIDUAL = 7;
+    private static final int DUE_DAYS_CORPORATE = 14;
+
     private final DocumentId id;
-    private final DocumentType type;
-    private final TaxDetails taxDetails;
-    private final List<DocumentLine> lines;
+    private final OrderId orderId;
+    private final String invoiceTitle;
+    private final BuyerDetails buyer;
+    private final SellerDetails seller;
+    private final Money totalAmount;
+    private final LocalDate issueDate;
+    private final LocalDate dueDate;
+    private final String authorizedIssuer;
+    private DocumentStatus status;
 
-    private Money totalAmount;     // null, dopóki nie dodamy pierwszej pozycji
-    private DocumentState state;
-    private String ksefReference;  // null, dopóki KSeF nie potwierdzi rejestracji
-
-    public AccountingDocument(DocumentId id, DocumentType type, TaxDetails taxDetails) {
-        if (id == null) {
-            throw new IllegalArgumentException("id must not be null.");
-        }
-        if (type == null) {
-            throw new IllegalArgumentException("type must not be null.");
-        }
-        if (taxDetails == null) {
-            throw new IllegalArgumentException("taxDetails must not be null.");
-        }
+    private AccountingDocument(DocumentId id,
+                              OrderId orderId,
+                              String invoiceTitle,
+                              BuyerDetails buyer,
+                              SellerDetails seller,
+                              Money totalAmount,
+                              LocalDate issueDate,
+                              LocalDate dueDate,
+                              String authorizedIssuer) {
         this.id = id;
-        this.type = type;
-        this.taxDetails = taxDetails;
-        this.lines = new ArrayList<>();
-        this.totalAmount = null;
-        this.state = DocumentState.DRAFT;
-        this.ksefReference = null;
+        this.orderId = orderId;
+        this.invoiceTitle = invoiceTitle;
+        this.buyer = buyer;
+        this.seller = seller;
+        this.totalAmount = totalAmount;
+        this.issueDate = issueDate;
+        this.dueDate = dueDate;
+        this.authorizedIssuer = authorizedIssuer;
+        this.status = DocumentStatus.DRAFT;
     }
 
-    // Dodanie pozycji. Po wystawieniu (ISSUED) dokument jest "zamrożony".
-    public void addLineItem(DocumentLine line) {
-        if (line == null) {
-            throw new IllegalArgumentException("line must not be null.");
+    /**
+     * Statyczna fabryka dokumentu. Wylicza termin płatności na podstawie typu nabywcy
+     * i rejestruje zdarzenie InvoiceCreated.
+     */
+    public static AccountingDocument createInvoice(OrderId orderId,
+                                                   BuyerDetails buyer,
+                                                   SellerDetails seller,
+                                                   Money totalAmount,
+                                                   String invoiceTitle,
+                                                   String authorizedIssuer) {
+        if (orderId == null) {
+            throw new IllegalArgumentException("orderId must not be null.");
         }
-        if (this.state != DocumentState.DRAFT) {
-            throw new IllegalStateException("Cannot modify document in " + this.state + " state.");
+        if (buyer == null) {
+            throw new IllegalArgumentException("buyer must not be null.");
         }
-        this.lines.add(line);
-        this.totalAmount = sumLines(this.lines);
+        if (seller == null) {
+            throw new IllegalArgumentException("seller must not be null.");
+        }
+        if (totalAmount == null) {
+            throw new IllegalArgumentException("totalAmount must not be null.");
+        }
+        if (invoiceTitle == null || invoiceTitle.isBlank()) {
+            throw new IllegalArgumentException("invoiceTitle must not be blank.");
+        }
+        if (authorizedIssuer == null || authorizedIssuer.isBlank()) {
+            throw new IllegalArgumentException("authorizedIssuer must not be blank.");
+        }
+
+        LocalDate issueDate = LocalDate.now();
+        LocalDate dueDate = issueDate.plusDays(
+                buyer.isCorporate() ? DUE_DAYS_CORPORATE : DUE_DAYS_INDIVIDUAL);
+
+        AccountingDocument document = new AccountingDocument(
+                DocumentId.generate(), orderId, invoiceTitle, buyer, seller,
+                totalAmount, issueDate, dueDate, authorizedIssuer);
+
+        document.registerEvent(new InvoiceCreatedEvent(
+                UUID.randomUUID(), document.id.value(), orderId.value(), Instant.now()));
+        return document;
     }
 
-    // Suma wartości pozycji — zwykła pętla for, bez Streamów.
-    private Money sumLines(List<DocumentLine> documentLines) {
-        Money total = null;
-        for (int i = 0; i < documentLines.size(); i++) {
-            Money lineCost = documentLines.get(i).getCost();
-            if (total == null) {
-                total = lineCost; // pierwsza pozycja nadaje walutę sumy
-            } else {
-                total = total.add(lineCost);
-            }
-        }
-        return total;
+    /**
+     * Generuje reprezentację PDF dokumentu. Tutaj zwracamy prostą reprezentację bajtową;
+     * faktyczne renderowanie deleguje warstwa aplikacji do PdfGeneratorPort.
+     */
+    public byte[] generatePdf() {
+        String content = "INVOICE " + this.id.value()
+                + " | title=" + this.invoiceTitle
+                + " | buyer=" + this.buyer.name()
+                + " | seller=" + this.seller.name()
+                + " | amount=" + this.totalAmount.amount() + " " + this.totalAmount.currency()
+                + " | issued=" + this.issueDate + " | due=" + this.dueDate
+                + " | issuer=" + this.authorizedIssuer;
+        return content.getBytes(StandardCharsets.UTF_8);
     }
 
-    // UC-ROZ-02, A1: brak odpowiedzi z KSeF -> dokument czeka na wysyłkę.
-    public void markAsKsefPending() {
-        if (this.state != DocumentState.DRAFT) {
-            throw new IllegalStateException(
-                    "Only a document in DRAFT state can be marked as PENDING_KSEF.");
-        }
-        this.state = DocumentState.PENDING_KSEF;
-    }
-
-    // UC-ROZ-02, krok 6: KSeF potwierdził rejestrację i zwrócił numer.
-    public void confirmKsefRegistration(String ksefReference) {
-        if (ksefReference == null || ksefReference.isBlank()) {
-            throw new IllegalArgumentException("KSeF reference must not be blank.");
-        }
-        if (this.state == DocumentState.ISSUED) {
+    // Przejście DRAFT -> ISSUED.
+    public void markAsIssued() {
+        if (this.status == DocumentStatus.ISSUED) {
             throw new IllegalStateException("Document is already issued.");
         }
-        this.ksefReference = ksefReference;
-        this.state = DocumentState.ISSUED;
-        registerEvent(new InvoiceIssuedEvent(
-                UUID.randomUUID(), this.id.value(), this.ksefReference, Instant.now()));
+        if (this.status == DocumentStatus.ERROR) {
+            throw new IllegalStateException("Cannot issue a document in ERROR state.");
+        }
+        this.status = DocumentStatus.ISSUED;
     }
 
-    public List<DocumentLine> getLines() {
-        return new ArrayList<>(this.lines); // kopia obronna przy odczycie
+    // Oznaczenie błędu przetwarzania (np. awaria generatora PDF / notyfikacji).
+    public void markAsError() {
+        this.status = DocumentStatus.ERROR;
     }
 
     public DocumentId getId() {
         return this.id;
     }
 
-    public DocumentType getType() {
-        return this.type;
+    public OrderId getOrderId() {
+        return this.orderId;
     }
 
-    public TaxDetails getTaxDetails() {
-        return this.taxDetails;
+    public String getInvoiceTitle() {
+        return this.invoiceTitle;
+    }
+
+    public BuyerDetails getBuyer() {
+        return this.buyer;
+    }
+
+    public SellerDetails getSeller() {
+        return this.seller;
     }
 
     public Money getTotalAmount() {
         return this.totalAmount;
     }
 
-    public DocumentState getState() {
-        return this.state;
+    public LocalDate getIssueDate() {
+        return this.issueDate;
     }
 
-    public String getKsefReference() {
-        return this.ksefReference;
+    public LocalDate getDueDate() {
+        return this.dueDate;
+    }
+
+    public String getAuthorizedIssuer() {
+        return this.authorizedIssuer;
+    }
+
+    public DocumentStatus getStatus() {
+        return this.status;
     }
 }

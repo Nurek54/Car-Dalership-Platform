@@ -1,29 +1,30 @@
 package salon.billing.infrastructure.messaging;
 
-import salon.billing.application.port.in.CalculateSettlementCommand;
-import salon.billing.application.port.in.CalculateSettlementUseCase;
+import salon.billing.application.service.SettlementAppService;
+import salon.shared.model.Money;
+import salon.shared.model.OrderId;
 
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Adapter WEJŚCIOWY (driving) sterowany zdarzeniem — odpala UC-ROZ-03.
+ * Adapter WEJŚCIOWY (driving) sterowany zdarzeniem — inicjalizuje rozliczenie (UC-FIR-03).
  *
- * Broker dostarcza zdarzenie, listener mapuje je na komendę i woła port wejściowy.
- * Domena/aplikacja nie wiedzą, że trigger przyszedł z kolejki (zależność do wewnątrz, 3.1).
- * Idempotencyjność (3.4.2): to Subskrybent pilnuje duplikatów po eventId.
+ * Broker dostarcza zdarzenie o złożeniu zamówienia, listener mapuje je i woła usługę aplikacji,
+ * która przez SettlementFactory powołuje agregat salda. Domena/aplikacja nie wiedzą, że trigger
+ * przyszedł z kolejki (zależność do wewnątrz). Idempotencyjność: Subskrybent pilnuje duplikatów.
  */
 public class SettlementEventListener {
 
-    private final CalculateSettlementUseCase calculateSettlement;
+    private final SettlementAppService settlementAppService;
     private final Set<UUID> processedEventIds = ConcurrentHashMap.newKeySet();
 
-    public SettlementEventListener(CalculateSettlementUseCase calculateSettlement) {
-        if (calculateSettlement == null) {
-            throw new IllegalArgumentException("calculateSettlement must not be null.");
+    public SettlementEventListener(SettlementAppService settlementAppService) {
+        if (settlementAppService == null) {
+            throw new IllegalArgumentException("settlementAppService must not be null.");
         }
-        this.calculateSettlement = calculateSettlement;
+        this.settlementAppService = settlementAppService;
     }
 
     public void on(OrderReadyForSettlementEvent event) {
@@ -35,11 +36,8 @@ public class SettlementEventListener {
             System.out.println("[SettlementEventListener] Duplicate event ignored: " + event.eventId());
             return;
         }
-        CalculateSettlementCommand command = new CalculateSettlementCommand(
-                event.orderId(),
-                event.vehicleValue(),
-                event.totalDeposits(),
-                event.currency());
-        this.calculateSettlement.calculateSettlement(command);
+        OrderId orderId = new OrderId(event.orderId());
+        Money contractValue = new Money(event.contractValue(), event.currency());
+        this.settlementAppService.initializeSettlement(orderId, contractValue);
     }
 }

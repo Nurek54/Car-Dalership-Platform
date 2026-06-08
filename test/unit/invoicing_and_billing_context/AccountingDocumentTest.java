@@ -2,66 +2,68 @@ package unit.invoicing_and_billing_context;
 
 import org.junit.jupiter.api.Test;
 import salon.billing.domain.model.document.AccountingDocument;
-import salon.billing.domain.model.document.DocumentId;
-import salon.billing.domain.model.document.DocumentLine;
-import salon.billing.domain.model.document.DocumentState;
-import salon.billing.domain.model.document.DocumentType;
-import salon.billing.domain.model.document.LineId;
-import salon.billing.domain.model.document.TaxDetails;
+import salon.billing.domain.model.document.BuyerDetails;
+import salon.billing.domain.model.document.DocumentStatus;
+import salon.billing.domain.model.document.SellerDetails;
 import salon.shared.model.Money;
+import salon.shared.model.OrderId;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.*;
 
 class AccountingDocumentTest {
 
+    private static final SellerDetails SELLER =
+            new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000");
+
     @Test
-    void shouldSuccessfullyAddDocumentLineWhenInDraftState() {
-        AccountingDocument document = new AccountingDocument(
-                new DocumentId("DOC-100"),
-                DocumentType.VAT_INVOICE,
-                new TaxDetails("Jan Kowalski", "1234567890"));
+    void shouldCreateInvoiceInDraftStateWithCorporateDueDate() {
+        AccountingDocument document = AccountingDocument.createInvoice(
+                new OrderId("ORD-123"),
+                new BuyerDetails("Firma XYZ", "9876543210"),
+                SELLER,
+                Money.of(new BigDecimal("100000.00"), "PLN"),
+                "Faktura koncowa ORD-123",
+                "ksiegowy@salon.pl");
 
-        DocumentLine newService = new DocumentLine(
-                new LineId(1L), "Wymiana filtrow", Money.of(new BigDecimal("300.00"), "PLN"));
-
-        document.addLineItem(newService);
-
-        assertThat(document.getLines()).contains(newService);
-        assertThat(document.getTotalAmount().getAmount()).isEqualByComparingTo("300.00");
+        assertThat(document.getStatus()).isEqualTo(DocumentStatus.DRAFT);
+        assertThat(document.getTotalAmount().getAmount()).isEqualByComparingTo("100000.00");
+        // Podmiot gospodarczy (NIP obecny) -> 14-dniowy termin płatności.
+        assertThat(document.getDueDate()).isEqualTo(document.getIssueDate().plusDays(14));
     }
 
     @Test
-    void shouldThrowExceptionWhenTryingToModifyIssuedDocument() {
-        AccountingDocument document = new AccountingDocument(
-                new DocumentId("DOC-101"),
-                DocumentType.VAT_INVOICE,
-                new TaxDetails("Firma XYZ", "9876543210"));
+    void shouldAssignShorterDueDateForIndividualBuyer() {
+        AccountingDocument document = AccountingDocument.createInvoice(
+                new OrderId("ORD-124"),
+                new BuyerDetails("Jan Kowalski", null), // brak NIP -> osoba fizyczna
+                SELLER,
+                Money.of(new BigDecimal("300.00"), "PLN"),
+                "Faktura ORD-124",
+                "ksiegowy@salon.pl");
 
-        document.markAsKsefPending();
-        document.confirmKsefRegistration("KSEF-REF-123456789");
-        assertThat(document.getState()).isEqualTo(DocumentState.ISSUED);
+        assertThat(document.getBuyer().isCorporate()).isFalse();
+        // Osoba fizyczna -> 7-dniowy termin płatności.
+        assertThat(document.getDueDate()).isEqualTo(LocalDate.now().plusDays(7));
+    }
 
-        DocumentLine lateService = new DocumentLine(
-                new LineId(2L), "Spozniona usluga", Money.of(new BigDecimal("150.00"), "PLN"));
+    @Test
+    void shouldTransitionToIssuedAndThenRejectReissue() {
+        AccountingDocument document = AccountingDocument.createInvoice(
+                new OrderId("ORD-125"),
+                new BuyerDetails("Firma XYZ", "9876543210"),
+                SELLER,
+                Money.of(new BigDecimal("500.00"), "PLN"),
+                "Faktura ORD-125",
+                "ksiegowy@salon.pl");
 
-        assertThatThrownBy(() -> document.addLineItem(lateService))
+        document.markAsIssued();
+        assertThat(document.getStatus()).isEqualTo(DocumentStatus.ISSUED);
+
+        assertThatThrownBy(document::markAsIssued)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Cannot modify document in ISSUED state");
-    }
-
-    @Test
-    void shouldTransitionStateCorrectlyDuringKsefRegistration() {
-        AccountingDocument document = new AccountingDocument(
-                new DocumentId("DOC-102"),
-                DocumentType.RECEIPT,
-                new TaxDetails("Osoba Fizyczna", null));
-
-        assertThat(document.getState()).isEqualTo(DocumentState.DRAFT);
-        document.markAsKsefPending();
-        assertThat(document.getState()).isEqualTo(DocumentState.PENDING_KSEF);
-        document.confirmKsefRegistration("KSEF-REF-999");
-        assertThat(document.getState()).isEqualTo(DocumentState.ISSUED);
+                .hasMessageContaining("already issued");
     }
 }

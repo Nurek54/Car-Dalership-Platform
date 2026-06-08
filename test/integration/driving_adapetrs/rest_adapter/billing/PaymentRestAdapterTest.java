@@ -6,7 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import salon.billing.application.service.PaymentAppService;
+import salon.billing.application.service.SettlementAppService;
 import salon.sales.domain.exceptions.OfferExpiredException;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -21,14 +21,15 @@ class PaymentRestAdapterTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private PaymentAppService paymentAppService;
+    private SettlementAppService settlementAppService;
 
-    // 1. HAPPY PATH: Zaksięgowanie poprawnej wpłaty
+    // 1. HAPPY PATH: Zaksięgowanie poprawnej wpłaty (UC-FIR-03)
     @Test
     void shouldReturn200OkWhenPaymentIsSuccessfullyRegistered() throws Exception {
         String validJson = """
             {
                 "orderId": "ORD-100",
+                "transactionId": "TX-1",
                 "amount": 5000.00,
                 "currency": "PLN"
             }
@@ -39,7 +40,7 @@ class PaymentRestAdapterTest {
                         .content(validJson))
                 .andExpect(status().isOk());
 
-        verify(paymentAppService, times(1)).registerPayment(any());
+        verify(settlementAppService, times(1)).processPayment(any());
     }
 
     // 2. WALIDACJA WEJŚCIA: Kwota ujemna (niedopuszczalne!)
@@ -48,6 +49,7 @@ class PaymentRestAdapterTest {
         String invalidJson = """
             {
                 "orderId": "ORD-100",
+                "transactionId": "TX-1",
                 "amount": -50.00,
                 "currency": "PLN"
             }
@@ -59,21 +61,22 @@ class PaymentRestAdapterTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.amount").value("Kwota musi być większa od zera"));
 
-        verify(paymentAppService, never()).registerPayment(any());
+        verify(settlementAppService, never()).processPayment(any());
     }
 
     // 3. BŁĄD BIZNESOWY: Wpłata do nieistniejącego zamówienia
     @Test
     void shouldReturn404NotFoundWhenOrderDoesNotExist() throws Exception {
-        String validJson = "{ \"orderId\": \"ORD-X\", \"amount\": 1000.00, \"currency\": \"PLN\" }";
+        String validJson =
+                "{ \"orderId\": \"ORD-X\", \"transactionId\": \"TX-1\", \"amount\": 1000.00, \"currency\": \"PLN\" }";
 
         doThrow(new OfferExpiredException("Nie znaleziono zamówienia ORD-X"))
-                .when(paymentAppService).registerPayment(any());
+                .when(settlementAppService).processPayment(any());
 
         mockMvc.perform(post("/api/billing/payments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validJson))
-                .andExpect(status().isNotFound()) // Kod 404
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Nie znaleziono zamówienia ORD-X"));
     }
 }

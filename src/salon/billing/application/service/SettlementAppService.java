@@ -1,81 +1,111 @@
 package salon.billing.application.service;
 
-import salon.billing.application.port.in.CalculateSettlementCommand;
-import salon.billing.application.port.in.CalculateSettlementUseCase;
-import salon.billing.application.port.out.ExternalIntegrationPort;
+import salon.billing.application.port.in.ProcessPaymentCommand;
+import salon.billing.application.port.in.ProcessPaymentUseCase;
+import salon.billing.application.port.out.PaymentGatewayPort;
 import salon.billing.application.port.out.SettlementRepository;
-import salon.billing.domain.model.settlement.OrderSettlement;
-import salon.billing.domain.model.settlement.SettlementId;
-import salon.billing.domain.service.SettlementCalculationService;
+import salon.billing.domain.model.settlement.Settlement;
+import salon.billing.domain.model.settlement.SettlementFactory;
+import salon.billing.domain.model.settlement.SettlementStatus;
+import salon.shared.application.EventPublisherPort;
+import salon.shared.event.DomainEvent;
 import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 
-import java.util.Optional;
+import java.util.List;
 
 /**
- * Realizuje UC-ROZ-03 (warstwa aplikacji — orkiestracja). Jedna waluta dla całego rozliczenia.
+ * Realizuje UC-FIR-03 (warstwa aplikacji — orkiestracja).
+ *
+ * Cienka usługa: pobiera/zapisuje agregat Settlement, woła na nim mutacje stanu i publikuje
+ * zdarzenia WYGENEROWANE PRZEZ AGREGAT. Cała matematyka salda i decyzja o statusie/zdarzeniu
+ * siedzą w agregacie — serwis nie zagląda do jego wewnętrznego stanu.
  */
-public class SettlementAppService implements CalculateSettlementUseCase {
+public class SettlementAppService implements ProcessPaymentUseCase {
 
     private final SettlementRepository settlementRepository;
-    private final ExternalIntegrationPort externalIntegration;
-    private final SettlementCalculationService calculationService;
+    private final SettlementFactory settlementFactory;
+    private final EventPublisherPort eventPublisher;
+    private final PaymentGatewayPort paymentGateway;
 
     public SettlementAppService(SettlementRepository settlementRepository,
-                                ExternalIntegrationPort externalIntegration,
-                                SettlementCalculationService calculationService) {
+                                SettlementFactory settlementFactory,
+                                EventPublisherPort eventPublisher,
+                                PaymentGatewayPort paymentGateway) {
         if (settlementRepository == null) {
             throw new IllegalArgumentException("settlementRepository must not be null.");
         }
-        if (externalIntegration == null) {
-            throw new IllegalArgumentException("externalIntegration must not be null.");
+        if (settlementFactory == null) {
+            throw new IllegalArgumentException("settlementFactory must not be null.");
         }
-        if (calculationService == null) {
-            throw new IllegalArgumentException("calculationService must not be null.");
+        if (eventPublisher == null) {
+            throw new IllegalArgumentException("eventPublisher must not be null.");
+        }
+        if (paymentGateway == null) {
+            throw new IllegalArgumentException("paymentGateway must not be null.");
         }
         this.settlementRepository = settlementRepository;
-        this.externalIntegration = externalIntegration;
-        this.calculationService = calculationService;
+        this.settlementFactory = settlementFactory;
+        this.eventPublisher = eventPublisher;
+        this.paymentGateway = paymentGateway;
+    }
+
+    /**
+     * UC-FIR-03, inicjalizacja: złożenie nowego zamówienia. Serwis deleguje budowę agregatu
+     * salda do fabryki i zapisuje go w repozytorium.
+     */
+    public void initializeSettlement(OrderId orderId, Money contractValue) {
+        Settlement settlement = this.settlementFactory.createForOrder(orderId, contractValue);
+        this.settlementRepository.save(settlement);
+        publishEvents(settlement);
     }
 
     @Override
-    // @Transactional w projekcie ze Springiem.
-    public void calculateSettlement(CalculateSettlementCommand command) {
+    // @Transactional w projekcie ze Springiem — wpłata + przeliczenie + zdarzenie w jednej transakcji.
+    public void processPayment(ProcessPaymentCommand command) {
         if (command == null) {
             throw new IllegalArgumentException("command must not be null.");
         }
 
-        // 1-3. Dane z zamówienia -> obiekty domenowe.
         OrderId orderId = new OrderId(command.orderId());
-        Money vehicleValue = new Money(command.vehicleValue(), command.currency());
-        Money totalDeposits = new Money(command.totalDeposits(), command.currency());
+        Settlement settlement = this.settlementRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No settlement for order " + command.orderId()));
 
-        // 4. Finansowanie z Modułu Finansowania (ACL).
-        Optional<Money> financing = externalIntegration.getApprovedFinancing(orderId);
-        if (financing.isEmpty()) {
-            // A2: brak potwierdzenia finansowania -> blokujemy rozliczenie i wydanie pojazdu.
-            throw new IllegalStateException(
-                    "No approved financing — settlement and vehicle handover are blocked.");
-        }
-        Money financingAmount = financing.get();
+        Money amount = new Money(command.amount(), command.currency());
+        settlement.registerPayment(command.transactionId(), amount);
 
-        // 5. Wartość odkupu pojazdu używanego.
-        Money tradeInValue = externalIntegration.getTradeInValue(orderId);
+        this.settlementRepository.save(settlement);
 
-        // 6. Budujemy agregat krok po kroku i liczymy saldo (przez serwis dziedzinowy).
-        OrderSettlement settlement = new OrderSettlement(SettlementId.generate(), orderId, vehicleValue);
-        settlement.applyDeposit(totalDeposits);
-        settlement.applyFinancing(financingAmount);
-        settlement.applyTradeIn(tradeInValue);
-        calculationService.process(settlement); // calculateBalance + checkForOverpayment
-
-        // 7. Rozgałęzienie według wyniku.
-        if (settlement.requiresCorrection()) {
-            // A1: nadpłata -> punkt rozszerzenia (dyspozycja zwrotu nadpłaty).
-        } else {
-            settlement.markAsSettled();
+        // Wpłata z bramki (webhook) — potwierdzamy ją do bramki.
+        if (command.gatewayTransactionId() != null && !command.gatewayTransactionId().isBlank()) {
+            this.paymentGateway.acknowledgePayment(command.gatewayTransactionId());
         }
 
-        settlementRepository.save(settlement);
+        publishEvents(settlement);
+    }
+
+    /**
+     * Cron (PaymentReminderCronJobAdapter): przypomnienia o niepełnych wpłatach.
+     * Skanujemy rozliczenia w stanie PARTIAL_PAYMENT — należność nie została jeszcze pokryta.
+     */
+    public void processPaymentReminders() {
+        List<Settlement> all = this.settlementRepository.findAll();
+        for (int i = 0; i < all.size(); i++) {
+            Settlement settlement = all.get(i);
+            if (settlement.getStatus() == SettlementStatus.PARTIAL_PAYMENT) {
+                System.out.println("[SettlementAppService] Reminder: order "
+                        + settlement.getOrderId().value()
+                        + " has an outstanding balance of "
+                        + settlement.getOutstandingBalance().amount() + " "
+                        + settlement.getOutstandingBalance().currency() + ".");
+            }
+        }
+    }
+
+    private void publishEvents(Settlement settlement) {
+        for (DomainEvent event : settlement.pullDomainEvents()) {
+            this.eventPublisher.publish(event);
+        }
     }
 }

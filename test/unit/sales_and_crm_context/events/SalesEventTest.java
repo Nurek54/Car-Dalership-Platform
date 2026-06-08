@@ -1,9 +1,6 @@
 package unit.sales_and_crm_context.events;
 
 import org.junit.jupiter.api.Test;
-import salon.billing.domain.event.DepositRegisteredEvent;
-import salon.billing.domain.model.payment.Payment;
-import salon.billing.domain.model.payment.PaymentId;
 import salon.sales.domain.event.OrderCancelledEvent;
 import salon.sales.domain.event.OrderPlacedEvent;
 import salon.sales.domain.event.VehicleHandedOverEvent;
@@ -65,26 +62,5 @@ class SalesEventTest {
         // Assert
         assertThat(order.getDomainEvents())
                 .hasAtLeastOneElementOfType(VehicleHandedOverEvent.class);
-    }
-
-    @Test
-    void shouldCategorizeAsDepositAndEmitEventWhenPaymentCoversRequiredAmount() {
-        // Arrange
-        Money requiredDeposit = Money.of(new BigDecimal("5000.00"), "PLN");
-        Payment payment = new Payment(
-                new PaymentId("PAY-001"),
-                new OrderId("ORD-123"),
-                Money.of(new BigDecimal("5000.00"), "PLN")
-        );
-
-        // Act
-        payment.categorizePayment(requiredDeposit);
-
-        // Assert. TESTOWANIE ZDARZEŃ (Events)
-        // Sprawdzamy, czy agregat poprawnie zapisał zdarzenie do swojego "notesu"
-        assertThat(payment.getDomainEvents())
-                .hasSize(1) // Czy wygenerowano dokładnie 1 zdarzenie?
-                .first()    // Pobierz pierwsze zdarzenie
-                .isInstanceOf(DepositRegisteredEvent.class); // Czy jest to odpowiednia klasa zdarzenia?
     }
 }

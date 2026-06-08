@@ -1,10 +1,19 @@
 package salon.bootstrap;
 
-import salon.billing.application.port.in.RegisterPaymentCommand;
-import salon.billing.application.service.PaymentAppService;
-import salon.billing.domain.service.PaymentClassificationService;
-import salon.billing.infrastructure.mock.InMemoryPaymentRepository;
+import salon.billing.application.port.in.GenerateAdvanceCommand;
+import salon.billing.application.service.DocumentAppService;
+import salon.billing.application.service.SettlementAppService;
+import salon.billing.domain.model.document.AccountingDocumentFactory;
+import salon.billing.domain.model.document.SellerDetails;
+import salon.billing.domain.model.settlement.SettlementFactory;
+import salon.billing.domain.service.InvoiceCalculationDomainService;
+import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
+import salon.billing.infrastructure.messaging.SettlementEventListener;
+import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
+import salon.billing.infrastructure.mock.InMemorySettlementRepository;
+import salon.billing.infrastructure.mock.NotificationMockAdapter;
 import salon.billing.infrastructure.mock.PaymentGatewayMockAdapter;
+import salon.billing.infrastructure.mock.PdfGeneratorMockAdapter;
 import salon.sales.application.service.OrderAppService;
 import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.model.order.Order;
@@ -19,14 +28,15 @@ import salon.shared.infrastructure.messaging.RecordEventSerializer;
 import salon.shared.model.OrderId;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Demo PRZEZ KOLEJKĘ (wymaga działającego RabbitMQ na localhost:5672).
  *
- * Przepływ między kontekstami (to jest sedno wymagania #1/#2):
- *   ROZLICZENIA: rejestracja zadatku -> publikacja DepositRegisteredEvent na RabbitMQ
- *      -> kolejka sales.inbox -> SPRZEDAŻ (SalesDepositListener) aktywuje zamówienie
- *      -> publikacja OrderActivatedEvent.
+ * Przepływ między kontekstami:
+ *   FAKTUROWANIE: generateAdvance (UC-FIR-01) -> publikacja AdvancePaymentRequestedEvent na RabbitMQ
+ *      -> kolejka sales.inbox -> SPRZEDAŻ (SalesDepositListener) aktywuje zamówienie.
  *
  * Najpierw odpal broker, np.:
  *   docker run -d --name salon-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management
@@ -37,7 +47,7 @@ public class MessagingDemo {
         try (RabbitMqConnection connection = new RabbitMqConnection()) {
             RecordEventSerializer serializer = new RecordEventSerializer();
 
-            // --- SPRZEDAŻ: przygotowujemy zamówienie czekające na zadatek + uruchamiamy konsumenta ---
+            // --- SPRZEDAŻ: zamówienie czekające na zadatek + konsument ---
             InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
             EventPublisherPort salesPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
             OrderAppService orderService = new OrderAppService(orderRepo, salesPublisher);
@@ -48,18 +58,30 @@ public class MessagingDemo {
 
             RabbitMqEventConsumer salesConsumer =
                     new RabbitMqEventConsumer(connection, RabbitMqConfig.SALES_QUEUE);
-            salesConsumer.register("DepositRegisteredEvent", new SalesDepositListener(orderService));
+            salesConsumer.register("AdvancePaymentRequestedEvent", new SalesDepositListener(orderService));
             salesConsumer.start();
 
-            // --- ROZLICZENIA: rejestrujemy zadatek -> publikacja na RabbitMQ ---
+            // --- FAKTUROWANIE I ROZLICZENIA ---
             EventPublisherPort billingPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
-            PaymentAppService payments = new PaymentAppService(
-                    new InMemoryPaymentRepository(), billingPublisher,
-                    new PaymentGatewayMockAdapter(), new PaymentClassificationService());
+            InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
 
-            System.out.println(">> Rejestruję zadatek 20000 PLN dla ORD-DEMO-1 ...");
-            payments.registerPayment(new RegisterPaymentCommand(
-                    "ORD-DEMO-1", new BigDecimal("20000"), "PLN", new BigDecimal("100000"), "TX-DEMO"));
+            SettlementAppService settlements = new SettlementAppService(
+                    settlementRepo, new SettlementFactory(), billingPublisher,
+                    new PaymentGatewayMockAdapter());
+
+            SettlementEventListener listener = new SettlementEventListener(settlements);
+            listener.on(new OrderReadyForSettlementEvent(
+                    UUID.randomUUID(), "ORD-DEMO-1", new BigDecimal("100000"), "PLN", Instant.now()));
+
+            DocumentAppService docs = new DocumentAppService(
+                    settlementRepo, new InMemoryDocumentRepository(),
+                    new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
+                    new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), billingPublisher,
+                    new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
+
+            System.out.println(">> generateAdvance(ORD-DEMO-1) -> publikacja AdvancePaymentRequestedEvent ...");
+            docs.generateAdvance(new GenerateAdvanceCommand(
+                    "ORD-DEMO-1", "Jan Kowalski", "1234567890", "ksiegowy@salon.pl"));
 
             // Dajemy konsumentowi chwilę na odebranie wiadomości z kolejki.
             Thread.sleep(1500);

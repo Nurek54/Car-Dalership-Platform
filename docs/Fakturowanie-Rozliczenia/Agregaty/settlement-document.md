@@ -30,9 +30,8 @@ direction TB
         SETTLED
     }
 
-    Settlement *-- "0..*" Payment : zawiera
-    Settlement *-- "1" SettlementStatus : state
-    Settlement *-- "1" Money : totalAmount
+    Settlement *-- "0..*" Payment
+    Settlement *-- "1" SettlementStatus
 
     %% ---------------------------------------------
     %% AGREGAT 2: ACCOUNTING DOCUMENT (FAKTURA)
@@ -74,13 +73,6 @@ direction TB
         ERROR
     }
 
-    class Money {
-        <<ValueObject>>
-        +BigDecimal amount
-        +String currency
-    }
-
-    AccountingDocument *-- "1" BuyerDetails : buyer
-    AccountingDocument *-- "1" SellerDetails : seller
-    AccountingDocument *-- "1" Money : totalAmount
-    AccountingDocument *-- "1" DocumentStatus : state
+    AccountingDocument *-- "1" BuyerDetails
+    AccountingDocument *-- "1" SellerDetails
+    AccountingDocument *-- "1" DocumentStatus

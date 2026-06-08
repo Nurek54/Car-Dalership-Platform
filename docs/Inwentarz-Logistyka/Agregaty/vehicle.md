@@ -1,7 +1,7 @@
 classDiagram
 direction TB
 
-    class InventoryVehicle {
+    class Vehicle {
         <<AggregateRoot>>
         -VinNumber vin
         -VehicleRole role
@@ -40,8 +40,8 @@ direction TB
         PRE_SALE_DEFECT
     }
 
-    InventoryVehicle *-- "1" VinNumber
-    InventoryVehicle *-- "0..1" OrderId : referencja rozłączna
-    InventoryVehicle *-- "1" VehicleRole
-    InventoryVehicle *-- "1" VehicleState
-    InventoryVehicle *-- "1" PdiStatus
+    Vehicle *-- "1" VinNumber
+    Vehicle *-- "0..1" OrderId : referencja rozłączna
+    Vehicle *-- "1" VehicleRole
+    Vehicle *-- "1" VehicleState
+    Vehicle *-- "1" PdiStatus

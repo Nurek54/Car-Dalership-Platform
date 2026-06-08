@@ -1,0 +1,51 @@
+\textbf{UC-INW-01: Przyjęcie Samochodu na plac}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-INW-01 \\
+\hline
+
+Nazwa & Przyjęcie Samochodu na plac \\
+\hline
+
+Opis &
+Systemowa rejestracja fizycznego auta zjeżdżającego z lawety na plac salonu samochodowego na podstawie numeru VIN i wprowadzenie go do stanu magazynowego. \\
+\hline
+
+Aktor główny & Logistyk / Magazynier \\
+\hline
+
+Aktorzy pomocniczy & System ERP Importera/Producenta  \\
+\hline
+
+Warunki wstępne &
+W systemie istnieje awizowana dostawa z fabryki lub utworzony wirtualny "Slot Produkcyjny" przypisany do salonu samochodowego. \\
+\hline
+
+Warunki końcowe &
+Samochód zostaje wprowadzony na stan magazynowy, otrzymuje unikalny znacznik czasu wejścia, a jego status pozwala na rozpoczęcie procesów warsztatowych. \\
+\hline
+
+Scenariusz główny &
+\begin{enumerate}
+\item Logistyk skanuje kod kreskowy lub wprowadza ręcznie numer VIN samochodu zjeżdżającego z lawety.
+\item System odpytuje warstwę ACL integrującą się z bazą Importera/Producenta w celu weryfikacji tożsamości pojazdu.
+\item System przypisuje auto do cyfrowego inwentarza salonu samochodowego i zmienia status logistyczny na \textit{Na placu (Stock)}.
+\item System uruchamia wewnętrzny zegar metryki ile czasu auto spędziło na placu dla tego konkretnego samochodu.
+\item System emituje zdarzenie \textit{PojazdPrzyjetyNaPlac},
+\end{enumerate}
+\\
+\hline
+
+Scenariusze alternatywne &
+\begin{itemize}
+\item [A1] Uszkodzenie w transporcie: Pracownik zauważa szkodę. System nadaje flagę \textit{Szkoda logistyczna}, wstrzymuje przyjęcie i generuje protokół szkody do ubezpieczyciela.
+\item [A2] Obcy numer VIN: System odrzuca VIN jako nieprzypisany do salonu, wyrzuca błąd i blokuje przyjęcie.
+\end{itemize}
+\\
+\hline
+
+\end{longtable}

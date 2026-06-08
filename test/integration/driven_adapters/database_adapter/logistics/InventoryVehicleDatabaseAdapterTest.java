@@ -4,11 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import salon.logistics.domain.model.InventoryVehicle;
-import salon.logistics.domain.model.VinNumber;
-import salon.logistics.domain.model.VehicleRole;
-import salon.logistics.domain.model.VehicleState;
-import salon.logistics.domain.model.PdiStatus;
+import salon.logistics.domain.model.vehicle.InventoryVehicle;
+import salon.logistics.domain.model.vehicle.VinNumber;
+import salon.logistics.domain.model.vehicle.VehicleRole;
+import salon.logistics.domain.model.vehicle.VehicleState;
+import salon.logistics.domain.model.vehicle.PdiStatus;
 import salon.shared.model.OrderId;
 
 import java.util.Optional;

@@ -4,12 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import salon.financing.domain.model.FinancingApplication;
-import salon.financing.domain.model.ApplicationId;
-import salon.financing.domain.model.ApplicationStatus;
-import salon.financing.domain.model.FinancingDecision;
-import salon.financing.domain.model.DecisionStatus;
-import salon.shared.model.CustomerId;
+import salon.financing.domain.model.financing.FinancingApplication;
+import salon.financing.domain.model.financing.ApplicationId;
+import salon.financing.domain.model.financing.ApplicationState;
+import salon.financing.domain.model.financing.FinancingDecision;
+import salon.financing.domain.model.financing.DecisionStatus;
+import salon.financing.domain.model.financing.CustomerId;
 import salon.shared.model.OrderId;
 import salon.shared.model.Money;
 
@@ -58,7 +58,7 @@ class FinancingApplicationDatabaseAdapterTest {
         FinancingApplication app = retrievedApp.get();
 
         assertThat(app.getId()).isEqualTo(appId);
-        assertThat(app.getStatus()).isEqualTo(ApplicationStatus.APPROVED);
+        assertThat(app.getStatus()).isEqualTo(ApplicationState.APPROVED);
 
         // KLUCZOWE WERYFIKACJE: Czy adapter poprawnie odtworzył klasę Money i obiekt Decyzji?
         assertThat(app.getRequestedAmount().getAmount()).isEqualByComparingTo("120000.00");

@@ -4,11 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import salon.catalog.domain.model.VehicleSpecification;
-import salon.catalog.domain.model.SpecificationId;
-import salon.catalog.domain.model.CatalogId;
-import salon.catalog.domain.model.OptionCode;
-import salon.catalog.domain.model.SpecificationState;
+import salon.catalog.domain.model.specification.VehicleSpecification;
+import salon.catalog.domain.model.specification.SpecificationId;
+import salon.catalog.domain.model.catalog.CatalogId;
+import salon.catalog.domain.model.catalog.OptionCode;
+import salon.catalog.domain.model.specification.SpecificationState;
 
 import java.util.List;
 import java.util.Optional;

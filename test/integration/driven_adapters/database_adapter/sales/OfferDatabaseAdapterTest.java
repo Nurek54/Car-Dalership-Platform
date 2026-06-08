@@ -4,12 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import salon.sales.domain.model.Offer;
-import salon.sales.domain.model.OfferId;
-import salon.sales.domain.model.OfferState;
-import salon.sales.domain.model.Discount;
-import salon.sales.domain.model.DiscountLimit;
-import salon.shared.model.CustomerId;
+import salon.sales.domain.model.offer.Offer;
+import salon.sales.domain.model.offer.OfferId;
+import salon.sales.domain.model.offer.OfferState;
+import salon.sales.domain.model.offer.Discount;
+import salon.sales.domain.model.offer.DiscountLimit;
+import salon.sales.domain.model.offer.CustomerId;
 import salon.shared.model.SpecificationId;
 import salon.shared.model.Money;
 

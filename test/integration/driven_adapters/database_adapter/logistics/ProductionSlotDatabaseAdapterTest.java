@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import salon.inventory.domain.model.ProductionSlot;
-import salon.inventory.domain.model.SlotId;
-import salon.inventory.domain.model.SlotState;
+import salon.logistics.domain.model.slot.ProductionSlot;
+import salon.logistics.domain.model.slot.SlotId;
+import salon.logistics.domain.model.slot.SlotState;
 import salon.shared.model.OrderId;
 
 import java.time.LocalDate;

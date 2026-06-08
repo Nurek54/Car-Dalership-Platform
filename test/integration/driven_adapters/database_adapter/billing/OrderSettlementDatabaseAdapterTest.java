@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import salon.billing.domain.model.OrderSettlement;
-import salon.billing.domain.model.SettlementId;
-import salon.billing.domain.model.SettlementState;
+import salon.billing.domain.model.settlement.OrderSettlement;
+import salon.billing.domain.model.settlement.SettlementId;
+import salon.billing.domain.model.settlement.SettlementState;
 import salon.shared.model.OrderId;
 import salon.shared.model.Money;
 

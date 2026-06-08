@@ -4,11 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import salon.sales.domain.model.Order;
-import salon.sales.domain.model.OrderId;
-import salon.sales.domain.model.OrderState;
-import salon.sales.domain.model.CancellationReason;
-import salon.shared.model.OfferId;
+import salon.sales.domain.model.order.Order;
+import salon.shared.model.OrderId;
+import salon.sales.domain.model.order.OrderState;
+import salon.sales.domain.model.order.CancellationReason;
+import salon.sales.domain.model.offer.OfferId;
 import salon.shared.model.Money;
 
 import java.math.BigDecimal;

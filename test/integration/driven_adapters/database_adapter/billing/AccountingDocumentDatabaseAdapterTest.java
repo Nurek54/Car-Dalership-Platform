@@ -4,12 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import salon.billing.domain.model.AccountingDocument;
-import salon.billing.domain.model.DocumentId;
-import salon.billing.domain.model.DocumentType;
-import salon.billing.domain.model.DocumentState;
-import salon.billing.domain.model.TaxDetails;
-import salon.billing.domain.model.DocumentLine;
+import salon.billing.domain.model.document.AccountingDocument;
+import salon.billing.domain.model.document.DocumentId;
+import salon.billing.domain.model.document.DocumentType;
+import salon.billing.domain.model.document.DocumentState;
+import salon.billing.domain.model.document.TaxDetails;
+import salon.billing.domain.model.document.DocumentLine;
 import salon.shared.model.Money;
 
 import java.math.BigDecimal;

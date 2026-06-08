@@ -73,6 +73,12 @@ direction TB
         ERROR
     }
 
+    class orderId {
+        <<ValueObject>>
+    }
+
     AccountingDocument *-- "1" BuyerDetails
     AccountingDocument *-- "1" SellerDetails
     AccountingDocument *-- "1" DocumentStatus
+    Settlement *-- "1" orderId
+    AccountingDocument *-- "1" orderId

@@ -18,7 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Aggregate Root: konfiguracja pojazdu budowana przez klienta/Handlowca (UC-KAT-01).
+ * Aggregate Root: konfiguracja pojazdu budowana przez klienta/Handlowca (UC-KON-01).
  *
  * Reguła kluczowa (Walidacja Technologiczna, Fail-fast): przy KAŻDYM dodaniu opcji sprawdzamy
  * reguły cennika. Jeśli nowa opcja wyklucza się z już wybraną -> RuleViolationException od ręki.
@@ -114,7 +114,7 @@ public class VehicleSpecification extends AbstractAggregateRoot {
         }
     }
 
-    // UC-KAT-01: zamknięcie konfiguracji. Wymagamy co najmniej jednej wybranej opcji.
+    // UC-KON-01: zamknięcie konfiguracji. Wymagamy co najmniej jednej wybranej opcji.
     // Po skompletowaniu agregat ogłasza światu, że specyfikacja jest gotowa do sprzedaży
     // (zdarzenie, na które czeka Kontekst Sprzedaży).
     public void finalizeSpecification() {

@@ -3,21 +3,24 @@ package salon.catalog.application.service;
 import salon.catalog.application.port.in.UpdateCatalogUseCase;
 import salon.catalog.application.port.out.CatalogRepository;
 import salon.catalog.application.port.out.ImporterApiPort;
+import salon.catalog.domain.event.CatalogUpdateFailedEvent;
 import salon.catalog.domain.model.catalog.CatalogId;
 import salon.catalog.domain.model.catalog.CatalogOption;
 import salon.catalog.domain.model.catalog.ProductCatalog;
 import salon.shared.application.EventPublisherPort;
 import salon.shared.event.DomainEvent;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
- * Realizuje wydanie nowej wersji cennika (WF-KAT): ściągamy opcje od Importera (ACL),
- * tworzymy NOWY aktywny cennik i ARCHIWIZUJEMY poprzedni (niezmienność starych wersji).
+ * Realizuje automatyczną aktualizację cennika i katalogu (UC-KON-02): ściągamy opcje od Importera
+ * (ACL), tworzymy NOWY aktywny cennik i ARCHIWIZUJEMY poprzedni (niezmienność starych wersji).
  *
- * Publikacja nowego aktywnego cennika emituje CatalogVersionPublishedEvent — serwis
- * ściąga zdarzenia z agregatu (pull) i przekazuje je portowi publikacji.
+ * Sukces zapisu wieńczy zdarzenie CatalogUpdated. Błąd translacji/walidacji pakietu (scenariusz A1)
+ * przerywa aktualizację i emituje techniczne zdarzenie CatalogUpdateFailed.
  */
 public class CatalogAppService implements UpdateCatalogUseCase {
 
@@ -44,7 +47,20 @@ public class CatalogAppService implements UpdateCatalogUseCase {
 
     @Override
     public CatalogId publishNewCatalogVersion(String modelYear, String previousCatalogId) {
-        // 1. Archiwizujemy poprzedni cennik (jeśli istnieje).
+        // 1. ACL: pobranie, translacja i walidacja pakietu od Importera (UC-KON-02, kroki 2-3).
+        List<CatalogOption> options;
+        try {
+            options = importerApi.fetchCurrentOptions(modelYear);
+            validateImportedPackage(options);
+        } catch (RuntimeException ex) {
+            // A1: błąd translacji/walidacji -> odrzucamy pakiet i emitujemy zdarzenie techniczne.
+            eventPublisher.publish(new CatalogUpdateFailedEvent(
+                    UUID.randomUUID(), modelYear, ex.getMessage(), Instant.now()));
+            throw new IllegalStateException(
+                    "Catalog update failed for modelYear " + modelYear + ": " + ex.getMessage(), ex);
+        }
+
+        // 2. Archiwizujemy poprzedni cennik (jeśli istnieje) — niemutowalność starych wersji.
         if (previousCatalogId != null && !previousCatalogId.isBlank()) {
             Optional<ProductCatalog> previous = catalogRepository.findById(new CatalogId(previousCatalogId));
             if (previous.isPresent()) {
@@ -54,17 +70,23 @@ public class CatalogAppService implements UpdateCatalogUseCase {
             }
         }
 
-        // 2. Tworzymy nowy aktywny cennik i wypełniamy opcjami od Importera.
+        // 3. Tworzymy nowy aktywny cennik (podbita wersja) i wypełniamy opcjami od Importera.
         ProductCatalog newCatalog = ProductCatalog.createActive(modelYear);
-        List<CatalogOption> options = importerApi.fetchCurrentOptions(modelYear);
         for (int i = 0; i < options.size(); i++) {
             newCatalog.addOption(options.get(i));
         }
         catalogRepository.save(newCatalog);
 
-        // 3. Publikujemy zdarzenia domenowe (m.in. CatalogVersionPublishedEvent).
+        // 4. Propagacja zmian: emisja zdarzenia CatalogUpdated (CatalogUpdatedEvent).
         publishEventsOf(newCatalog);
         return newCatalog.getCatalogId();
+    }
+
+    // Walidacja logiczna pakietu (UC-KON-02 krok 3): pusty pakiet/brak cen traktujemy jako błąd.
+    private void validateImportedPackage(List<CatalogOption> options) {
+        if (options == null || options.isEmpty()) {
+            throw new IllegalArgumentException("Pakiet katalogowy jest pusty (brak opcji/cen).");
+        }
     }
 
     private void publishEventsOf(ProductCatalog catalog) {

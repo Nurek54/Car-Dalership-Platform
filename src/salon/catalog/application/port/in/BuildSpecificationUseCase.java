@@ -3,7 +3,7 @@ package salon.catalog.application.port.in;
 import salon.shared.model.SpecificationId;
 
 /**
- * Port wejściowy dla UC-KAT-01 (konfiguracja pojazdu).
+ * Port wejściowy dla UC-KON-01 (konfiguracja pojazdu).
  */
 public interface BuildSpecificationUseCase {
     SpecificationId startSpecification(String catalogId);

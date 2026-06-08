@@ -6,7 +6,7 @@ import java.util.List;
 
 /**
  * Port wyjściowy (ACL): pobranie aktualnej oferty/cennika od Importera (system zewnętrzny).
- * Wykorzystywany przy wydaniu nowej wersji cennika (WF-KAT).
+ * Wykorzystywany przy automatycznej aktualizacji cennika (UC-KON-02).
  */
 public interface ImporterApiPort {
     List<CatalogOption> fetchCurrentOptions(String modelYear);

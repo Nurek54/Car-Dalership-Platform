@@ -1,6 +1,6 @@
 import org.junit.jupiter.api.Test;
 import salon.catalog.domain.model.catalog.*;
-import salon.catalog.domain.event.CatalogVersionPublishedEvent;
+import salon.catalog.domain.event.CatalogUpdatedEvent;
 import salon.catalog.domain.event.SpecificationCompletedEvent;
 import salon.catalog.domain.model.specification.SpecificationState;
 import salon.catalog.domain.model.specification.VehicleSpecification;
@@ -12,17 +12,17 @@ import static org.assertj.core.api.Assertions.*;
 class CatalogAndConfiguratorEventTest {
 
     @Test
-    void shouldEmitCatalogVersionPublishedEventWhenNewCatalogIsActivated() {
+    void shouldEmitCatalogUpdatedEventWhenNewCatalogIsActivated() {
         // Arrange & Act
-        // Opublikowanie nowego aktywnego cennika (WF-KAT) rozsyła informację w świat.
+        // Zapis nowej aktywnej wersji cennika (UC-KON-02) rozsyła informację w świat.
         ProductCatalog catalog = ProductCatalog.createActive("2026");
 
         // Assert
         assertThat(catalog.getState()).isEqualTo(CatalogState.ACTIVE);
 
-        // Sprawdzamy, czy agregat "zanotował" zdarzenie o publikacji nowego cennika
+        // Sprawdzamy, czy agregat "zanotował" zdarzenie CatalogUpdated o nowej wersji cennika
         assertThat(catalog.getDomainEvents())
-                .hasAtLeastOneElementOfType(CatalogVersionPublishedEvent.class);
+                .hasAtLeastOneElementOfType(CatalogUpdatedEvent.class);
     }
 
     @Test
@@ -38,7 +38,7 @@ class CatalogAndConfiguratorEventTest {
         );
         specification.addOption(new OptionCode("ENGINE_2.0"), catalog);
 
-        // Act - Klient zatwierdza ostatecznie konfigurację (UC-KAT-01)
+        // Act - Klient zatwierdza ostatecznie konfigurację (UC-KON-01)
         specification.finalizeSpecification();
 
         // Assert

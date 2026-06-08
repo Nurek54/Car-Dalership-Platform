@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Realizuje UC-KAT-01 (orkiestracja). Zgodnie z diagramem architektury serwis aplikacyjny zależy od
+ * Realizuje UC-KON-01 (orkiestracja). Zgodnie z diagramem architektury serwis aplikacyjny zależy od
  * SpecificationRepository, RuleValidationDomainService i EventPublisherPort. To serwis dziedzinowy
  * (RuleValidationDomainService) czyta cennik z CatalogRepository — aplikacja pozostaje cienka.
  */
@@ -60,6 +60,8 @@ public class SpecificationAppService implements BuildSpecificationUseCase {
     @Override
     public void finalizeSpecification(String specificationId) {
         VehicleSpecification specification = loadSpecification(specificationId);
+        // Reguła finalizacji (UC-KON-01): serwis dziedzinowy ocenia kompletność (REQUIRES) wg cennika.
+        ruleValidation.assertComplete(specification);
         specification.finalizeSpecification();
         specificationRepository.save(specification);
         publishEventsOf(specification);

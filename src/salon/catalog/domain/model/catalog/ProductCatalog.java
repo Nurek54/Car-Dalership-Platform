@@ -1,6 +1,6 @@
 package salon.catalog.domain.model.catalog;
 
-import salon.catalog.domain.event.CatalogVersionPublishedEvent;
+import salon.catalog.domain.event.CatalogUpdatedEvent;
 import salon.shared.event.AbstractAggregateRoot;
 
 import java.time.Instant;
@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Aggregate Root: cennik produktowy (UC-KAT). Trzyma opcje wyposażenia i reguły zależności.
+ * Aggregate Root: cennik produktowy (UC-KON-02). Trzyma opcje wyposażenia i reguły zależności.
  *
  * Cykl życia: ACTIVE -> ARCHIVED. Po archiwizacji cennik jest "zamrożony" —
  * nie dodajemy do niego opcji ani reguł.
@@ -46,14 +46,14 @@ public class ProductCatalog extends AbstractAggregateRoot {
     }
 
     /**
-     * Fabryka: nowy, aktywny cennik dla danego rocznika (publikacja nowej wersji, WF-KAT).
-     * Opublikowanie aktywnego cennika rozsyła w świat informację o nowej wersji —
+     * Fabryka: nowy, aktywny cennik dla danego rocznika (publikacja nowej wersji, UC-KON-02).
+     * Zapis nowej aktywnej wersji rozsyła w świat zdarzenie CatalogUpdated —
      * nasłuchuje m.in. Kontekst Sprzedaży, by unieważnić oferty oparte o starsze cenniki.
      */
     public static ProductCatalog createActive(String modelYear) {
         ProductCatalog catalog =
                 new ProductCatalog(CatalogId.generate(), new ModelYear(modelYear), 1, CatalogState.ACTIVE);
-        catalog.registerEvent(new CatalogVersionPublishedEvent(
+        catalog.registerEvent(new CatalogUpdatedEvent(
                 UUID.randomUUID(), catalog.id.value(), catalog.modelYear.value(), Instant.now()));
         return catalog;
     }
@@ -78,7 +78,7 @@ public class ProductCatalog extends AbstractAggregateRoot {
         this.rules.add(rule);
     }
 
-    // WF-KAT: wydanie nowej wersji archiwizuje starą.
+    // UC-KON-02: wydanie nowej wersji archiwizuje starą.
     public void archive() {
         this.state = CatalogState.ARCHIVED;
     }

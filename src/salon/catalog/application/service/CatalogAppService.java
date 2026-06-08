@@ -5,6 +5,7 @@ import salon.catalog.application.port.out.CatalogRepository;
 import salon.catalog.application.port.out.ImporterApiPort;
 import salon.catalog.domain.model.catalog.CatalogId;
 import salon.catalog.domain.model.catalog.CatalogOption;
+import salon.catalog.domain.model.catalog.CatalogState;
 import salon.catalog.domain.model.catalog.ProductCatalog;
 
 import java.util.List;
@@ -50,5 +51,19 @@ public class CatalogAppService implements UpdateCatalogUseCase {
         }
         catalogRepository.save(newCatalog);
         return newCatalog.getCatalogId();
+    }
+
+    /**
+     * Cron (CatalogActivationCronJobAdapter, UC-KAT-02): aktywuje cenniki zaplanowane (SCHEDULED).
+     */
+    public void activatePendingCatalogs() {
+        List<ProductCatalog> all = catalogRepository.findAll();
+        for (int i = 0; i < all.size(); i++) {
+            ProductCatalog catalog = all.get(i);
+            if (catalog.getState() == CatalogState.SCHEDULED) {
+                catalog.activate();
+                catalogRepository.save(catalog);
+            }
+        }
     }
 }

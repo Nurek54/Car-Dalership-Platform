@@ -5,12 +5,15 @@ import salon.billing.application.port.in.RegisterPaymentUseCase;
 import salon.billing.application.port.out.PaymentGatewayPort;
 import salon.billing.application.port.out.PaymentRepository;
 import salon.billing.domain.model.payment.Payment;
+import salon.billing.domain.model.payment.PaymentCategory;
 import salon.billing.domain.model.payment.PaymentId;
 import salon.billing.domain.service.PaymentClassificationService;
 import salon.shared.application.EventPublisherPort;
 import salon.shared.event.DomainEvent;
 import salon.shared.model.Money;
 import salon.shared.model.OrderId;
+
+import java.util.List;
 
 /**
  * Realizuje UC-ROZ-01. TYLKO orkiestracja: pobiera/zapisuje agregaty, woła metody biznesowe,
@@ -47,7 +50,6 @@ public class PaymentAppService implements RegisterPaymentUseCase {
     }
 
     @Override
-    // @Transactional w projekcie ze Springiem.
     public void registerPayment(RegisterPaymentCommand command) {
         if (command == null) {
             throw new IllegalArgumentException("command must not be null.");
@@ -76,6 +78,25 @@ public class PaymentAppService implements RegisterPaymentUseCase {
         // 6. Publikacja zdarzeń wygenerowanych przez agregat — bez zaglądania w jego stan.
         for (DomainEvent event : payment.pullDomainEvents()) {
             eventPublisher.publish(event);
+        }
+    }
+
+    /**
+     * Cron (PaymentReminderCronJobAdapter): przypomnienia o niepełnych wpłatach.
+     *
+     * UWAGA: model billing nie ma dziś rejestru zamówień z terminami płatności, więc skanujemy
+     * wpłaty i przypominamy tam, gdzie wpłacono jedynie ZALICZKĘ (ADVANCE) — zadatek nie pokrył
+     * wymaganego progu. Docelowo: oprzeć o read-model zamówień/rat.
+     */
+    public void processPaymentReminders() {
+        List<Payment> all = paymentRepository.findAll();
+        for (int i = 0; i < all.size(); i++) {
+            Payment payment = all.get(i);
+            if (payment.getCategory() == PaymentCategory.ADVANCE) {
+                System.out.println("[PaymentAppService] Reminder: order "
+                        + payment.getOrderId().value()
+                        + " has only a partial payment (ADVANCE).");
+            }
         }
     }
 }

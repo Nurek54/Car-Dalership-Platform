@@ -1,6 +1,13 @@
 package unit.financing_and_insurance_context;
 
 import org.junit.jupiter.api.Test;
+import salon.financing.domain.model.insurance.InsurancePolicy;
+import salon.financing.domain.model.insurance.PolicyId;
+import salon.financing.domain.model.insurance.PolicyState;
+import salon.financing.domain.model.insurance.PolicyType;
+import salon.financing.domain.model.insurance.VinNumber;
+import salon.shared.model.Money;
+
 import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.*;
 

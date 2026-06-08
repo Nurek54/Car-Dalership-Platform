@@ -5,7 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import salon.billing.application.PaymentAppService;
+import salon.billing.application.service.PaymentAppService;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.*;

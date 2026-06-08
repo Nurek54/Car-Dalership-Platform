@@ -4,7 +4,9 @@ import salon.billing.application.port.out.PaymentRepository;
 import salon.billing.domain.model.payment.Payment;
 import salon.billing.domain.model.payment.PaymentId;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -21,5 +23,10 @@ public class InMemoryPaymentRepository implements PaymentRepository {
     @Override
     public Optional<Payment> findById(PaymentId id) {
         return Optional.ofNullable(this.store.get(id));
+    }
+
+    @Override
+    public List<Payment> findAll() {
+        return new ArrayList<>(this.store.values());
     }
 }

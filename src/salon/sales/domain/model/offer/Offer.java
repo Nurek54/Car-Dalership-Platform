@@ -110,6 +110,18 @@ public class Offer {
         this.state = OfferState.CONVERTED;
     }
 
+    /**
+     * Wygaśnięcie/unieważnienie oferty.
+     * Używane przez Cron wygasłych ofert (UC-SPR-01 A2) oraz przy publikacji nowej wersji cennika.
+     * Oferta już CONVERTED nie może wygasnąć; dla pozostałych stanów operacja jest idempotentna.
+     */
+    public void expire() {
+        if (this.state == OfferState.CONVERTED) {
+            throw new IllegalStateException("A converted offer cannot expire.");
+        }
+        this.state = OfferState.EXPIRED;
+    }
+
     private void recomputeFinalPrice() {
         if (this.basePrice == null || this.appliedDiscount == null) {
             return;

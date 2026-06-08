@@ -4,7 +4,9 @@ import salon.catalog.application.port.out.CatalogRepository;
 import salon.catalog.domain.model.catalog.CatalogId;
 import salon.catalog.domain.model.catalog.ProductCatalog;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,5 +22,10 @@ public class InMemoryCatalogRepository implements CatalogRepository {
     @Override
     public Optional<ProductCatalog> findById(CatalogId id) {
         return Optional.ofNullable(this.store.get(id));
+    }
+
+    @Override
+    public List<ProductCatalog> findAll() {
+        return new ArrayList<>(this.store.values());
     }
 }

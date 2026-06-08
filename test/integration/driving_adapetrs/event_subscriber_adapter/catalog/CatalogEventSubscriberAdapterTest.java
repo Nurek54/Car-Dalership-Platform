@@ -5,8 +5,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import salon.sales.application.OfferAppService;
-import salon.shared.events.CatalogVersionPublishedEvent;
+import salon.sales.application.service.OfferAppService;
+import salon.shared.event.CatalogVersionPublishedEvent;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

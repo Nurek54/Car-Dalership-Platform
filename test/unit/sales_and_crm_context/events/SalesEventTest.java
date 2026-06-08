@@ -1,6 +1,12 @@
 package unit.sales_and_crm_context.events;
 
 import org.junit.jupiter.api.Test;
+import salon.billing.domain.event.DepositRegisteredEvent;
+import salon.billing.domain.model.payment.Payment;
+import salon.billing.domain.model.payment.PaymentId;
+import salon.sales.domain.event.OrderCancelledEvent;
+import salon.sales.domain.event.OrderPlacedEvent;
+import salon.sales.domain.event.VehicleHandedOverEvent;
 import salon.sales.domain.model.offer.CustomerId;
 import salon.sales.domain.model.offer.Offer;
 import salon.sales.domain.model.offer.OfferId;
@@ -11,6 +17,7 @@ import salon.shared.model.OrderId;
 import salon.shared.model.SpecificationId;
 
 import java.math.BigDecimal;
+import static org.assertj.core.api.Assertions.*;
 
 class SalesEventTest {
 

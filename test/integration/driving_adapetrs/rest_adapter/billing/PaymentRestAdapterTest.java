@@ -6,8 +6,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import salon.billing.application.PaymentAppService;
-import salon.billing.domain.exceptions.OrderNotFoundException;
+import salon.billing.application.service.PaymentAppService;
+import salon.sales.domain.exceptions.OfferExpiredException;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -67,7 +67,7 @@ class PaymentRestAdapterTest {
     void shouldReturn404NotFoundWhenOrderDoesNotExist() throws Exception {
         String validJson = "{ \"orderId\": \"ORD-X\", \"amount\": 1000.00, \"currency\": \"PLN\" }";
 
-        doThrow(new OrderNotFoundException("Nie znaleziono zamówienia ORD-X"))
+        doThrow(new OfferExpiredException("Nie znaleziono zamówienia ORD-X"))
                 .when(paymentAppService).registerPayment(any());
 
         mockMvc.perform(post("/api/billing/payments")

@@ -50,7 +50,6 @@ public class PaymentAppService implements RegisterPaymentUseCase {
     }
 
     @Override
-    // @Transactional w projekcie ze Springiem.
     public void registerPayment(RegisterPaymentCommand command) {
         if (command == null) {
             throw new IllegalArgumentException("command must not be null.");

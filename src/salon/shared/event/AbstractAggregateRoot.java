@@ -33,4 +33,14 @@ public abstract class AbstractAggregateRoot {
         this.domainEvents.clear();
         return Collections.unmodifiableList(copy);
     }
+
+    /**
+     * Podgląd zarejestrowanych zdarzeń BEZ czyszczenia listy.
+     * W odróżnieniu od pullDomainEvents() nie "konsumuje" zdarzeń — służy testom jednostkowym,
+     * które asercją sprawdzają, jakie zdarzenia agregat wyemitował (getDomainEvents()).
+     * Zwracamy niemodyfikowalną kopię obronną, więc test nie naruszy wewnętrznej listy.
+     */
+    public List<DomainEvent> getDomainEvents() {
+        return Collections.unmodifiableList(new ArrayList<>(this.domainEvents));
+    }
 }

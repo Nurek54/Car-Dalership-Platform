@@ -6,7 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.logistics.application.InventoryAppService;
-import salon.shared.events.OrderPlacedEvent;
+import salon.sales.domain.event.OrderActivatedEvent;
 
 import java.util.List;
 
@@ -29,7 +29,7 @@ class SalesEventSubscriberAdapterTest {
     @Test
     void shouldAllocateVehicleWhenValidOrderPlacedEventIsReceived() {
         // Arrange
-        OrderPlacedEvent validEvent = new OrderPlacedEvent(
+        OrderActivatedEvent validEvent = new OrderActivatedEvent(
                 "EVT-1001",
                 "ORD-999",
                 List.of("PAINT_BLACK", "ENGINE_2.0")
@@ -47,7 +47,7 @@ class SalesEventSubscriberAdapterTest {
     @Test
     void shouldRejectEventWhenOrderIdIsMissing() {
         // Arrange
-        OrderPlacedEvent invalidEvent = new OrderPlacedEvent(
+        OrderActivatedEvent invalidEvent = new OrderActivatedEvent(
                 "EVT-1002",
                 null, // Zgubione ID zamówienia!
                 List.of("PAINT_BLACK")
@@ -66,7 +66,7 @@ class SalesEventSubscriberAdapterTest {
     @Test
     void shouldBubbleUpExceptionWhenDatabaseIsDown() {
         // Arrange
-        OrderPlacedEvent validEvent = new OrderPlacedEvent(
+        OrderActivatedEvent validEvent = new OrderActivatedEvent(
                 "EVT-1003", "ORD-777", List.of("WINTER_PACK")
         );
 

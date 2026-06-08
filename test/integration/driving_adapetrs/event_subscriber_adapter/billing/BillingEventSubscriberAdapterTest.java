@@ -5,8 +5,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import salon.sales.application.OrderAppService;
-import salon.shared.events.DepositRegisteredEvent;
+import salon.sales.application.service.OrderAppService;
+import salon.billing.domain.event.DepositRegisteredEvent;
 
 import java.math.BigDecimal;
 

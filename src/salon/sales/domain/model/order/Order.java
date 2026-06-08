@@ -3,6 +3,9 @@ package salon.sales.domain.model.order;
 import salon.sales.domain.event.DepositRefundOrderedEvent;
 import salon.sales.domain.event.DepositRetainedAsIncomeEvent;
 import salon.sales.domain.event.OrderActivatedEvent;
+import salon.sales.domain.event.OrderCancelledEvent;
+import salon.sales.domain.event.OrderPlacedEvent;
+import salon.sales.domain.event.VehicleHandedOverEvent;
 import salon.sales.domain.model.offer.Offer;
 import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.model.offer.OfferState;
@@ -70,6 +73,9 @@ public class Order extends AbstractAggregateRoot {
         }
         this.signatureRef = signatureRef;
         this.state = OrderState.PENDING_PAYMENT;
+        // Po podpisie zamówienie jest formalnie złożone — ogłaszamy to światu (UC-SPR-02).
+        registerEvent(new OrderPlacedEvent(
+                UUID.randomUUID(), this.id.value(), Instant.now()));
     }
 
     // UC-SPR-02, krok 5: zadatek zaksięgowany (sygnał z Rozliczeń) -> uruchamiamy realizację.
@@ -102,6 +108,11 @@ public class Order extends AbstractAggregateRoot {
         this.cancellationReason = reason;
         this.state = OrderState.CANCELLED;
 
+        // Najpierw ogłaszamy sam fakt anulowania (wraz z powodem) — to zdarzenie nadrzędne (UC-SPR-03).
+        registerEvent(new OrderCancelledEvent(
+                UUID.randomUUID(), this.id.value(), reason.name(), Instant.now()));
+
+        // Następnie zdarzenie-polecenie dla Rozliczeń: jak potraktować zadatek.
         if (reason == CancellationReason.CLIENT_FAULT) {
             registerEvent(new DepositRetainedAsIncomeEvent(
                     UUID.randomUUID(), this.id.value(), Instant.now()));
@@ -109,6 +120,23 @@ public class Order extends AbstractAggregateRoot {
             registerEvent(new DepositRefundOrderedEvent(
                     UUID.randomUUID(), this.id.value(), Instant.now()));
         }
+    }
+
+    /**
+     * UC-SPR-08: wydanie pojazdu klientowi — finalny krok zamówienia.
+     * Zamknięcie zamówienia (COMPLETED) i ogłoszenie zdarzenia o wydaniu auta,
+     * którego nasłuchują Rozliczenia (domknięcie salda) oraz obsługa posprzedażowa.
+     */
+    public void completeHandover() {
+        if (this.state == OrderState.CANCELLED) {
+            throw new IllegalStateException("A cancelled order cannot be handed over.");
+        }
+        if (this.state == OrderState.COMPLETED) {
+            throw new IllegalStateException("Order is already completed.");
+        }
+        this.state = OrderState.COMPLETED;
+        registerEvent(new VehicleHandedOverEvent(
+                UUID.randomUUID(), this.id.value(), Instant.now()));
     }
 
     public OrderId getId() {

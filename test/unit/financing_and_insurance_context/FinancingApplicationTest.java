@@ -1,6 +1,12 @@
 package unit.financing_and_insurance_context;
 
 import org.junit.jupiter.api.Test;
+import salon.financing.domain.model.financing.ApplicationId;
+import salon.financing.domain.model.financing.ApplicationState;
+import salon.financing.domain.model.financing.CustomerId;
+import salon.financing.domain.model.financing.DecisionStatus;
+import salon.financing.domain.model.financing.FinancingApplication;
+import salon.financing.domain.model.financing.FinancingDecision;
 import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 

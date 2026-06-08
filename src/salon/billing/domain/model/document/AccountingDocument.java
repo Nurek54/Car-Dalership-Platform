@@ -41,14 +41,14 @@ public class AccountingDocument extends AbstractAggregateRoot {
     private DocumentStatus status;
 
     private AccountingDocument(DocumentId id,
-                              OrderId orderId,
-                              String invoiceTitle,
-                              BuyerDetails buyer,
-                              SellerDetails seller,
-                              Money totalAmount,
-                              LocalDate issueDate,
-                              LocalDate dueDate,
-                              String authorizedIssuer) {
+                               OrderId orderId,
+                               String invoiceTitle,
+                               BuyerDetails buyer,
+                               SellerDetails seller,
+                               Money totalAmount,
+                               LocalDate issueDate,
+                               LocalDate dueDate,
+                               String authorizedIssuer) {
         this.id = id;
         this.orderId = orderId;
         this.invoiceTitle = invoiceTitle;
@@ -61,10 +61,6 @@ public class AccountingDocument extends AbstractAggregateRoot {
         this.status = DocumentStatus.DRAFT;
     }
 
-    /**
-     * Statyczna fabryka dokumentu. Wylicza termin płatności na podstawie typu nabywcy
-     * i rejestruje zdarzenie InvoiceCreated.
-     */
     public static AccountingDocument createInvoice(OrderId orderId,
                                                    BuyerDetails buyer,
                                                    SellerDetails seller,
@@ -103,22 +99,6 @@ public class AccountingDocument extends AbstractAggregateRoot {
         return document;
     }
 
-    /**
-     * Generuje reprezentację PDF dokumentu. Tutaj zwracamy prostą reprezentację bajtową;
-     * faktyczne renderowanie deleguje warstwa aplikacji do PdfGeneratorPort.
-     */
-    public byte[] generatePdf() {
-        String content = "INVOICE " + this.id.value()
-                + " | title=" + this.invoiceTitle
-                + " | buyer=" + this.buyer.name()
-                + " | seller=" + this.seller.name()
-                + " | amount=" + this.totalAmount.amount() + " " + this.totalAmount.currency()
-                + " | issued=" + this.issueDate + " | due=" + this.dueDate
-                + " | issuer=" + this.authorizedIssuer;
-        return content.getBytes(StandardCharsets.UTF_8);
-    }
-
-    // Przejście DRAFT -> ISSUED.
     public void markAsIssued() {
         if (this.status == DocumentStatus.ISSUED) {
             throw new IllegalStateException("Document is already issued.");
@@ -129,7 +109,6 @@ public class AccountingDocument extends AbstractAggregateRoot {
         this.status = DocumentStatus.ISSUED;
     }
 
-    // Oznaczenie błędu przetwarzania (np. awaria generatora PDF / notyfikacji).
     public void markAsError() {
         this.status = DocumentStatus.ERROR;
     }

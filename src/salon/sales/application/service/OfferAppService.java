@@ -71,7 +71,7 @@ public class OfferAppService implements CreateOfferUseCase {
     }
 
     /**
-     * Reakcja na CatalogVersionPublishedEvent: nowa wersja cennika unieważnia otwarte oferty
+     * Reakcja na CatalogUpdated (CatalogUpdatedEvent): nowa wersja cennika unieważnia otwarte oferty
      * zbudowane na poprzednich cenach.
      *
      * UWAGA: agregat Offer nie przechowuje dziś CatalogId, więc konserwatywnie unieważniamy

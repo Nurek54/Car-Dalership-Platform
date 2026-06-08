@@ -3,7 +3,7 @@ package salon.catalog.application.port.in;
 import salon.catalog.domain.model.catalog.CatalogId;
 
 /**
- * Port wejściowy dla wydania nowej wersji cennika (WF-KAT):
+ * Port wejściowy dla automatycznej aktualizacji cennika i katalogu (UC-KON-02):
  * tworzymy nowy aktywny cennik i archiwizujemy poprzedni.
  */
 public interface UpdateCatalogUseCase {

@@ -1,6 +1,6 @@
 package salon.catalog.domain.model.catalog;
 
-import salon.catalog.domain.event.CatalogVersionPublishedEvent;
+import salon.catalog.domain.event.CatalogUpdatedEvent;
 import salon.shared.event.AbstractAggregateRoot;
 
 import java.time.Instant;
@@ -10,9 +10,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Aggregate Root: cennik produktowy (UC-KAT). Trzyma opcje wyposażenia i reguły zależności.
+ * Aggregate Root: cennik produktowy (UC-KON-02). Trzyma opcje wyposażenia i reguły zależności.
  *
- * Cykl życia: SCHEDULED -> ACTIVE -> ARCHIVED. Po archiwizacji cennik jest "zamrożony" —
+ * Cykl życia: ACTIVE -> ARCHIVED. Po archiwizacji cennik jest "zamrożony" —
  * nie dodajemy do niego opcji ani reguł.
  */
 public class ProductCatalog extends AbstractAggregateRoot {
@@ -46,22 +46,16 @@ public class ProductCatalog extends AbstractAggregateRoot {
     }
 
     /**
-     * Konstruktor skrócony (id + rocznik): tworzy cennik ZAPLANOWANY (SCHEDULED) w wersji 1.
-     * Wygodny tam, gdzie chcemy najpierw zbudować cennik, a dopiero potem go aktywować
-     * (activate() ogłasza wtedy publikację nowej wersji).
+     * Fabryka: nowy, aktywny cennik dla danego rocznika (publikacja nowej wersji, UC-KON-02).
+     * Zapis nowej aktywnej wersji rozsyła w świat zdarzenie CatalogUpdated —
+     * nasłuchuje m.in. Kontekst Sprzedaży, by unieważnić oferty oparte o starsze cenniki.
      */
-    public ProductCatalog(CatalogId id, ModelYear modelYear) {
-        this(id, modelYear, 1, CatalogState.SCHEDULED);
-    }
-
-    // Fabryka: nowy, aktywny cennik dla danego rocznika.
     public static ProductCatalog createActive(String modelYear) {
-        return new ProductCatalog(CatalogId.generate(), new ModelYear(modelYear), 1, CatalogState.ACTIVE);
-    }
-
-    // Fabryka: cennik zaplanowany (wejdzie w życie później) — aktywowany przez Cron.
-    public static ProductCatalog createScheduled(String modelYear) {
-        return new ProductCatalog(CatalogId.generate(), new ModelYear(modelYear), 1, CatalogState.SCHEDULED);
+        ProductCatalog catalog =
+                new ProductCatalog(CatalogId.generate(), new ModelYear(modelYear), 1, CatalogState.ACTIVE);
+        catalog.registerEvent(new CatalogUpdatedEvent(
+                UUID.randomUUID(), catalog.id.value(), catalog.modelYear.value(), Instant.now()));
+        return catalog;
     }
 
     public void addOption(CatalogOption option) {
@@ -84,18 +78,7 @@ public class ProductCatalog extends AbstractAggregateRoot {
         this.rules.add(rule);
     }
 
-    // Cron (CatalogActivationCronJobAdapter, UC-KAT-02): zaplanowany cennik staje się aktywny.
-    // Uruchomienie cennika rozsyła w świat informację o publikacji nowej wersji.
-    public void activate() {
-        if (this.state != CatalogState.SCHEDULED) {
-            throw new IllegalStateException("Only a SCHEDULED catalog can be activated, was: " + this.state);
-        }
-        this.state = CatalogState.ACTIVE;
-        registerEvent(new CatalogVersionPublishedEvent(
-                UUID.randomUUID(), this.id.value(), this.modelYear.value(), Instant.now()));
-    }
-
-    // WF-KAT: wydanie nowej wersji archiwizuje starą.
+    // UC-KON-02: wydanie nowej wersji archiwizuje starą.
     public void archive() {
         this.state = CatalogState.ARCHIVED;
     }

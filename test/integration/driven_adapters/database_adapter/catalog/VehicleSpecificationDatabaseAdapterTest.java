@@ -7,8 +7,11 @@ import org.springframework.context.annotation.Import;
 import salon.catalog.domain.model.specification.VehicleSpecification;
 import salon.catalog.domain.model.specification.SpecificationId;
 import salon.catalog.domain.model.catalog.CatalogId;
+import salon.catalog.domain.model.catalog.CatalogOption;
 import salon.catalog.domain.model.catalog.OptionCode;
+import salon.catalog.domain.model.catalog.ProductCatalog;
 import salon.catalog.domain.model.specification.SpecificationState;
+import salon.shared.model.Money;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,11 +33,16 @@ class VehicleSpecificationDatabaseAdapterTest {
         CatalogId catalogId = new CatalogId("CAT-2026-V1");
         VehicleSpecification specification = new VehicleSpecification(specId, catalogId);
 
-        // Dodajemy opcje wyposażenia (np. silnik i lakier)
-        specification.addOption(new OptionCode("ENGINE_2.0"));
-        specification.addOption(new OptionCode("PAINT_METALLIC_BLACK"));
+        // Cennik z dostępnymi opcjami — agregat waliduje obecność opcji w cenniku przy dodawaniu.
+        ProductCatalog catalog = ProductCatalog.createActive("2026");
+        catalog.addOption(new CatalogOption(new OptionCode("ENGINE_2.0"), Money.of(15000, "PLN")));
+        catalog.addOption(new CatalogOption(new OptionCode("PAINT_METALLIC_BLACK"), Money.of(3000, "PLN")));
 
-        // Zmieniamy stan na gotowy do sprzedaży
+        // Dodajemy opcje wyposażenia (np. silnik i lakier)
+        specification.addOption(new OptionCode("ENGINE_2.0"), catalog);
+        specification.addOption(new OptionCode("PAINT_METALLIC_BLACK"), catalog);
+
+        // Zmieniamy stan na finalny (gotowy do sprzedaży)
         specification.finalizeSpecification();
 
         // Act - Zapis w bazie
@@ -50,7 +58,7 @@ class VehicleSpecificationDatabaseAdapterTest {
         VehicleSpecification spec = retrievedSpec.get();
         assertThat(spec.getId()).isEqualTo(specId);
         assertThat(spec.getCatalogId()).isEqualTo(catalogId);
-        assertThat(spec.getState()).isEqualTo(SpecificationState.READY_FOR_SALES);
+        assertThat(spec.getState()).isEqualTo(SpecificationState.FINAL);
 
         // KLUCZOWE WERYFIKACJE MAPOWANIA: Czy baza poprawnie zapisała i odtworzyła listę opcji?
         assertThat(spec.getSelectedOptions())

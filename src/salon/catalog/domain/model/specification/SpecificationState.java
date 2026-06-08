@@ -1,6 +1,7 @@
 package salon.catalog.domain.model.specification;
 
 public enum SpecificationState {
-    DRAFT,            // w trakcie konfiguracji
-    READY_FOR_SALES   // skompletowana, gotowa do oferty
+    DRAFT,         // utworzona, brak wybranych opcji
+    IN_PROGRESS,   // w trakcie konfiguracji (wybrano co najmniej jedną opcję)
+    FINAL          // skompletowana, gotowa do oferty
 }

@@ -25,12 +25,14 @@ import java.util.UUID;
  *
  * Cennik przekazujemy jako argument (addOption(code, catalog)) — agregat sam nie sięga do bazy
  * (to robi warstwa aplikacji/serwis dziedzinowy), dzięki czemu domena pozostaje czysta.
+ *
+ * Cykl życia: DRAFT -> IN_PROGRESS (po pierwszej opcji) -> FINAL (po skompletowaniu).
  */
 public class VehicleSpecification extends AbstractAggregateRoot {
 
     private final SpecificationId id;
     private final CatalogId catalogId;
-    private final List<OptionCode> selectedOptions;
+    private final List<OptionCode> optionsPicked;
     private Money totalPrice;            // null, dopóki nie wybierzemy pierwszej płatnej opcji
     private SpecificationState state;
 
@@ -43,7 +45,7 @@ public class VehicleSpecification extends AbstractAggregateRoot {
         }
         this.id = id;
         this.catalogId = catalogId;
-        this.selectedOptions = new ArrayList<>();
+        this.optionsPicked = new ArrayList<>();
         this.totalPrice = null;
         this.state = SpecificationState.DRAFT;
     }
@@ -55,7 +57,7 @@ public class VehicleSpecification extends AbstractAggregateRoot {
         if (catalog == null) {
             throw new IllegalArgumentException("catalog must not be null.");
         }
-        if (this.state != SpecificationState.DRAFT) {
+        if (this.state == SpecificationState.FINAL) {
             throw new IllegalStateException("Cannot modify a finalized specification.");
         }
 
@@ -69,7 +71,8 @@ public class VehicleSpecification extends AbstractAggregateRoot {
         // Fail-fast: sprawdzamy reguły wykluczeń względem już wybranych opcji.
         checkExclusions(newOption, catalog);
 
-        this.selectedOptions.add(newOption);
+        this.optionsPicked.add(newOption);
+        this.state = SpecificationState.IN_PROGRESS;
         Money price = catalogOption.get().basePrice();
         if (this.totalPrice == null) {
             this.totalPrice = price;
@@ -86,33 +89,15 @@ public class VehicleSpecification extends AbstractAggregateRoot {
                 continue;
             }
             // Reguła: newOption wyklucza coś, co już mamy wybrane.
-            if (rule.sourceCode().equals(newOption) && this.selectedOptions.contains(rule.targetCode())) {
+            if (rule.sourceCode().equals(newOption) && this.optionsPicked.contains(rule.targetCode())) {
                 throw new RuleViolationException("Option " + newOption.value()
                         + " is mutually exclusive with " + rule.targetCode().value());
             }
             // Reguła odwrotna: już wybrana opcja wyklucza newOption.
-            if (rule.targetCode().equals(newOption) && this.selectedOptions.contains(rule.sourceCode())) {
+            if (rule.targetCode().equals(newOption) && this.optionsPicked.contains(rule.sourceCode())) {
                 throw new RuleViolationException("Option " + newOption.value()
                         + " is mutually exclusive with " + rule.sourceCode().value());
             }
-        }
-    }
-
-    /**
-     * Ścieżka koordynowana przez RuleValidationDomainService (UC-KAT-01).
-     * Serwis dziedzinowy pobrał już cennik z repozytorium i sam zweryfikował reguły, dlatego agregat
-     * jedynie rejestruje wybraną opcję — bez ponownej kontroli obecności opcji w cenniku.
-     * Dublety pomijamy (idempotencja); stan musi pozostać roboczy (DRAFT).
-     */
-    public void applyValidatedOption(OptionCode option) {
-        if (option == null) {
-            throw new IllegalArgumentException("option must not be null.");
-        }
-        if (this.state != SpecificationState.DRAFT) {
-            throw new IllegalStateException("Cannot modify a finalized specification.");
-        }
-        if (!this.selectedOptions.contains(option)) {
-            this.selectedOptions.add(option);
         }
     }
 
@@ -120,26 +105,29 @@ public class VehicleSpecification extends AbstractAggregateRoot {
         if (option == null) {
             throw new IllegalArgumentException("option must not be null.");
         }
-        if (this.state != SpecificationState.DRAFT) {
+        if (this.state == SpecificationState.FINAL) {
             throw new IllegalStateException("Cannot modify a finalized specification.");
         }
-        this.selectedOptions.remove(option);
+        this.optionsPicked.remove(option);
+        if (this.optionsPicked.isEmpty()) {
+            this.state = SpecificationState.DRAFT;
+        }
     }
 
     // UC-KAT-01: zamknięcie konfiguracji. Wymagamy co najmniej jednej wybranej opcji.
     // Po skompletowaniu agregat ogłasza światu, że specyfikacja jest gotowa do sprzedaży
     // (zdarzenie, na które czeka Kontekst Sprzedaży).
     public void finalizeSpecification() {
-        if (this.selectedOptions.isEmpty()) {
+        if (this.optionsPicked.isEmpty()) {
             throw new IllegalStateException("Specification must have at least one option to be finalized.");
         }
-        this.state = SpecificationState.READY_FOR_SALES;
+        this.state = SpecificationState.FINAL;
         registerEvent(new SpecificationCompletedEvent(
                 UUID.randomUUID(), this.id.value(), this.catalogId.value(), Instant.now()));
     }
 
     public List<OptionCode> getSelectedOptions() {
-        return new ArrayList<>(this.selectedOptions); // kopia obronna
+        return new ArrayList<>(this.optionsPicked); // kopia obronna
     }
 
     public SpecificationId getId() {

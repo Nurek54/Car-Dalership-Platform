@@ -65,6 +65,6 @@ class VehicleSpecificationTest {
 
         specification.finalizeSpecification();
 
-        assertThat(specification.getState()).isEqualTo(SpecificationState.READY_FOR_SALES);
+        assertThat(specification.getState()).isEqualTo(SpecificationState.FINAL);
     }
 }

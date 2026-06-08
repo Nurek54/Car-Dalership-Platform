@@ -26,10 +26,8 @@ class ProductCatalogDatabaseAdapterTest {
         // Arrange - Tworzymy czysty obiekt dziedziny
         CatalogId catalogId = new CatalogId("CAT-2026-V1");
         ModelYear year = new ModelYear("2026");
-        ProductCatalog catalog = new ProductCatalog(catalogId, year);
-
-        // Aktywujemy cennik, co zmienia jego stan wewnętrzny
-        catalog.activate();
+        // Aktywny cennik w wersji 1 (cykl życia: ACTIVE -> ARCHIVED).
+        ProductCatalog catalog = new ProductCatalog(catalogId, year, 1, CatalogState.ACTIVE);
 
         // Act - Adapter mapuje obiekt na encję JPA i zapisuje w bazie H2
         adapter.save(catalog);

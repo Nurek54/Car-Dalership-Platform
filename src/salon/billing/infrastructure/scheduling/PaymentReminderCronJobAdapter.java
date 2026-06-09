@@ -1,4 +1,4 @@
-package integration.driving_adapetrs.cron_job_adapter.billing;
+package salon.billing.infrastructure.scheduling;
 
 import salon.billing.application.service.SettlementAppService;
 

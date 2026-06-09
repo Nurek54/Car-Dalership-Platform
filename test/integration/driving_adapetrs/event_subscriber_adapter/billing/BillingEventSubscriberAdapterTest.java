@@ -1,5 +1,7 @@
 package integration.driving_adapetrs.event_subscriber_adapter.billing;
 
+import salon.sales.infrastructure.messaging.BillingEventSubscriberAdapter;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

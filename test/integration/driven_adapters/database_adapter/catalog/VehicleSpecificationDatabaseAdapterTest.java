@@ -1,11 +1,15 @@
 package integration.driven_adapters.database_adapter.catalog;
 
+import salon.catalog.infrastructure.persistence.VehicleSpecificationDatabaseAdapter;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.context.annotation.Import;
 import salon.catalog.domain.model.specification.VehicleSpecification;
-import salon.catalog.domain.model.specification.SpecificationId;
+import salon.shared.model.SpecificationId;
 import salon.catalog.domain.model.catalog.CatalogId;
 import salon.catalog.domain.model.catalog.CatalogOption;
 import salon.catalog.domain.model.catalog.OptionCode;
@@ -18,6 +22,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@EntityScan("salon")
+@EnableJpaRepositories("salon")
 @DataJpaTest
 @Import(VehicleSpecificationDatabaseAdapter.class)
 class VehicleSpecificationDatabaseAdapterTest {

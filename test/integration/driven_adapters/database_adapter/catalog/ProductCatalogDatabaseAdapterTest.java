@@ -1,8 +1,12 @@
 package integration.driven_adapters.database_adapter.catalog;
 
+import salon.catalog.infrastructure.persistence.ProductCatalogDatabaseAdapter;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.context.annotation.Import;
 import salon.catalog.domain.model.catalog.ProductCatalog;
 import salon.catalog.domain.model.catalog.CatalogId;
@@ -13,6 +17,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@EntityScan("salon")
+@EnableJpaRepositories("salon")
 @DataJpaTest
 @Import(ProductCatalogDatabaseAdapter.class)
 class ProductCatalogDatabaseAdapterTest {
@@ -37,7 +43,7 @@ class ProductCatalogDatabaseAdapterTest {
 
         // Assert - Weryfikujemy, czy dane nie uległy zniekształceniu podczas transformacji
         assertThat(retrievedCatalog).isPresent();
-        assertThat(retrievedCatalog.get().getId()).isEqualTo(catalogId);
+        assertThat(retrievedCatalog.get().getCatalogId()).isEqualTo(catalogId);
         assertThat(retrievedCatalog.get().getModelYear().value()).isEqualTo("2026");
         assertThat(retrievedCatalog.get().getState()).isEqualTo(CatalogState.ACTIVE);
     }

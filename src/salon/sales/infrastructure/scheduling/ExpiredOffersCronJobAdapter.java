@@ -1,4 +1,4 @@
-package integration.driving_adapetrs.cron_job_adapter.sales;
+package salon.sales.infrastructure.scheduling;
 
 import salon.sales.application.service.OfferAppService;
 

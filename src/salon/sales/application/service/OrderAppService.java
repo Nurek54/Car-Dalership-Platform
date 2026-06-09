@@ -4,6 +4,8 @@ import salon.sales.application.port.in.ActivateOrderOnDepositUseCase;
 import salon.sales.application.port.in.CancelOrderCommand;
 import salon.sales.application.port.in.CancelOrderUseCase;
 import salon.sales.application.port.in.CreateOrderCommand;
+import salon.sales.application.port.in.ScheduleHandoverCommand;
+import salon.sales.application.port.in.ScheduleHandoverUseCase;
 import salon.sales.application.port.out.OfferRepository;
 import salon.sales.application.port.out.OrderRepository;
 import salon.sales.domain.exceptions.OfferExpiredException;
@@ -30,7 +32,7 @@ import java.util.Optional;
  * OfferRepository jest potrzebne tylko dla createOrderFromOffer. Stary, 2-argumentowy
  * konstruktor zostaje (zgodność z demami); createOrderFromOffer wymaga wariantu z OfferRepository.
  */
-public class OrderAppService implements CancelOrderUseCase, ActivateOrderOnDepositUseCase {
+public class OrderAppService implements CancelOrderUseCase, ActivateOrderOnDepositUseCase, ScheduleHandoverUseCase {
 
     private final OrderRepository orderRepository;
     private final OfferRepository offerRepository; // może być null (konstruktor 2-arg)
@@ -137,6 +139,43 @@ public class OrderAppService implements CancelOrderUseCase, ActivateOrderOnDepos
         }
         Order order = found.get();
         order.activate();
+        orderRepository.save(order);
+        publishEventsOf(order);
+    }
+
+    /**
+     * UC-CRM-04, krok 1-2: reakcja na VehicleReadyForHandoverEvent z Inwentarza/Logistyki.
+     * Zamówienie przechodzi w stan READY_FOR_HANDOVER i publikuje OrderReadyForHandoverEvent
+     * (powiadomienie Handlowca). Brak zamówienia traktujemy jako błąd (wiadomość do DLQ).
+     */
+    public void markReadyForHandover(String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
+        }
+        Optional<Order> found = orderRepository.findById(new OrderId(orderId));
+        if (found.isEmpty()) {
+            throw new IllegalStateException("Order not found for handover readiness: " + orderId);
+        }
+        Order order = found.get();
+        order.markAsReadyForHandover();
+        orderRepository.save(order);
+        publishEventsOf(order);
+    }
+
+    /**
+     * UC-CRM-04, krok 4-5: Handlowiec ustala termin odbioru -> stan HANDOVER_SCHEDULED.
+     */
+    @Override
+    public void scheduleHandover(ScheduleHandoverCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("command must not be null.");
+        }
+        Optional<Order> found = orderRepository.findById(new OrderId(command.orderId()));
+        if (found.isEmpty()) {
+            throw new IllegalStateException("Order not found: " + command.orderId());
+        }
+        Order order = found.get();
+        order.scheduleHandover(command.handoverDate());
         orderRepository.save(order);
         publishEventsOf(order);
     }

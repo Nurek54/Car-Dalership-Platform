@@ -5,6 +5,7 @@ import salon.sales.domain.event.DepositRetainedAsIncomeEvent;
 import salon.sales.domain.event.OrderActivatedEvent;
 import salon.sales.domain.event.OrderCancelledEvent;
 import salon.sales.domain.event.OrderPlacedEvent;
+import salon.sales.domain.event.OrderReadyForHandoverEvent;
 import salon.sales.domain.event.VehicleHandedOverEvent;
 import salon.sales.domain.model.offer.OfferId;
 import salon.shared.event.AbstractAggregateRoot;
@@ -12,6 +13,7 @@ import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -36,6 +38,7 @@ public class Order extends AbstractAggregateRoot {
     private String signatureRef;               // referencja podpisu umowy
     private OrderState state;
     private CancellationReason cancellationReason;
+    private LocalDate handoverDate;          // ustalony termin odbioru (UC-CRM-04)
 
     public Order(OrderId id, OfferId sourceOfferId) {
         this(id, sourceOfferId, null);
@@ -59,6 +62,7 @@ public class Order extends AbstractAggregateRoot {
         this.signatureRef = null;
         this.state = OrderState.DRAFT_CREATED;
         this.cancellationReason = CancellationReason.NONE;
+        this.handoverDate = null;
     }
 
     // UC-SPR-02: podpis umowy -> zamówienie czeka na zadatek.
@@ -121,6 +125,37 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /**
+     * UC-CRM-04, krok 1-2: sygnał z placu (VehicleReadyForHandoverEvent) — pojazd gotowy
+     * fizycznie i finansowo. Zamówienie przechodzi w stan "Gotowe do odbioru" i ogłasza
+     * zdarzenie, które wyzwala powiadomienie Handlowca.
+     */
+    public void markAsReadyForHandover() {
+        if (this.state != OrderState.IN_PROGRESS) {
+            throw new IllegalStateException(
+                    "Only an order in progress can become ready for handover.");
+        }
+        this.state = OrderState.READY_FOR_HANDOVER;
+        registerEvent(new OrderReadyForHandoverEvent(
+                UUID.randomUUID(), this.id.value(), Instant.now()));
+    }
+
+    /**
+     * UC-CRM-04, krok 4-5: Handlowiec ustala z klientem termin odbioru — zamówienie zostaje
+     * zablokowane w stanie "Umówiony na odbiór". Obsługuje także A1 (odroczony odbiór: dalsza data).
+     */
+    public void scheduleHandover(LocalDate date) {
+        if (date == null) {
+            throw new IllegalArgumentException("date must not be null.");
+        }
+        if (this.state != OrderState.READY_FOR_HANDOVER) {
+            throw new IllegalStateException(
+                    "Handover can only be scheduled for an order ready for handover.");
+        }
+        this.handoverDate = date;
+        this.state = OrderState.HANDOVER_SCHEDULED;
+    }
+
+    /**
      * UC-SPR-08: wydanie pojazdu klientowi — finalny krok zamówienia.
      * Zamknięcie zamówienia (COMPLETED) i ogłoszenie zdarzenia o wydaniu auta,
      * którego nasłuchują Rozliczenia (domknięcie salda) oraz obsługa posprzedażowa.
@@ -147,6 +182,10 @@ public class Order extends AbstractAggregateRoot {
 
     public Money getRequiredDeposit() {
         return this.requiredDeposit;
+    }
+
+    public LocalDate getHandoverDate() {
+        return this.handoverDate;
     }
 
     public String getSignatureRef() {

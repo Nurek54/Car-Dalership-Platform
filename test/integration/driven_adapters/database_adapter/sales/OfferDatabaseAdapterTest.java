@@ -1,8 +1,12 @@
 package integration.driven_adapters.database_adapter.sales;
 
+import salon.sales.infrastructure.persistence.OfferDatabaseAdapter;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.context.annotation.Import;
 import salon.sales.domain.model.offer.Offer;
 import salon.sales.domain.model.offer.OfferId;
@@ -14,11 +18,12 @@ import salon.shared.model.SpecificationId;
 import salon.shared.model.Money;
 
 import java.math.BigDecimal;
-import java.util.Date;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@EntityScan("salon")
+@EnableJpaRepositories("salon")
 @DataJpaTest
 @Import(OfferDatabaseAdapter.class)
 class OfferDatabaseAdapterTest {
@@ -26,7 +31,7 @@ class OfferDatabaseAdapterTest {
     @Autowired
     private OfferDatabaseAdapter adapter;
 
-    // 1. ZAPIS, ODCZYT I MAPOWANIE: Weryfikacja rabatów i zmiany stanów
+    // 1. ZAPIS, ODCZYT I MAPOWANIE: Weryfikacja rabatu i zmiany stanu
     @Test
     void shouldSaveAndRetrieveOfferWithDiscountAndStateMapped() {
         // Arrange
@@ -35,19 +40,17 @@ class OfferDatabaseAdapterTest {
         SpecificationId specId = new SpecificationId("SPEC-999");
         Money basePrice = Money.of(new BigDecimal("200000.00"), "PLN");
 
-        Offer offer = new Offer(offerId, customerId, specId, basePrice, new Date());
+        Offer offer = new Offer(offerId, customerId, specId);
+        offer.setBasePrice(basePrice);
 
-        // Zgodnie z analizą: aplikujemy rabat 10%, ale limit sprzedawcy to 5%
+        // Zgodnie z analizą: żądany rabat 10% przekracza limit sprzedawcy (5%),
+        // więc agregat blokuje go i przenosi ofertę do akceptacji Dyrektora (UC-SPR-01 A1).
         Discount requestedDiscount = new Discount(new BigDecimal("10.00"));
         DiscountLimit limit = new DiscountLimit(new BigDecimal("5.00"));
-
-        // Metoda applyDiscount powinna wykryć przekroczenie i zmienić stan na PENDING_DIRECTOR_APPROVAL
         offer.applyDiscount(requestedDiscount, limit);
 
-        // Act - Zapis w bazie danych
+        // Act - Zapis i odczyt z bazy (wymusza pełne mapowanie tam i z powrotem)
         adapter.save(offer);
-
-        // Odczyt z bazy
         Optional<Offer> retrievedOffer = adapter.findById(offerId);
 
         // Assert
@@ -59,16 +62,17 @@ class OfferDatabaseAdapterTest {
         assertThat(retrieved.getCustomerId()).isEqualTo(customerId);
         assertThat(retrieved.getSpecificationId()).isEqualTo(specId);
 
-        // Weryfikacja cen
+        // Weryfikacja ceny bazowej
         assertThat(retrieved.getBasePrice().getAmount()).isEqualByComparingTo("200000.00");
-        // Ostateczna cena powinna zostać przeliczona (200 000 - 10% = 180 000)
-        assertThat(retrieved.getFinalPrice().getAmount()).isEqualByComparingTo("180000.00");
 
-        // Weryfikacja rabatu
-        assertThat(retrieved.getAppliedDiscount().getPercentage()).isEqualByComparingTo("10.00");
+        // Weryfikacja zapamiętanego rabatu
+        assertThat(retrieved.getAppliedDiscount().percentage()).isEqualByComparingTo("10.00");
 
-        // Krytyczna weryfikacja logiki biznesowej zmapowanej na bazę danych
+        // Krytyczna weryfikacja logiki biznesowej zmapowanej na bazę danych:
+        // rabat ponad limit -> stan oczekiwania na akceptację Dyrektora; cena końcowa NIE jest
+        // jeszcze przeliczana (dopiero po zatwierdzeniu rabatu przez Dyrektora).
         assertThat(retrieved.getState()).isEqualTo(OfferState.PENDING_DIRECTOR_APPROVAL);
+        assertThat(retrieved.getFinalPrice()).isNull();
     }
 
     // 2. BRAK DANYCH

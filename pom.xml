@@ -95,6 +95,13 @@
             <version>1.3.0</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Wbudowana baza H2 dla testow @DataJpaTest (adaptery bazodanowe) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

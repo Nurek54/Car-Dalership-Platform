@@ -1,41 +1,52 @@
 package unit.inventory_and_logistics_context;
 
 import org.junit.jupiter.api.Test;
+import salon.logistics.domain.model.vehicle.ImporterData;
+import salon.logistics.domain.model.vehicle.InventoryVehicle;
+import salon.logistics.domain.model.vehicle.VehicleRole;
+import salon.logistics.domain.model.vehicle.VehicleState;
+import salon.logistics.domain.model.vehicle.VinNumber;
+import salon.shared.model.OrderId;
+
 import static org.assertj.core.api.Assertions.*;
 
 class InventoryVehicleTest {
 
-    @Test
-    void shouldSuccessfullyLockForOrderWhenVehicleIsAvailable() {
-        // Arrange (Given)
-        InventoryVehicle vehicle = new InventoryVehicle(
-                new VinNumber("VIN1234567890ABCDE")
-        );
-        // Symulujemy przyjęcie auta na plac - status ON_YARD i rola STOCK
-        vehicle.receiveOnYard(new ImporterData("MODEL_X", "COLOR_RED"));
+    private InventoryVehicle receivedVehicle(String vin) {
+        InventoryVehicle vehicle = new InventoryVehicle(new VinNumber(vin));
+        vehicle.receiveOnYard(new ImporterData(vin)); // IN_PRODUCTION -> ON_STOCK
+        return vehicle;
+    }
 
+    @Test
+    void shouldEnterStockWhenReceivedOnYard() {
+        InventoryVehicle vehicle = new InventoryVehicle(new VinNumber("VIN1234567890ABCDE"));
+
+        vehicle.receiveOnYard(new ImporterData("VIN1234567890ABCDE"));
+
+        assertThat(vehicle.getState()).isEqualTo(VehicleState.ON_STOCK);
+        assertThat(vehicle.getRole()).isEqualTo(VehicleRole.STOCK);
+        assertThat(vehicle.getOrder()).isNull();
+    }
+
+    @Test
+    void shouldSuccessfullyLockForOrderWhenVehicleIsOnStock() {
+        InventoryVehicle vehicle = receivedVehicle("VIN1234567890ABCDE");
         OrderId newOrderId = new OrderId("ORD-100");
 
-        // Act (When)
         vehicle.lockForOrder(newOrderId);
 
-        // Assert (Then)
-        // Zgodnie z wymaganiami, auto musi zmienić stan na RESERVED i zostać trwale przypisane do zamówienia
+        // Auto musi zmienić stan na RESERVED i zostać trwale przypisane do zamówienia
         assertThat(vehicle.getState()).isEqualTo(VehicleState.RESERVED);
-        assertThat(vehicle.getLockedForOrder()).isEqualTo(newOrderId);
+        assertThat(vehicle.getOrder()).isEqualTo(newOrderId);
     }
 
     @Test
     void shouldThrowExceptionWhenTryingToLockAlreadyReservedVehicle() {
-        // Arrange (Given)
-        InventoryVehicle vehicle = new InventoryVehicle(new VinNumber("VIN9876543210XYZ"));
-        vehicle.receiveOnYard(new ImporterData("MODEL_Y", "COLOR_BLUE"));
-
-        // Pierwsza rezerwacja (np. przez Handlowca A)
+        InventoryVehicle vehicle = receivedVehicle("VIN9876543210XYZAB");
         vehicle.lockForOrder(new OrderId("ORD-101"));
 
-        // Act & Assert (When & Then)
-        // Druga próba rezerwacji tego samego auta (np. przez Handlowca B) musi natychmiast rzucić błędem
+        // Druga próba rezerwacji tego samego auta musi natychmiast rzucić błędem
         assertThatThrownBy(() -> vehicle.lockForOrder(new OrderId("ORD-102")))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Vehicle is already reserved");
@@ -43,31 +54,22 @@ class InventoryVehicleTest {
 
     @Test
     void shouldReleaseReservationAndReturnToStockPool() {
-        // Arrange (Given)
-        InventoryVehicle vehicle = new InventoryVehicle(new VinNumber("VIN1111111111111"));
-        vehicle.lockForOrder(new OrderId("ORD-200")); // Auto zarezerwowane
+        InventoryVehicle vehicle = receivedVehicle("VIN1111111111111AA");
+        vehicle.lockForOrder(new OrderId("ORD-200"));
 
-        // Act (When)
         vehicle.releaseReservation();
 
-        // Assert (Then)
-        // W przypadku zerwania kontraktu, auto musi wrócić do wolnej puli na placu
-        assertThat(vehicle.getState()).isEqualTo(VehicleState.ON_YARD);
-        assertThat(vehicle.getLockedForOrder()).isNull();
+        // Po zerwaniu kontraktu auto wraca do wolnej puli na placu
+        assertThat(vehicle.getState()).isEqualTo(VehicleState.ON_STOCK);
+        assertThat(vehicle.getOrder()).isNull();
     }
 
     @Test
-    void shouldExpirePdiValidityAndBlockHandover() {
-        // Arrange (Given)
-        InventoryVehicle vehicle = new InventoryVehicle(new VinNumber("VIN2222222222222"));
-        vehicle.approvePdi(); // Przegląd PDI pomyślnie zaliczony
+    void shouldMarkVehicleAsDemo() {
+        InventoryVehicle vehicle = receivedVehicle("VIN2222222222222BB");
 
-        // Act (When)
-        // Wywołanie akcji (np. przez cykliczny Cron Job po upływie 90 dni)
-        vehicle.expirePdiValidity();
+        vehicle.markAsDemo();
 
-        // Assert (Then)
-        // Status PDI zmienia się na EXPIRED, co ostatecznie zablokuje możliwość wydania pojazdu
-        assertThat(vehicle.getPdiStatus()).isEqualTo(PdiStatus.EXPIRED);
+        assertThat(vehicle.getRole()).isEqualTo(VehicleRole.DEMO);
     }
 }

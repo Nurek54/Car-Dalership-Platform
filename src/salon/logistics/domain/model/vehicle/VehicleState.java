@@ -1,9 +1,13 @@
 package salon.logistics.domain.model.vehicle;
 
+/**
+ * Stan logistyczny pojazdu — zgodnie z diagramem agregatu (inventory-vehicle.md).
+ *
+ * Cykl: IN_PRODUCTION -> ON_STOCK -> (RESERVED) -> HANDED_OVER.
+ */
 public enum VehicleState {
-    IN_TRANSIT,       // w drodze z fabryki
-    ON_YARD,          // na placu salonu
-    RESERVED,         // zablokowany pod konkretne zamówienie
-    HANDED_OVER,      // wydany klientowi
-    TRANSPORT_DAMAGE  // szkoda logistyczna (UC-INW-01 A1)
+    ON_STOCK,       // na placu salonu (w stanie magazynowym)
+    IN_PRODUCTION,  // w produkcji u importera/producenta
+    RESERVED,       // zablokowany pod konkretne zamówienie
+    HANDED_OVER     // wydany klientowi
 }

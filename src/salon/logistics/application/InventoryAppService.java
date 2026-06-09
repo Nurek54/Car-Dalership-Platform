@@ -4,8 +4,6 @@ import salon.logistics.application.port.in.ManageInventoryUseCase;
 import salon.logistics.application.port.out.ImporterIdentityAclPort;
 import salon.logistics.application.port.out.ProductionSlotRepository;
 import salon.logistics.application.port.out.VehicleRepository;
-import salon.logistics.domain.event.DeliveryEtaUpdatedEvent;
-import salon.logistics.domain.exceptions.InvalidVehicleStateException;
 import salon.logistics.domain.model.slot.ProductionSlot;
 import salon.logistics.domain.model.vehicle.ImporterData;
 import salon.logistics.domain.model.vehicle.InventoryVehicle;
@@ -20,11 +18,8 @@ import java.util.Optional;
 
 /**
  * Orkiestracja kontekstu Inwentarza i Logistyki. Konsoliduje role z diagramu
- * (YardManagement / ProductionTracking / Allocation) w jeden serwis aplikacyjny,
- * bo testy adapterów odwołują się do salon.logistics.application.InventoryAppService.
- *
- * UWAGA pakiet: serwis leży w salon.logistics.application (BEZ .service) — celowo,
- * pod kontrakt testów; różni się od starszych kontekstów (application.service).
+ * (YardManagement / Allocation) w jeden serwis aplikacyjny, bo testy adapterów
+ * odwołują się do salon.logistics.application.InventoryAppService.
  */
 public class InventoryAppService implements ManageInventoryUseCase {
 
@@ -69,30 +64,9 @@ public class InventoryAppService implements ManageInventoryUseCase {
         }
         VinNumber vinNumber = new VinNumber(vin);
         Optional<InventoryVehicle> found = vehicleRepository.findByVin(vinNumber);
-        InventoryVehicle vehicle;
-        if (found.isPresent()) {
-            vehicle = found.get();
-        } else {
-            vehicle = new InventoryVehicle(vinNumber);
-        }
+        InventoryVehicle vehicle = found.orElseGet(() -> new InventoryVehicle(vinNumber));
         ImporterData data = importerIdentity.verifyVin(vin);
         vehicle.receiveOnYard(data);
-        vehicleRepository.save(vehicle);
-        publishEventsOf(vehicle);
-    }
-
-    // UC-INW-02: zatwierdzenie PDI dla VIN-u.
-    @Override
-    public void approvePdi(String vin) {
-        if (vin == null || vin.isBlank()) {
-            throw new IllegalArgumentException("vin must not be blank.");
-        }
-        Optional<InventoryVehicle> found = vehicleRepository.findByVin(new VinNumber(vin));
-        if (found.isEmpty()) {
-            throw new InvalidVehicleStateException("Vehicle not found for VIN: " + vin);
-        }
-        InventoryVehicle vehicle = found.get();
-        vehicle.approvePdi();
         vehicleRepository.save(vehicle);
         publishEventsOf(vehicle);
     }
@@ -108,7 +82,6 @@ public class InventoryAppService implements ManageInventoryUseCase {
 
         boolean locked = allocationService.tryLockExistingVehicle(id, all, specCodes);
         if (locked) {
-            // Zapisujemy wszystkie pojazdy, by utrwalić blokadę (prosto, bez identyfikacji który).
             for (int i = 0; i < all.size(); i++) {
                 vehicleRepository.save(all.get(i));
             }

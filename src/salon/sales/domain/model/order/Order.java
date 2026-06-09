@@ -161,15 +161,26 @@ public class Order extends AbstractAggregateRoot {
      * którego nasłuchują Rozliczenia (domknięcie salda) oraz obsługa posprzedażowa.
      */
     public void completeHandover() {
-        if (this.state == OrderState.CANCELLED) {
-            throw new IllegalStateException("A cancelled order cannot be handed over.");
-        }
-        if (this.state == OrderState.COMPLETED) {
-            throw new IllegalStateException("Order is already completed.");
+        if (this.state != OrderState.HANDOVER_SCHEDULED) {
+            throw new IllegalStateException(
+                    "Only an order scheduled for handover can be completed (UC-CRM-05).");
         }
         this.state = OrderState.COMPLETED;
         registerEvent(new VehicleHandedOverEvent(
                 UUID.randomUUID(), this.id.value(), Instant.now()));
+    }
+
+    /**
+     * UC-CRM-05, scenariusz A1: Inwentarz odmówił zwolnienia pojazdu
+     * (VehicleInventoryReleasedError). Mechanizm kompensacyjny (saga): cofamy zamówienie do
+     * "Gotowe do odbioru", aby Handlowiec mógł ponowić odbiór po usunięciu blokady magazynowej.
+     */
+    public void revertToReadyForHandover() {
+        if (this.state != OrderState.COMPLETED && this.state != OrderState.HANDOVER_SCHEDULED) {
+            throw new IllegalStateException(
+                    "Only a completed or scheduled handover can be reverted to ready-for-handover.");
+        }
+        this.state = OrderState.READY_FOR_HANDOVER;
     }
 
     public OrderId getId() {

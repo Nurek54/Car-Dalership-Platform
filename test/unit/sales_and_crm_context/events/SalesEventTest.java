@@ -15,6 +15,7 @@ import salon.shared.model.OrderId;
 import salon.shared.model.SpecificationId;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.*;
 
 class SalesEventTest {
@@ -53,11 +54,14 @@ class SalesEventTest {
 
     @Test
     void shouldEmitVehicleHandedOverEventWhenHandoverCompletes() {
-        // Arrange
+        // Arrange - doprowadzamy zamówienie do stanu HANDOVER_SCHEDULED (UC-CRM-04)
         Order order = new Order(new OrderId("ORD-2"), new OfferId("OFF-2"));
-        // Zakładamy, że saldo to 0 i PDI jest gotowe...
+        order.confirmSignature("SIG-2");
+        order.activate();
+        order.markAsReadyForHandover();
+        order.scheduleHandover(LocalDate.now().plusDays(1));
 
-        // Act - Wydanie auta (UC-SPR-08)
+        // Act - Wydanie auta (UC-CRM-05)
         order.completeHandover();
 
         // Assert

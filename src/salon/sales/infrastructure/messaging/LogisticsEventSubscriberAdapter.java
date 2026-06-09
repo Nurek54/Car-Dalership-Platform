@@ -29,4 +29,20 @@ public class LogisticsEventSubscriberAdapter {
         }
         orderAppService.markReadyForHandover(event.orderId());
     }
+
+    /**
+     * UC-CRM-05, A1: odmowa zwolnienia pojazdu przez Inwentarz — zlecamy kompensację (cofnięcie
+     * zamówienia do "Gotowe do odbioru") i sygnalizujemy blokadę magazynową Handlowcowi.
+     */
+    public void handleVehicleInventoryReleasedError(VehicleInventoryReleasedError event) {
+        if (event == null) {
+            throw new IllegalArgumentException("event must not be null.");
+        }
+        if (event.orderId() == null || event.orderId().isBlank()) {
+            throw new IllegalArgumentException("Identyfikator zamówienia (orderId) nie może być pusty");
+        }
+        System.out.println("[LogisticsEventSubscriberAdapter] Blokada magazynowa dla zamówienia "
+                + event.orderId() + " (" + event.reason() + ") -> cofam do READY_FOR_HANDOVER.");
+        orderAppService.revertHandoverOnInventoryError(event.orderId());
+    }
 }

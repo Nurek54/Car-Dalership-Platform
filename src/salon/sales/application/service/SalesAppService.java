@@ -5,6 +5,7 @@ import salon.sales.application.port.in.CancelOrderCommand;
 import salon.sales.application.port.in.CancelOrderUseCase;
 import salon.sales.application.port.in.CreateOfferCommand;
 import salon.sales.application.port.in.CreateOfferUseCase;
+import salon.sales.application.port.in.CompleteHandoverUseCase;
 import salon.sales.application.port.in.CreateOrderCommand;
 import salon.sales.application.port.in.ScheduleHandoverCommand;
 import salon.sales.application.port.in.ScheduleHandoverUseCase;
@@ -30,7 +31,7 @@ import salon.sales.domain.model.offer.OfferId;
  */
 public class SalesAppService
         implements CreateOfferUseCase, CancelOrderUseCase, ActivateOrderOnDepositUseCase,
-        StartConfiguratorSessionUseCase, ScheduleHandoverUseCase {
+        StartConfiguratorSessionUseCase, ScheduleHandoverUseCase, CompleteHandoverUseCase {
 
     private final ConfiguratorAppService configuratorAppService;
     private final OfferAppService offerAppService;
@@ -112,6 +113,13 @@ public class SalesAppService
     @Override
     public void scheduleHandover(ScheduleHandoverCommand command) {
         orderAppService.scheduleHandover(command);
+    }
+
+    // --- UC-CRM-05: rejestracja fizycznego wydania pojazdu ---
+
+    @Override
+    public void completeHandover(String orderId) {
+        orderAppService.completeHandover(orderId);
     }
 
     // --- UC-CRM-03 (alt. A): anulowanie zamówienia ---

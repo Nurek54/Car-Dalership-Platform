@@ -3,6 +3,7 @@ package salon.sales.application.service;
 import salon.sales.application.port.in.ActivateOrderOnDepositUseCase;
 import salon.sales.application.port.in.CancelOrderCommand;
 import salon.sales.application.port.in.CancelOrderUseCase;
+import salon.sales.application.port.in.CompleteHandoverUseCase;
 import salon.sales.application.port.in.CreateOrderCommand;
 import salon.sales.application.port.in.ScheduleHandoverCommand;
 import salon.sales.application.port.in.ScheduleHandoverUseCase;
@@ -32,7 +33,7 @@ import java.util.Optional;
  * OfferRepository jest potrzebne tylko dla createOrderFromOffer. Stary, 2-argumentowy
  * konstruktor zostaje (zgodność z demami); createOrderFromOffer wymaga wariantu z OfferRepository.
  */
-public class OrderAppService implements CancelOrderUseCase, ActivateOrderOnDepositUseCase, ScheduleHandoverUseCase {
+public class OrderAppService implements CancelOrderUseCase, ActivateOrderOnDepositUseCase, ScheduleHandoverUseCase, CompleteHandoverUseCase {
 
     private final OrderRepository orderRepository;
     private final OfferRepository offerRepository; // może być null (konstruktor 2-arg)
@@ -176,6 +177,44 @@ public class OrderAppService implements CancelOrderUseCase, ActivateOrderOnDepos
         }
         Order order = found.get();
         order.scheduleHandover(command.handoverDate());
+        orderRepository.save(order);
+        publishEventsOf(order);
+    }
+
+    /**
+     * UC-CRM-05: rejestracja fizycznego wydania pojazdu. Zamówienie przechodzi w COMPLETED i
+     * publikuje VehicleHandedOverEvent — sygnał "ReleaseVehicle" dla Inwentarza (zwolnienie
+     * pojazdu) oraz dla Rozliczeń (domknięcie salda).
+     */
+    @Override
+    public void completeHandover(String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
+        }
+        Optional<Order> found = orderRepository.findById(new OrderId(orderId));
+        if (found.isEmpty()) {
+            throw new IllegalStateException("Order not found: " + orderId);
+        }
+        Order order = found.get();
+        order.completeHandover();
+        orderRepository.save(order);
+        publishEventsOf(order);
+    }
+
+    /**
+     * UC-CRM-05, A1: Inwentarz odmówił zwolnienia (VehicleInventoryReleasedError) — kompensata:
+     * cofnięcie zamówienia do READY_FOR_HANDOVER. Brak zamówienia traktujemy jako błąd (DLQ).
+     */
+    public void revertHandoverOnInventoryError(String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
+        }
+        Optional<Order> found = orderRepository.findById(new OrderId(orderId));
+        if (found.isEmpty()) {
+            throw new IllegalStateException("Order not found for handover revert: " + orderId);
+        }
+        Order order = found.get();
+        order.revertToReadyForHandover();
         orderRepository.save(order);
         publishEventsOf(order);
     }

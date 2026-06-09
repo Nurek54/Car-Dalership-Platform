@@ -3,10 +3,11 @@ package salon.sales.application.service;
 import salon.sales.application.port.in.CreateOfferCommand;
 import salon.sales.application.port.in.CreateOfferUseCase;
 import salon.sales.application.port.out.OfferRepository;
-import salon.sales.domain.model.offer.CustomerId;
+import salon.sales.domain.model.customer.CustomerId;
 import salon.sales.domain.model.offer.Discount;
 import salon.sales.domain.model.offer.DiscountLimit;
 import salon.sales.domain.model.offer.Offer;
+import salon.sales.domain.model.offer.OfferFactory;
 import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.model.offer.OfferState;
 import salon.shared.model.Money;
@@ -16,18 +17,28 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Realizuje UC-SPR-01 (orkiestracja). Tworzy ofertę, opcjonalnie wycenia i przyznaje rabat,
- * a regułę limitu rabatu zostawia agregatowi (Offer.applyDiscount).
+ * Realizuje UC-SPR-01 (orkiestracja). Tworzy ofertę (przez {@link OfferFactory}),
+ * opcjonalnie wycenia i przyznaje rabat, a regułę limitu rabatu zostawia
+ * agregatowi (Offer.applyDiscount).
  */
 public class OfferAppService implements CreateOfferUseCase {
 
     private final OfferRepository offerRepository;
+    private final OfferFactory offerFactory;
 
     public OfferAppService(OfferRepository offerRepository) {
+        this(offerRepository, new OfferFactory());
+    }
+
+    public OfferAppService(OfferRepository offerRepository, OfferFactory offerFactory) {
         if (offerRepository == null) {
             throw new IllegalArgumentException("offerRepository must not be null.");
         }
+        if (offerFactory == null) {
+            throw new IllegalArgumentException("offerFactory must not be null.");
+        }
         this.offerRepository = offerRepository;
+        this.offerFactory = offerFactory;
     }
 
     @Override
@@ -36,14 +47,15 @@ public class OfferAppService implements CreateOfferUseCase {
             throw new IllegalArgumentException("command must not be null.");
         }
 
-        Offer offer = new Offer(
-                OfferId.generate(),
-                new CustomerId(command.customerId()),
-                new SpecificationId(command.specificationId()));
-
+        Money basePrice = null;
         if (command.basePrice() != null && command.currency() != null) {
-            offer.setBasePrice(new Money(command.basePrice(), command.currency()));
+            basePrice = new Money(command.basePrice(), command.currency());
         }
+
+        Offer offer = offerFactory.createOffer(
+                new CustomerId(command.customerId()),
+                new SpecificationId(command.specificationId()),
+                basePrice);
 
         if (command.discountPercentage() != null && command.salespersonDiscountLimit() != null) {
             offer.applyDiscount(

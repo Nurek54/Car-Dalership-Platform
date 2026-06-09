@@ -6,9 +6,7 @@ import salon.sales.domain.event.OrderActivatedEvent;
 import salon.sales.domain.event.OrderCancelledEvent;
 import salon.sales.domain.event.OrderPlacedEvent;
 import salon.sales.domain.event.VehicleHandedOverEvent;
-import salon.sales.domain.model.offer.Offer;
 import salon.sales.domain.model.offer.OfferId;
-import salon.sales.domain.model.offer.OfferState;
 import salon.shared.event.AbstractAggregateRoot;
 import salon.shared.model.Money;
 import salon.shared.model.OrderId;
@@ -21,6 +19,10 @@ import java.util.UUID;
  *
  * Reguła kluczowa (UC-SPR-03): po WYDANIU pojazdu zamówienia nie wolno już anulować —
  * cancelOrder rzuca wtedy wyjątkiem (blokada operacji), bo dalej idzie ścieżka reklamacji/serwisu.
+ *
+ * Tworzenie zamówienia z oferty należy do dedykowanej fabryki
+ * {@code salon.sales.domain.model.order.OrderFactory} (patrz docs/Agregate/Sales/order.md).
+ * Fabryka korzysta z {@code OfferSnapshot} (obiekty wartości), nie z referencji do agregatu Offer.
  *
  * Zdarzenia domenowe: to agregat decyduje (na podstawie swojego stanu / powodu anulacji),
  * jakie zdarzenie wyemitować. Warstwa aplikacji tylko je ściąga i publikuje.
@@ -36,6 +38,15 @@ public class Order extends AbstractAggregateRoot {
     private CancellationReason cancellationReason;
 
     public Order(OrderId id, OfferId sourceOfferId) {
+        this(id, sourceOfferId, null);
+    }
+
+    /**
+     * Konstruktor używany przez {@code OrderFactory} oraz odtwarzanie z repozytorium:
+     * pozwala od razu ustawić wymagany zadatek (z {@code OfferSnapshot}).
+     * {@code requiredDeposit} może być null, jeśli oferty nie wyceniono.
+     */
+    public Order(OrderId id, OfferId sourceOfferId, Money requiredDeposit) {
         if (id == null) {
             throw new IllegalArgumentException("id must not be null.");
         }
@@ -44,23 +55,10 @@ public class Order extends AbstractAggregateRoot {
         }
         this.id = id;
         this.sourceOfferId = sourceOfferId;
-        this.requiredDeposit = null;
+        this.requiredDeposit = requiredDeposit;
         this.signatureRef = null;
         this.state = OrderState.DRAFT_CREATED;
         this.cancellationReason = CancellationReason.NONE;
-    }
-
-    // UC-SPR-02: zamówienie powstaje z opublikowanej oferty.
-    public static Order createFromOffer(Offer offer) {
-        if (offer == null) {
-            throw new IllegalArgumentException("offer must not be null.");
-        }
-        if (offer.getState() != OfferState.PUBLISHED) {
-            throw new IllegalStateException("Order can only be created from a PUBLISHED offer.");
-        }
-        Order order = new Order(OrderId.generate(), offer.getId());
-        order.requiredDeposit = offer.getFinalPrice(); // może być null, jeśli nie wyceniono
-        return order;
     }
 
     // UC-SPR-02: podpis umowy -> zamówienie czeka na zadatek.
@@ -149,6 +147,10 @@ public class Order extends AbstractAggregateRoot {
 
     public Money getRequiredDeposit() {
         return this.requiredDeposit;
+    }
+
+    public String getSignatureRef() {
+        return this.signatureRef;
     }
 
     public OrderState getState() {

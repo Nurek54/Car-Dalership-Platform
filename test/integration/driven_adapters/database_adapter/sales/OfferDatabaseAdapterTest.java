@@ -9,7 +9,7 @@ import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.model.offer.OfferState;
 import salon.sales.domain.model.offer.Discount;
 import salon.sales.domain.model.offer.DiscountLimit;
-import salon.sales.domain.model.offer.CustomerId;
+import salon.sales.domain.model.customer.CustomerId;
 import salon.shared.model.SpecificationId;
 import salon.shared.model.Money;
 

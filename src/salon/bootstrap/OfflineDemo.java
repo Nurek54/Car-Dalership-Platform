@@ -23,7 +23,7 @@ import salon.catalog.domain.model.catalog.ProductCatalog;
 import salon.catalog.domain.model.catalog.RuleType;
 import salon.catalog.domain.model.specification.RuleViolationException;
 import salon.catalog.domain.model.specification.VehicleSpecification;
-import salon.sales.domain.model.offer.CustomerId;
+import salon.sales.domain.model.customer.CustomerId;
 import salon.sales.domain.model.offer.Discount;
 import salon.sales.domain.model.offer.DiscountLimit;
 import salon.sales.domain.model.offer.Offer;

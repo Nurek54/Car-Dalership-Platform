@@ -1,7 +1,7 @@
 package unit.sales_and_crm_context;
 
 import org.junit.jupiter.api.Test;
-import salon.sales.domain.model.offer.CustomerId;
+import salon.sales.domain.model.customer.CustomerId;
 import salon.sales.domain.model.offer.Discount;
 import salon.sales.domain.model.offer.DiscountLimit;
 import salon.sales.domain.model.offer.Offer;

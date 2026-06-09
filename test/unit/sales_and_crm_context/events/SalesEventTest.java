@@ -4,16 +4,18 @@ import org.junit.jupiter.api.Test;
 import salon.sales.domain.event.OrderCancelledEvent;
 import salon.sales.domain.event.OrderPlacedEvent;
 import salon.sales.domain.event.VehicleHandedOverEvent;
-import salon.sales.domain.model.offer.CustomerId;
+import salon.sales.domain.model.customer.CustomerId;
 import salon.sales.domain.model.offer.Offer;
 import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.model.order.CancellationReason;
 import salon.sales.domain.model.order.Order;
+import salon.sales.domain.model.order.OrderFactory;
 import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 import salon.shared.model.SpecificationId;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.*;
 
 class SalesEventTest {
@@ -25,7 +27,7 @@ class SalesEventTest {
         offer.publish(); // Zakładamy, że to emituje OfferPublishedEvent
 
         // Act - Klient podpisuje umowę (UC-SPR-02)
-        Order order = Order.createFromOffer(offer);
+        Order order = new OrderFactory().createFromOffer(offer.getId(), offer.toSnapshot());
         order.confirmSignature("DOCUSIGN-REF-123");
 
         // Assert
@@ -52,11 +54,14 @@ class SalesEventTest {
 
     @Test
     void shouldEmitVehicleHandedOverEventWhenHandoverCompletes() {
-        // Arrange
+        // Arrange - doprowadzamy zamówienie do stanu HANDOVER_SCHEDULED (UC-CRM-04)
         Order order = new Order(new OrderId("ORD-2"), new OfferId("OFF-2"));
-        // Zakładamy, że saldo to 0 i PDI jest gotowe...
+        order.confirmSignature("SIG-2");
+        order.activate();
+        order.markAsReadyForHandover();
+        order.scheduleHandover(LocalDate.now().plusDays(1));
 
-        // Act - Wydanie auta (UC-SPR-08)
+        // Act - Wydanie auta (UC-CRM-05)
         order.completeHandover();
 
         // Assert

@@ -1,5 +1,6 @@
 package salon.sales.domain.model.offer;
 
+import salon.sales.domain.model.customer.CustomerId;
 import salon.shared.model.Money;
 import salon.shared.model.SpecificationId;
 
@@ -131,6 +132,14 @@ public class Offer {
                 this.appliedDiscount.percentage().movePointLeft(2));
         BigDecimal value = this.basePrice.amount().multiply(factor);
         this.finalPrice = new Money(value, this.basePrice.currency());
+    }
+
+    /**
+     * Niemutowalna migawka oferty dla {@code OrderFactory} (UC-SPR-02).
+     * Eksponujemy tylko obiekty wartości — nie samą referencję do agregatu.
+     */
+    public OfferSnapshot toSnapshot() {
+        return new OfferSnapshot(this.id, this.customerId, this.specificationId, this.finalPrice);
     }
 
     public OfferId getId() {

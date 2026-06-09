@@ -6,30 +6,34 @@ import salon.financing.application.port.out.FinancingRepository;
 import salon.financing.domain.model.financing.ApplicationId;
 import salon.financing.domain.model.financing.CustomerId;
 import salon.financing.domain.model.financing.FinancingApplication;
-import salon.financing.domain.model.financing.FinancingDecision;
+import salon.financing.domain.model.financing.FinancingApplicationFactory;
 import salon.shared.application.EventPublisherPort;
 import salon.shared.event.DomainEvent;
-import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Orkiestracja UC-FIN-01. Cała reguła "jakie zdarzenie" (Approved/Rejected) jest w agregacie.
+ * Orkiestracja UC-FIN-01. Reguła "jakie zdarzenie" (Approved/Rejected) jest w agregacie;
+ * serwis aplikacyjny tłumaczy decyzję ACL na wywołanie approve()/reject().
  */
 public class FinancingAppService implements ProcessFinancingUseCase {
 
     private final FinancingRepository financingRepository;
+    private final FinancingApplicationFactory applicationFactory;
     private final BankIntegrationAclPort bankAcl;
     private final EventPublisherPort eventPublisher;
 
     public FinancingAppService(FinancingRepository financingRepository,
+                               FinancingApplicationFactory applicationFactory,
                                BankIntegrationAclPort bankAcl,
                                EventPublisherPort eventPublisher) {
         if (financingRepository == null) {
             throw new IllegalArgumentException("financingRepository must not be null.");
+        }
+        if (applicationFactory == null) {
+            throw new IllegalArgumentException("applicationFactory must not be null.");
         }
         if (bankAcl == null) {
             throw new IllegalArgumentException("bankAcl must not be null.");
@@ -38,25 +42,23 @@ public class FinancingAppService implements ProcessFinancingUseCase {
             throw new IllegalArgumentException("eventPublisher must not be null.");
         }
         this.financingRepository = financingRepository;
+        this.applicationFactory = applicationFactory;
         this.bankAcl = bankAcl;
         this.eventPublisher = eventPublisher;
     }
 
     @Override
-    public String submitFinancing(String orderId, String customerId, BigDecimal amount, String currency) {
+    public String submitFinancing(String orderId, String customerId) {
         if (orderId == null || orderId.isBlank()) {
             throw new IllegalArgumentException("orderId must not be blank.");
         }
-        FinancingApplication application = new FinancingApplication(
-                ApplicationId.generate(),
-                new OrderId(orderId),
-                new CustomerId(customerId),
-                new Money(amount, currency));
+        FinancingApplication application =
+                applicationFactory.createFor(new OrderId(orderId), new CustomerId(customerId));
 
         application.submitApplication();
         financingRepository.save(application);
 
-        bankAcl.submitApplication(application.getId().value(), customerId, amount);
+        bankAcl.submitApplication(application.getId().value(), customerId);
         return application.getId().value();
     }
 
@@ -71,10 +73,12 @@ public class FinancingAppService implements ProcessFinancingUseCase {
         }
         FinancingApplication application = found.get();
 
-        FinancingDecision decision = bankAcl.fetchDecision(applicationId);
-        application.processBankDecision(decision);
+        if (bankAcl.isApproved(applicationId)) {
+            application.approve();
+        } else {
+            application.reject();
+        }
         financingRepository.save(application);
-
         publishEventsOf(application);
     }
 

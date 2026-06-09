@@ -1,12 +1,14 @@
 package integration.driving_adapetrs.event_subscriber_adapter.sales;
 
+import salon.logistics.infrastructure.messaging.SalesEventSubscriberAdapter;
+import salon.logistics.infrastructure.messaging.OrderActivatedEvent;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.logistics.application.InventoryAppService;
-import salon.sales.domain.event.OrderActivatedEvent;
 
 import java.util.List;
 

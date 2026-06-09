@@ -1,36 +1,91 @@
 package salon.billing.infrastructure.persistence;
 
+import salon.billing.infrastructure.persistence.PaymentEmbeddable;
+import salon.billing.infrastructure.persistence.SettlementJpaEntity;
+import salon.billing.infrastructure.persistence.SettlementJpaRepository;
+import org.springframework.stereotype.Component;
 import salon.billing.application.port.out.SettlementRepository;
+import salon.billing.domain.model.settlement.Payment;
 import salon.billing.domain.model.settlement.Settlement;
 import salon.billing.domain.model.settlement.SettlementId;
+import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Szkielet adaptera bazodanowego (np. JPA). Świadomie pusty — pokazuje, że port
- * SettlementRepository można podmienić na prawdziwą bazę bez dotykania domeny ani aplikacji.
+ * Adapter sterowany (driven) — implementacja portu {@link SettlementRepository} na JPA (H2/PostgreSQL).
+ *
+ * Mapuje agregat Settlement na encję JPA i z powrotem. Odtworzenie odbywa się przez ODTWORZENIE
+ * przebiegu wpłat (registerPayment), dzięki czemu agregat sam przelicza saldo i status — nie
+ * dotykamy jego wewnętrznych pól ani nie modyfikujemy kodu domeny.
  */
+@Component
 public class SettlementDatabaseAdapter implements SettlementRepository {
+
+    private final SettlementJpaRepository repository;
+
+    public SettlementDatabaseAdapter(SettlementJpaRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     public void save(Settlement settlement) {
-        throw new UnsupportedOperationException("TODO: implement JPA persistence for Settlement.");
+        repository.save(toEntity(settlement));
     }
 
     @Override
     public Optional<Settlement> findById(SettlementId id) {
-        throw new UnsupportedOperationException("TODO: implement JPA lookup for Settlement.");
+        return repository.findById(id.value()).map(this::toDomain);
     }
 
     @Override
     public Optional<Settlement> findByOrderId(OrderId orderId) {
-        throw new UnsupportedOperationException("TODO: implement JPA lookup by orderId for Settlement.");
+        return repository.findByOrderId(orderId.value()).map(this::toDomain);
     }
 
     @Override
     public List<Settlement> findAll() {
-        throw new UnsupportedOperationException("TODO: implement JPA listing for Settlement.");
+        List<SettlementJpaEntity> entities = repository.findAll();
+        List<Settlement> result = new ArrayList<>();
+        for (int i = 0; i < entities.size(); i++) {
+            result.add(toDomain(entities.get(i)));
+        }
+        return result;
+    }
+
+    private SettlementJpaEntity toEntity(Settlement settlement) {
+        SettlementJpaEntity entity = new SettlementJpaEntity();
+        entity.id = settlement.getId().value();
+        entity.orderId = settlement.getOrderId().value();
+        entity.totalAmount = settlement.getTotalAmount().amount();
+        entity.currency = settlement.getTotalAmount().currency();
+        entity.status = settlement.getStatus().name();
+        entity.payments = new ArrayList<>();
+        List<Payment> payments = settlement.getPayments();
+        for (int i = 0; i < payments.size(); i++) {
+            Payment payment = payments.get(i);
+            PaymentEmbeddable embeddable = new PaymentEmbeddable();
+            embeddable.transactionId = payment.getTransactionId();
+            embeddable.amount = payment.getAmount().amount();
+            embeddable.currency = payment.getAmount().currency();
+            embeddable.paymentDate = payment.getPaymentDate();
+            entity.payments.add(embeddable);
+        }
+        return entity;
+    }
+
+    private Settlement toDomain(SettlementJpaEntity entity) {
+        Settlement settlement = new Settlement(
+                new SettlementId(entity.id),
+                new OrderId(entity.orderId),
+                Money.of(entity.totalAmount, entity.currency));
+        for (int i = 0; i < entity.payments.size(); i++) {
+            PaymentEmbeddable payment = entity.payments.get(i);
+            settlement.registerPayment(payment.transactionId, Money.of(payment.amount, payment.currency));
+        }
+        return settlement;
     }
 }

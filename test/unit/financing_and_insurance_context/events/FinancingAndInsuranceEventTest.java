@@ -1,43 +1,41 @@
 package unit.financing_and_insurance_context.events;
 
 import org.junit.jupiter.api.Test;
-import salon.shared.model.Money;
+import salon.financing.domain.event.FinancingApprovedEvent;
+import salon.financing.domain.event.FinancingRejectedEvent;
+import salon.financing.domain.model.financing.ApplicationId;
+import salon.financing.domain.model.financing.CustomerId;
+import salon.financing.domain.model.financing.FinancingApplication;
 import salon.shared.model.OrderId;
 
-import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.*;
 
 class FinancingAndInsuranceEventTest {
 
+    private FinancingApplication submitted(String appId, String orderId) {
+        FinancingApplication app = new FinancingApplication(
+                new ApplicationId(appId), new OrderId(orderId), new CustomerId("C-1"));
+        app.submitApplication();
+        return app;
+    }
+
     @Test
     void shouldEmitFinancingApprovedEventWhenBankAccepts() {
-        // Arrange
-        FinancingApplication app = new FinancingApplication(
-                new ApplicationId("APP-1"), new OrderId("ORD-1"), new CustomerId("C-1"), Money.of(100000, "PLN")
-        );
-        app.submitApplication();
+        FinancingApplication app = submitted("APP-1", "ORD-1");
 
-        FinancingDecision positiveDecision = new FinancingDecision("BANK-123", new BigDecimal("100000.00"), DecisionStatus.APPROVED);
+        app.approve();
 
-        // Act
-        app.processBankDecision(positiveDecision);
-
-        // Assert
         assertThat(app.getDomainEvents())
                 .hasAtLeastOneElementOfType(FinancingApprovedEvent.class);
     }
 
     @Test
-    void shouldEmitPolicyActivatedEventWhenGapIsIssued() {
-        // Arrange
-        InsurancePolicy policy = new InsurancePolicy(new PolicyId("POL-1"), new VinNumber("VIN123"), PolicyType.GAP_INSURANCE);
-        policy.assignResidualValue(Money.of(80000, "PLN"));
+    void shouldEmitFinancingRejectedEventWhenBankDeclines() {
+        FinancingApplication app = submitted("APP-2", "ORD-2");
 
-        // Act
-        policy.activatePolicy("INSURER-REF-999");
+        app.reject();
 
-        // Assert
-        assertThat(policy.getDomainEvents())
-                .hasAtLeastOneElementOfType(PolicyActivatedEvent.class);
+        assertThat(app.getDomainEvents())
+                .hasAtLeastOneElementOfType(FinancingRejectedEvent.class);
     }
 }

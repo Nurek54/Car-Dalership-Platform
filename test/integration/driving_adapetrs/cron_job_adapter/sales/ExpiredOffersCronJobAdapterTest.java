@@ -6,6 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.service.OfferAppService;
+import salon.sales.infrastructure.scheduling.ExpiredOffersCronJobAdapter;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.*;

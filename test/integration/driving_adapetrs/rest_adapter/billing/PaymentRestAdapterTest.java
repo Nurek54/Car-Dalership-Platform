@@ -1,5 +1,7 @@
 package integration.driving_adapetrs.rest_adapter.billing;
 
+import salon.billing.infrastructure.web.PaymentRestApiAdapter;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

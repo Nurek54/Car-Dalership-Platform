@@ -5,15 +5,15 @@ import salon.sales.domain.event.DepositRetainedAsIncomeEvent;
 import salon.sales.domain.event.OrderActivatedEvent;
 import salon.sales.domain.event.OrderCancelledEvent;
 import salon.sales.domain.event.OrderPlacedEvent;
+import salon.sales.domain.event.OrderReadyForHandoverEvent;
 import salon.sales.domain.event.VehicleHandedOverEvent;
-import salon.sales.domain.model.offer.Offer;
 import salon.sales.domain.model.offer.OfferId;
-import salon.sales.domain.model.offer.OfferState;
 import salon.shared.event.AbstractAggregateRoot;
 import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -21,6 +21,10 @@ import java.util.UUID;
  *
  * Reguła kluczowa (UC-SPR-03): po WYDANIU pojazdu zamówienia nie wolno już anulować —
  * cancelOrder rzuca wtedy wyjątkiem (blokada operacji), bo dalej idzie ścieżka reklamacji/serwisu.
+ *
+ * Tworzenie zamówienia z oferty należy do dedykowanej fabryki
+ * {@code salon.sales.domain.model.order.OrderFactory} (patrz docs/Agregate/Sales/order.md).
+ * Fabryka korzysta z {@code OfferSnapshot} (obiekty wartości), nie z referencji do agregatu Offer.
  *
  * Zdarzenia domenowe: to agregat decyduje (na podstawie swojego stanu / powodu anulacji),
  * jakie zdarzenie wyemitować. Warstwa aplikacji tylko je ściąga i publikuje.
@@ -34,8 +38,18 @@ public class Order extends AbstractAggregateRoot {
     private String signatureRef;               // referencja podpisu umowy
     private OrderState state;
     private CancellationReason cancellationReason;
+    private LocalDate handoverDate;          // ustalony termin odbioru (UC-CRM-04)
 
     public Order(OrderId id, OfferId sourceOfferId) {
+        this(id, sourceOfferId, null);
+    }
+
+    /**
+     * Konstruktor używany przez {@code OrderFactory} oraz odtwarzanie z repozytorium:
+     * pozwala od razu ustawić wymagany zadatek (z {@code OfferSnapshot}).
+     * {@code requiredDeposit} może być null, jeśli oferty nie wyceniono.
+     */
+    public Order(OrderId id, OfferId sourceOfferId, Money requiredDeposit) {
         if (id == null) {
             throw new IllegalArgumentException("id must not be null.");
         }
@@ -44,23 +58,11 @@ public class Order extends AbstractAggregateRoot {
         }
         this.id = id;
         this.sourceOfferId = sourceOfferId;
-        this.requiredDeposit = null;
+        this.requiredDeposit = requiredDeposit;
         this.signatureRef = null;
         this.state = OrderState.DRAFT_CREATED;
         this.cancellationReason = CancellationReason.NONE;
-    }
-
-    // UC-SPR-02: zamówienie powstaje z opublikowanej oferty.
-    public static Order createFromOffer(Offer offer) {
-        if (offer == null) {
-            throw new IllegalArgumentException("offer must not be null.");
-        }
-        if (offer.getState() != OfferState.PUBLISHED) {
-            throw new IllegalStateException("Order can only be created from a PUBLISHED offer.");
-        }
-        Order order = new Order(OrderId.generate(), offer.getId());
-        order.requiredDeposit = offer.getFinalPrice(); // może być null, jeśli nie wyceniono
-        return order;
+        this.handoverDate = null;
     }
 
     // UC-SPR-02: podpis umowy -> zamówienie czeka na zadatek.
@@ -123,20 +125,62 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /**
+     * UC-CRM-04, krok 1-2: sygnał z placu (VehicleReadyForHandoverEvent) — pojazd gotowy
+     * fizycznie i finansowo. Zamówienie przechodzi w stan "Gotowe do odbioru" i ogłasza
+     * zdarzenie, które wyzwala powiadomienie Handlowca.
+     */
+    public void markAsReadyForHandover() {
+        if (this.state != OrderState.IN_PROGRESS) {
+            throw new IllegalStateException(
+                    "Only an order in progress can become ready for handover.");
+        }
+        this.state = OrderState.READY_FOR_HANDOVER;
+        registerEvent(new OrderReadyForHandoverEvent(
+                UUID.randomUUID(), this.id.value(), Instant.now()));
+    }
+
+    /**
+     * UC-CRM-04, krok 4-5: Handlowiec ustala z klientem termin odbioru — zamówienie zostaje
+     * zablokowane w stanie "Umówiony na odbiór". Obsługuje także A1 (odroczony odbiór: dalsza data).
+     */
+    public void scheduleHandover(LocalDate date) {
+        if (date == null) {
+            throw new IllegalArgumentException("date must not be null.");
+        }
+        if (this.state != OrderState.READY_FOR_HANDOVER) {
+            throw new IllegalStateException(
+                    "Handover can only be scheduled for an order ready for handover.");
+        }
+        this.handoverDate = date;
+        this.state = OrderState.HANDOVER_SCHEDULED;
+    }
+
+    /**
      * UC-SPR-08: wydanie pojazdu klientowi — finalny krok zamówienia.
      * Zamknięcie zamówienia (COMPLETED) i ogłoszenie zdarzenia o wydaniu auta,
      * którego nasłuchują Rozliczenia (domknięcie salda) oraz obsługa posprzedażowa.
      */
     public void completeHandover() {
-        if (this.state == OrderState.CANCELLED) {
-            throw new IllegalStateException("A cancelled order cannot be handed over.");
-        }
-        if (this.state == OrderState.COMPLETED) {
-            throw new IllegalStateException("Order is already completed.");
+        if (this.state != OrderState.HANDOVER_SCHEDULED) {
+            throw new IllegalStateException(
+                    "Only an order scheduled for handover can be completed (UC-CRM-05).");
         }
         this.state = OrderState.COMPLETED;
         registerEvent(new VehicleHandedOverEvent(
                 UUID.randomUUID(), this.id.value(), Instant.now()));
+    }
+
+    /**
+     * UC-CRM-05, scenariusz A1: Inwentarz odmówił zwolnienia pojazdu
+     * (VehicleInventoryReleasedError). Mechanizm kompensacyjny (saga): cofamy zamówienie do
+     * "Gotowe do odbioru", aby Handlowiec mógł ponowić odbiór po usunięciu blokady magazynowej.
+     */
+    public void revertToReadyForHandover() {
+        if (this.state != OrderState.COMPLETED && this.state != OrderState.HANDOVER_SCHEDULED) {
+            throw new IllegalStateException(
+                    "Only a completed or scheduled handover can be reverted to ready-for-handover.");
+        }
+        this.state = OrderState.READY_FOR_HANDOVER;
     }
 
     public OrderId getId() {
@@ -149,6 +193,14 @@ public class Order extends AbstractAggregateRoot {
 
     public Money getRequiredDeposit() {
         return this.requiredDeposit;
+    }
+
+    public LocalDate getHandoverDate() {
+        return this.handoverDate;
+    }
+
+    public String getSignatureRef() {
+        return this.signatureRef;
     }
 
     public OrderState getState() {

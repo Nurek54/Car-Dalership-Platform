@@ -1,34 +1,22 @@
 package unit.inventory_and_logistics_context.events;
 
 import org.junit.jupiter.api.Test;
+import salon.logistics.domain.event.VehicleReceivedOnYardEvent;
+import salon.logistics.domain.model.vehicle.ImporterData;
+import salon.logistics.domain.model.vehicle.InventoryVehicle;
+import salon.logistics.domain.model.vehicle.VinNumber;
+
+import static org.assertj.core.api.Assertions.*;
 
 class InventoryAndLogisticsEventTest {
 
     @Test
-    void shouldEmitVehicleReceivedInYardEventWhenCarArrives() {
-        // Arrange
-        InventoryVehicle vehicle = new InventoryVehicle(new VinNumber("VIN12345"));
-        ImporterData data = new ImporterData("MODEL_X", "BLACK");
+    void shouldEmitVehicleReceivedOnYardEventWhenCarArrives() {
+        InventoryVehicle vehicle = new InventoryVehicle(new VinNumber("VIN12345ONYARD"));
 
-        // Act
-        vehicle.receiveOnYard(data);
+        vehicle.receiveOnYard(new ImporterData("VIN12345ONYARD"));
 
-        // Assert - Sprawdzamy czy agregat wyemitował zdarzenie
         assertThat(vehicle.getDomainEvents())
-                .hasAtLeastOneElementOfType(VehicleReceivedInYardEvent.class);
-    }
-
-    @Test
-    void shouldEmitVehicleReadyForHandoverEventWhenPdiIsApproved() {
-        // Arrange
-        InventoryVehicle vehicle = new InventoryVehicle(new VinNumber("VIN12345"));
-        vehicle.receiveOnYard(new ImporterData("MODEL_X", "BLACK"));
-
-        // Act
-        vehicle.approvePdi();
-
-        // Assert
-        assertThat(vehicle.getDomainEvents())
-                .hasAtLeastOneElementOfType(VehicleReadyForHandoverEvent.class);
+                .hasAtLeastOneElementOfType(VehicleReceivedOnYardEvent.class);
     }
 }

@@ -2,6 +2,8 @@ package salon.logistics.domain.service;
 
 import salon.logistics.domain.model.slot.ProductionSlot;
 import salon.logistics.domain.model.vehicle.InventoryVehicle;
+import salon.logistics.domain.model.vehicle.VehicleRole;
+import salon.logistics.domain.model.vehicle.VehicleState;
 import salon.shared.model.OrderId;
 
 import java.util.List;
@@ -11,14 +13,11 @@ import java.util.List;
  *
  * Dostaje listę pojazdów (pobraną przez warstwę aplikacji z repozytorium — agregat nie zna bazy)
  * i albo blokuje pasujące auto na placu, albo tworzy slot produkcyjny.
- *
- * ZALOZENIE: pojazd nie przechowuje kodów konfiguracji, więc "dopasowanie" sprowadza się
- * do wyboru pierwszego wolnego auta STOCK na placu. Docelowo: dodać porównanie specCodes.
  */
 public class VehicleAllocationDomainService {
 
     /**
-     * Fast Track: znajduje wolne auto i blokuje je na zamówienie. Zwraca true, jeśli sparowano.
+     * Fast Track: znajduje wolne auto STOCK na placu i blokuje je. Zwraca true, jeśli sparowano.
      */
     public boolean tryLockExistingVehicle(OrderId orderId,
                                           List<InventoryVehicle> availableVehicles,
@@ -31,7 +30,7 @@ public class VehicleAllocationDomainService {
         }
         for (int i = 0; i < availableVehicles.size(); i++) {
             InventoryVehicle vehicle = availableVehicles.get(i);
-            if (vehicle.isAvailableForOrder()) {
+            if (vehicle.getRole() == VehicleRole.STOCK && vehicle.getState() == VehicleState.ON_STOCK) {
                 vehicle.lockForOrder(orderId);
                 return true;
             }

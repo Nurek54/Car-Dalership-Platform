@@ -2,8 +2,8 @@ package unit.sales_and_crm_context.aggregateTests;
 
 import org.junit.jupiter.api.Test;
 import salon.sales.domain.model.offer.OfferId;
-import salon.sales.domain.model.order.Order;
-import salon.sales.domain.model.order.OrderState;
+import salon.sales.domain.model.order.*;
+import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 
 import java.time.LocalDate;
@@ -11,10 +11,18 @@ import static org.assertj.core.api.Assertions.*;
 
 class OrderTest {
 
+    private Order createBaseOrder(String rawOrderId, String rawOfferId) {
+        return new Order(
+                new OrderId(rawOrderId),
+                new OfferId(rawOfferId),
+                Money.of(150000, "PLN")
+        );
+    }
+
     @Test
     void shouldDeclarePaymentMethodAndRegisterDomainEvent() {
         // Zamówienie powiązane z ofertą
-        Order order = new Order(new OrderId("ORD-001"), new OfferId("O-100"));
+        Order order = createBaseOrder("ORD-001", "O-100");
 
         // Klient wybiera finansowanie jako metodę płatności
         order.declarePaymentMethod(PaymentMethod.FINANCING);
@@ -34,13 +42,19 @@ class OrderTest {
     @Test
     void shouldExecuteRevertWhenHandoverFails() {
         // Zamówienie było gotowe do wydania, po czym zostało umówione i zrealizowane
-        Order order = new Order(new OrderId("ORD-002"), new OfferId("O-101"));
+        Order order = createBaseOrder("ORD-002", "O-101");
+
+        // Trzeba aktywować zamówienie, inaczej domena odrzuci kolejne kroki
+        order.activate(); // Stan: IN_PROGRESS
+
         order.markAsReadyForHandover(); // Stan: READY_FOR_HANDOVER
         order.scheduleHandover(LocalDate.now().plusDays(2)); // Stan: HANDOVER_SCHEDULED
+        order.setPaymentStatus(PaymentStatus.PAID);
         order.confirmHandover(); // Stan: COMPLETED
+
         assertThat(order.getState()).isEqualTo(OrderState.COMPLETED);
 
-        // ystępuje błąd w systemie inwentarza (np. auto jest zablokowane fizycznie)
+        // Występuje błąd w systemie inwentarza
         // System wywołuje metodę kompensacyjną
         order.revertToReadyForHandover();
 
@@ -52,8 +66,11 @@ class OrderTest {
     @Test
     void shouldConfirmHandoverDirectlyFromReadyState() {
         // Zamówienie gotowe do wydania (bez umówionej daty w kalendarzu)
-        Order order = new Order(new OrderId("ORD-001"), new OfferId("O-100"));
+        Order order = createBaseOrder("ORD-003", "O-102");
+
+        order.activate(); // Aktywacja (DRAFT -> IN_PROGRESS)
         order.markAsReadyForHandover(); // Stan: READY_FOR_HANDOVER
+        order.setPaymentStatus(PaymentStatus.PAID); // Musi być opłacone
 
         // Klient odbiera auto natychmiast na miejscu
         order.confirmHandover();

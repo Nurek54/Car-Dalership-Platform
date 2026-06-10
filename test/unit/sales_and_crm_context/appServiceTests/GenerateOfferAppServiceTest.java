@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import salon.catalog.application.port.out.CatalogRepository;
 import salon.sales.application.port.out.OfferRepository;
 import salon.sales.application.service.SalesAppService;
 import salon.sales.domain.model.offer.Offer;
@@ -20,7 +21,7 @@ class GenerateOfferAppServiceTest {
 
     @Mock
     private OfferRepository offerRepository;
-    @Mock private CatalogPort catalogPort;
+    @Mock private CatalogRepository catalogPort;
     @InjectMocks
     private SalesAppService salesAppService;
 

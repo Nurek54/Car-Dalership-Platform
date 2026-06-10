@@ -10,6 +10,7 @@ import salon.sales.application.service.SalesAppService;
 import salon.sales.application.port.out.OrderRepository;
 import salon.shared.application.EventPublisherPort;
 import salon.sales.domain.model.order.Order;
+import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.exception.OrderNotFoundException;
@@ -35,7 +36,7 @@ class ScheduleHandoverAppServiceTest {
         // Zamówienie istnieje w bazie i jest gotowe do wydania
         String rawOrderId = "ORD-11";
         OrderId orderId = new OrderId(rawOrderId);
-        Order order = new Order(orderId, new OfferId("OFF-11"));
+        Order order = new Order(orderId, new OfferId("OFF-11"), Money.of(150000, "PLN"));
         order.activate();
         order.markAsReadyForHandover(); // Status: READY_FOR_HANDOVER
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
@@ -54,7 +55,7 @@ class ScheduleHandoverAppServiceTest {
         // Poprawne zamówienie w bazie
         String rawOrderId = "ORD-12";
         OrderId orderId = new OrderId(rawOrderId);
-        Order order = new Order(orderId, new OfferId("OFF-12"));
+        Order order = new Order(orderId, new OfferId("OFF-12"), Money.of(150000, "PLN"));
         order.activate();
         order.markAsReadyForHandover();
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));

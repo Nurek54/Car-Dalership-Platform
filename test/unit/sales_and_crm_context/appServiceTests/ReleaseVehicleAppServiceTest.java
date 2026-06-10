@@ -10,6 +10,7 @@ import salon.sales.application.service.SalesAppService;
 import salon.sales.application.port.out.OrderRepository;
 import salon.shared.application.EventPublisherPort;
 import salon.sales.domain.model.order.*;
+import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.exception.InventoryLockedException;
@@ -35,7 +36,7 @@ class ReleaseVehicleAppServiceTest {
     void shouldExecuteConfirmHandoverUseCaseSuccessfully() { // SCENARIUSZ GŁÓWNY
         // Kompletne zamówienie w bazie
         OrderId orderId = new OrderId("ORD-999");
-        Order order = new Order(orderId, new OfferId("OFF-999"));
+        Order order = new Order(orderId, new OfferId("OFF-999"), Money.of(150000, "PLN"));
         order.activate();
         order.markAsReadyForHandover();
         order.scheduleHandover(LocalDate.now());
@@ -56,7 +57,7 @@ class ReleaseVehicleAppServiceTest {
     void shouldHandleInventoryLockErrorAndRollback() {
         // Wydanie umówione
         OrderId orderId = new OrderId("ORD-999");
-        Order order = new Order(orderId, new OfferId("OFF-999"));
+        Order order = new Order(orderId, new OfferId("OFF-999"), Money.of(150000, "PLN"));
         order.activate();
         order.markAsReadyForHandover();
         order.scheduleHandover(LocalDate.now());

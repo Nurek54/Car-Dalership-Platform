@@ -6,6 +6,7 @@ import salon.sales.domain.model.offer.Offer;
 import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.model.order.Order;
 import salon.sales.domain.model.order.OrderState;
+import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 import salon.shared.model.SpecificationId;
 
@@ -21,7 +22,7 @@ class AcceptOfferDomainTest {
 
         // Klient akceptuje ofertę, a my generujemy na jej podstawie zamówienie
         offer.accept();
-        Order order = new Order(new OrderId("ORD-1"), offer.getId());
+        Order order = new Order(new OrderId("ORD-1"), offer.getId(), Money.of(150000, "PLN"));
 
         // Oferta przechodzi w stan ACCEPTED
         assertThat(offer.getState()).isEqualTo(OfferState.ACCEPTED);

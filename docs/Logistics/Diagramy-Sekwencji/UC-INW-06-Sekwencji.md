@@ -4,7 +4,7 @@ box lightblue Adapter wejściowy (komenda ze Sprzedaży/CRM)
 participant Cmd as InventoryCommandAdapter
 end
 box lightgreen Warstwa aplikacji
-participant App as InventoryAppService
+participant App as AllocationAppService<br/>«HandleOrderEventsUseCase»
 end
 box pink Warstwa dziedziny
 participant Veh as InventoryVehicle
@@ -14,7 +14,7 @@ participant Repo as VehicleRepository
 participant Bus as EventPublisher
 end
 
-    Cmd->>App: releaseVehicle(ReleaseVehicle {vin})
+    Cmd->>App: releaseVehicle(vin)
     App->>Repo: findByVin(vin)
     Repo-->>App: InventoryVehicle
     App->>Veh: handOver()
@@ -23,10 +23,10 @@ end
         App->>Bus: publish(VehicleInventoryReleasedError)
         App-->>Cmd: błąd komendy
     else Główny: pojazd gotowy do wydania
-        note over Veh: → HANDED_OVER<br/>registerEvent(VehicleInventoryReleased)
+        note over Veh: → HANDED_OVER<br/>registerEvent(VehicleInventoryReleasedEvent)
         App->>Repo: save(vehicle)
         App->>Veh: pullDomainEvents()
-        Veh-->>App: [VehicleInventoryReleased]
-        App->>Bus: publish(VehicleInventoryReleased)
+        Veh-->>App: [VehicleInventoryReleasedEvent]
+        App->>Bus: publish(VehicleInventoryReleasedEvent)
         App-->>Cmd: OK (Wydany)
     end

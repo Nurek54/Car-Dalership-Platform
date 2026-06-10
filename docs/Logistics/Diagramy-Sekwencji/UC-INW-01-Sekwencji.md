@@ -5,7 +5,7 @@ box lightblue Adapter wejściowy
 participant Rest as InventoryRestAdapter
 end
 box lightgreen Warstwa aplikacji
-participant App as InventoryAppService
+participant App as YardManagementAppService<br/>«ManageYardUseCase»
 end
 box lavender Adapter wyjściowy (ACL)
 participant Acl as ImporterIdentityAclPort

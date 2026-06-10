@@ -1,36 +1,55 @@
 sequenceDiagram
 autonumber
-actor Op as Handlowiec / CRM
 box lightblue Adapter wejściowy
-participant Rest as InventoryRestAdapter
+participant Bus as Domain Event Bus<br/>(OrderActivatedEvent ze Sprzedaży)
+participant Sub as SalesEventSubscriberAdapter
 end
 box lightgreen Warstwa aplikacji
-participant App as InventoryAppService
+participant App as AllocationAppService<br/>«HandleOrderEventsUseCase»
 end
 box lavender Adapter wyjściowy (ACL)
-participant Acl as FactoryIntegrationAclPort
+participant Spec as SpecificationIntegrationAdapter<br/>«SpecificationIntegrationPort»
 end
 box pink Warstwa dziedziny
-participant Fac as InventoryVehicleFactory
+participant Alloc as VehicleAllocationDomainService
 participant Veh as InventoryVehicle
+participant Slot as ProductionSlot
 end
 box lavender Adaptery wyjściowe (wewn.)
-participant Repo as VehicleRepository
-participant Bus as EventPublisher
+participant VRepo as VehicleRepository
+participant SRepo as ProductionSlotRepository
+participant Pub as EventPublisherPort
 end
 
-    Op->>Rest: POST /api/factory-orders {orderId, specCodes}
-    Rest->>App: orderVehicleFromFactory(orderId, specCodes)
-    App->>Acl: placeFactoryOrder(specCodes)
-    alt A1: Fabryka odrzuca zlecenie (błąd API/połączenia)
-        Acl-->>App: FactoryOrderException
-        App->>Bus: publish(FactoryOrderFailed)
-        App-->>Rest: 502 Bad Gateway
-    else Główny: zlecenie przyjęte przez fabrykę
-        Acl-->>App: factoryJobId
-        App->>Fac: createInProduction(orderId, factoryJobId)
-        note over Fac,Veh: wirtualny pojazd w stanie IN_PRODUCTION
-        Fac-->>App: InventoryVehicle (IN_PRODUCTION)
-        App->>Repo: save(vehicle)
-        App-->>Rest: 202 Accepted (zamówiono w fabryce)
+    Bus->>Sub: OrderActivatedEvent {orderId, specCodes?}
+    Sub->>Sub: walidacja (orderId niepusty)
+    Sub->>App: allocateVehicleForOrder(orderId, specCodes)
+
+    opt Zdarzenie nie niesie kodów wyposażenia
+        App->>Spec: getSpecificationForOrder(orderId)
+        note over Spec: ACL do Kontekstu Katalogu/Sprzedaży —<br/>kody wyposażenia (silnik, kolor, opcje)<br/>NIE pochodzą "z powietrza"
+        Spec-->>App: List~specCodes~ (zatwierdzona specyfikacja)
+    end
+
+    App->>VRepo: findAll()
+    VRepo-->>App: List~InventoryVehicle~
+
+    App->>Alloc: tryLockExistingVehicle(orderId, vehicles, specCodes)
+
+    alt Fast Track: pasujące auto jest na placu
+        Alloc->>Veh: lockForOrder(orderId)
+        note over Veh: ON_STOCK → RESERVED<br/>registerEvent(VehicleReservedFromStockEvent)
+        Alloc-->>App: true
+        App->>VRepo: save(vehicle)
+        App->>Pub: publish(VehicleReservedFromStockEvent)
+        note over Pub: trigger UC-FIR-02 (faktura końcowa)
+    else Long Track: brak auta — slot produkcyjny
+        Alloc-->>App: false
+        App->>Alloc: createProductionSlot(orderId, specCodes)
+        Alloc->>Slot: createForOrder(orderId, specCodes)
+        note over Slot: zlecenie produkcyjne z kompletem kodów —<br/>fabryka wie, co wyprodukować
+        Alloc-->>App: ProductionSlot
+        App->>SRepo: save(slot)
+        App->>Pub: publish(VehicleIsNotOnStockEvent)
+        note over Pub: trigger UC-FIR-01 (prośba o zadatek)
     end

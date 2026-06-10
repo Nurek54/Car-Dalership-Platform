@@ -4,7 +4,7 @@ box lightblue Adapter wejściowy (zdarzeniowy)
 participant Listener as InventoryEventListener
 end
 box lightgreen Warstwa aplikacji
-participant App as InventoryAppService
+participant App as AllocationAppService<br/>«HandleOrderEventsUseCase»
 end
 box pink Warstwa dziedziny
 participant Veh as InventoryVehicle
@@ -14,7 +14,7 @@ participant Repo as VehicleRepository
 participant Bus as EventPublisher
 end
 
-    Listener->>App: on(PaymentDeadlineExpired {orderId})
+    Listener->>App: releaseReservationForOrder(orderId)<br/>(trigger: PaymentDeadlineExpired)
     App->>Repo: findByOrderId(orderId)
     alt A1: Pojazd nie istnieje w rezerwacjach (wydany/usunięty)
         Repo-->>App: Optional.empty()

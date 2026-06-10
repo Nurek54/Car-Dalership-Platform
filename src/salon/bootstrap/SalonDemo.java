@@ -9,6 +9,7 @@ import salon.billing.domain.model.settlement.SettlementFactory;
 import salon.billing.domain.service.InvoiceCalculationDomainService;
 import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
 import salon.billing.infrastructure.messaging.SettlementEventListener;
+import salon.billing.infrastructure.mock.CrmIntegrationMockAdapter;
 import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
 import salon.billing.infrastructure.mock.InMemorySettlementRepository;
 import salon.billing.infrastructure.mock.NotificationMockAdapter;
@@ -67,6 +68,7 @@ public class SalonDemo {
                 settlementRepo, new InMemoryDocumentRepository(),
                 new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
                 new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), bus,
+                new CrmIntegrationMockAdapter(),
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
         System.out.println("=== Choreografia: żądanie zadatku -> aktywacja zamówienia ===");
@@ -74,8 +76,7 @@ public class SalonDemo {
                 + orderRepo.findById(new OrderId("ORD-1")).get().getState());
 
         System.out.println("\n-> generateAdvance(ORD-1) (UC-FIR-01)");
-        docs.generateAdvance(new GenerateAdvanceCommand(
-                "ORD-1", "Jan Kowalski", "1234567890", "ksiegowy@salon.pl"));
+        docs.generateAdvance(new GenerateAdvanceCommand("ORD-1", "ksiegowy@salon.pl"));
 
         System.out.println("\nStan zamówienia PO:    "
                 + orderRepo.findById(new OrderId("ORD-1")).get().getState());

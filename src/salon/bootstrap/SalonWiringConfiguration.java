@@ -8,16 +8,24 @@ import salon.billing.application.port.out.PaymentGatewayPort;
 import salon.billing.application.port.out.SettlementRepository;
 import salon.billing.application.service.SettlementAppService;
 import salon.billing.domain.model.settlement.SettlementFactory;
+import salon.billing.application.port.out.CrmIntegrationPort;
+import salon.billing.infrastructure.mock.CrmIntegrationMockAdapter;
 import salon.billing.infrastructure.mock.PaymentGatewayMockAdapter;
 
-import salon.logistics.application.InventoryAppService;
+import salon.logistics.application.AllocationAppService;
+import salon.logistics.application.ProductionTrackingAppService;
+import salon.logistics.application.YardManagementAppService;
+import salon.logistics.application.port.out.FactoryStatusAclPort;
 import salon.logistics.application.port.out.ImporterIdentityAclPort;
 import salon.logistics.application.port.out.ProductionSlotRepository;
+import salon.logistics.application.port.out.SpecificationIntegrationPort;
 import salon.logistics.application.port.out.VehicleRepository;
 import salon.logistics.domain.service.VehicleAllocationDomainService;
+import salon.logistics.infrastructure.mock.FactoryStatusMockAdapter;
 import salon.logistics.infrastructure.mock.ImporterIdentityMockAdapter;
 import salon.logistics.infrastructure.mock.InMemoryProductionSlotRepository;
 import salon.logistics.infrastructure.mock.InMemoryVehicleRepository;
+import salon.logistics.infrastructure.mock.SpecificationIntegrationMockAdapter;
 
 import salon.sales.application.port.out.OfferRepository;
 import salon.sales.application.port.out.OrderRepository;
@@ -77,6 +85,16 @@ public class SalonWiringConfiguration {
     }
 
     @Bean
+    public SpecificationIntegrationPort specificationIntegrationPort() {
+        return new SpecificationIntegrationMockAdapter();
+    }
+
+    @Bean
+    public CrmIntegrationPort crmIntegrationPort() {
+        return new CrmIntegrationMockAdapter();
+    }
+
+    @Bean
     public VehicleAllocationDomainService vehicleAllocationDomainService() {
         return new VehicleAllocationDomainService();
     }
@@ -115,13 +133,32 @@ public class SalonWiringConfiguration {
     }
 
     @Bean
-    public InventoryAppService inventoryAppService(VehicleRepository vehicleRepository,
-                                                   ProductionSlotRepository productionSlotRepository,
-                                                   ImporterIdentityAclPort importerIdentityAclPort,
-                                                   VehicleAllocationDomainService vehicleAllocationDomainService,
-                                                   EventPublisherPort eventPublisherPort) {
-        return new InventoryAppService(vehicleRepository, productionSlotRepository,
-                importerIdentityAclPort, vehicleAllocationDomainService, eventPublisherPort);
+    public FactoryStatusAclPort factoryStatusAclPort() {
+        return new FactoryStatusMockAdapter();
+    }
+
+    @Bean
+    public YardManagementAppService yardManagementAppService(VehicleRepository vehicleRepository,
+                                                             ImporterIdentityAclPort importerIdentityAclPort,
+                                                             EventPublisherPort eventPublisherPort) {
+        return new YardManagementAppService(vehicleRepository, importerIdentityAclPort, eventPublisherPort);
+    }
+
+    @Bean
+    public ProductionTrackingAppService productionTrackingAppService(ProductionSlotRepository productionSlotRepository,
+                                                                     FactoryStatusAclPort factoryStatusAclPort,
+                                                                     EventPublisherPort eventPublisherPort) {
+        return new ProductionTrackingAppService(productionSlotRepository, factoryStatusAclPort, eventPublisherPort);
+    }
+
+    @Bean
+    public AllocationAppService allocationAppService(VehicleRepository vehicleRepository,
+                                                     ProductionSlotRepository productionSlotRepository,
+                                                     SpecificationIntegrationPort specificationIntegrationPort,
+                                                     VehicleAllocationDomainService vehicleAllocationDomainService,
+                                                     EventPublisherPort eventPublisherPort) {
+        return new AllocationAppService(vehicleRepository, productionSlotRepository,
+                specificationIntegrationPort, vehicleAllocationDomainService, eventPublisherPort);
     }
 
     // --- Adaptery sterujące (subskrybenty zdarzeń) jako beany ---
@@ -142,7 +179,7 @@ public class SalonWiringConfiguration {
     }
 
     @Bean
-    public SalesEventSubscriberAdapter salesEventSubscriberAdapter(InventoryAppService inventoryAppService) {
-        return new SalesEventSubscriberAdapter(inventoryAppService);
+    public SalesEventSubscriberAdapter salesEventSubscriberAdapter(AllocationAppService allocationAppService) {
+        return new SalesEventSubscriberAdapter(allocationAppService);
     }
 }

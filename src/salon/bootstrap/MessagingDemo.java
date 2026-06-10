@@ -9,6 +9,7 @@ import salon.billing.domain.model.settlement.SettlementFactory;
 import salon.billing.domain.service.InvoiceCalculationDomainService;
 import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
 import salon.billing.infrastructure.messaging.SettlementEventListener;
+import salon.billing.infrastructure.mock.CrmIntegrationMockAdapter;
 import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
 import salon.billing.infrastructure.mock.InMemorySettlementRepository;
 import salon.billing.infrastructure.mock.NotificationMockAdapter;
@@ -77,11 +78,11 @@ public class MessagingDemo {
                     settlementRepo, new InMemoryDocumentRepository(),
                     new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
                     new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), billingPublisher,
+                    new CrmIntegrationMockAdapter(),
                     new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
             System.out.println(">> generateAdvance(ORD-DEMO-1) -> publikacja AdvancePaymentRequestedEvent ...");
-            docs.generateAdvance(new GenerateAdvanceCommand(
-                    "ORD-DEMO-1", "Jan Kowalski", "1234567890", "ksiegowy@salon.pl"));
+            docs.generateAdvance(new GenerateAdvanceCommand("ORD-DEMO-1", "ksiegowy@salon.pl"));
 
             // Dajemy konsumentowi chwilę na odebranie wiadomości z kolejki.
             Thread.sleep(1500);

@@ -1,14 +1,11 @@
 package salon.logistics.application;
 
-import salon.logistics.application.port.in.ManageInventoryUseCase;
+import salon.logistics.application.port.in.ManageYardUseCase;
 import salon.logistics.application.port.out.ImporterIdentityAclPort;
-import salon.logistics.application.port.out.ProductionSlotRepository;
 import salon.logistics.application.port.out.VehicleRepository;
-import salon.logistics.domain.model.slot.ProductionSlot;
 import salon.logistics.domain.model.vehicle.ImporterData;
 import salon.logistics.domain.model.vehicle.InventoryVehicle;
 import salon.logistics.domain.model.vehicle.VinNumber;
-import salon.logistics.domain.service.VehicleAllocationDomainService;
 import salon.shared.application.EventPublisherPort;
 import salon.shared.event.DomainEvent;
 import salon.shared.model.OrderId;
@@ -17,42 +14,29 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Orkiestracja kontekstu Inwentarza i Logistyki. Konsoliduje role z diagramu
- * (YardManagement / Allocation) w jeden serwis aplikacyjny, bo testy adapterów
- * odwołują się do salon.logistics.application.InventoryAppService.
+ * Usługa aplikacyjna placu i PDI (UC-INW-01, 03, 05) —
+ * węzeł "YardManagementAppService" w docs/Inwentarz-Logistyka/LogisticsArchitecture.md.
  */
-public class InventoryAppService implements ManageInventoryUseCase {
+public class YardManagementAppService implements ManageYardUseCase {
 
     private final VehicleRepository vehicleRepository;
-    private final ProductionSlotRepository slotRepository;
     private final ImporterIdentityAclPort importerIdentity;
-    private final VehicleAllocationDomainService allocationService;
     private final EventPublisherPort eventPublisher;
 
-    public InventoryAppService(VehicleRepository vehicleRepository,
-                               ProductionSlotRepository slotRepository,
-                               ImporterIdentityAclPort importerIdentity,
-                               VehicleAllocationDomainService allocationService,
-                               EventPublisherPort eventPublisher) {
+    public YardManagementAppService(VehicleRepository vehicleRepository,
+                                    ImporterIdentityAclPort importerIdentity,
+                                    EventPublisherPort eventPublisher) {
         if (vehicleRepository == null) {
             throw new IllegalArgumentException("vehicleRepository must not be null.");
         }
-        if (slotRepository == null) {
-            throw new IllegalArgumentException("slotRepository must not be null.");
-        }
         if (importerIdentity == null) {
             throw new IllegalArgumentException("importerIdentity must not be null.");
-        }
-        if (allocationService == null) {
-            throw new IllegalArgumentException("allocationService must not be null.");
         }
         if (eventPublisher == null) {
             throw new IllegalArgumentException("eventPublisher must not be null.");
         }
         this.vehicleRepository = vehicleRepository;
-        this.slotRepository = slotRepository;
         this.importerIdentity = importerIdentity;
-        this.allocationService = allocationService;
         this.eventPublisher = eventPublisher;
     }
 
@@ -71,25 +55,39 @@ public class InventoryAppService implements ManageInventoryUseCase {
         publishEventsOf(vehicle);
     }
 
-    // UC-INW-07: Fast Track (blokada auta) albo Long Track (slot produkcyjny).
+    // UC-INW-03: dostawa na stock — jeśli czeka zamówienie, auto jest od razu rezerwowane.
     @Override
-    public void allocateVehicleForOrder(String orderId, List<String> specCodes) {
+    public void registerDelivery(String vin) {
+        if (vin == null || vin.isBlank()) {
+            throw new IllegalArgumentException("vin must not be blank.");
+        }
+        VinNumber vinNumber = new VinNumber(vin);
+        InventoryVehicle vehicle = vehicleRepository.findByVin(vinNumber)
+                .orElseThrow(() -> new IllegalStateException("No vehicle on stock with VIN " + vin));
+
+        Optional<OrderId> pendingOrder = vehicleRepository.findPendingOrderForSpec(vinNumber);
+        if (pendingOrder.isEmpty()) {
+            // A1: auto zamówione "na stock" — pozostaje ON_STOCK (wolne), bez zdarzenia.
+            vehicleRepository.save(vehicle);
+            return;
+        }
+        vehicle.lockForOrder(pendingOrder.get());
+        vehicleRepository.save(vehicle);
+        publishEventsOf(vehicle);
+    }
+
+    // UC-INW-05: SettlementCompleted -> auto gotowe do wydania (pozostaje RESERVED).
+    @Override
+    public void markVehicleReadyForHandover(String orderId) {
         if (orderId == null || orderId.isBlank()) {
             throw new IllegalArgumentException("orderId must not be blank.");
         }
-        OrderId id = new OrderId(orderId);
-        List<InventoryVehicle> all = vehicleRepository.findAll();
-
-        boolean locked = allocationService.tryLockExistingVehicle(id, all, specCodes);
-        if (locked) {
-            for (int i = 0; i < all.size(); i++) {
-                vehicleRepository.save(all.get(i));
-            }
-            return;
-        }
-
-        ProductionSlot slot = allocationService.createProductionSlot(id, specCodes);
-        slotRepository.save(slot);
+        InventoryVehicle vehicle = vehicleRepository.findByOrderId(new OrderId(orderId))
+                .orElseThrow(() -> new IllegalStateException(
+                        "No reserved vehicle for order " + orderId));
+        vehicle.markReadyForHandover();
+        vehicleRepository.save(vehicle);
+        publishEventsOf(vehicle);
     }
 
     private void publishEventsOf(InventoryVehicle vehicle) {

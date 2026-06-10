@@ -1,6 +1,10 @@
 package salon.logistics.domain.model.vehicle;
 
+import salon.logistics.domain.event.VehicleInventoryReleasedEvent;
+import salon.logistics.domain.event.VehicleReadyForHandoverEvent;
 import salon.logistics.domain.event.VehicleReceivedOnYardEvent;
+import salon.logistics.domain.event.VehicleReservationCancelledEvent;
+import salon.logistics.domain.event.VehicleReservedFromStockEvent;
 import salon.logistics.domain.exceptions.InvalidVehicleStateException;
 import salon.shared.event.AbstractAggregateRoot;
 import salon.shared.model.OrderId;
@@ -14,6 +18,7 @@ import java.util.UUID;
  * Model zgodny 1:1 z diagramem agregatu:
  *   pola:    vin, role, state, order (referencja rozłączna do zamówienia, 0..1)
  *   metody:  receiveOnYard, markAsDemo, lockForOrder, releaseReservation
+ *            + markReadyForHandover / handOver (UC-INW-05/06 — domknięcie cyklu HANDED_OVER)
  *   stany:   IN_PRODUCTION -> ON_STOCK -> (RESERVED) -> HANDED_OVER
  *
  * Rezerwacja to mutex: lockForOrder zdejmuje auto z puli sprzedaży, releaseReservation je zwraca.
@@ -71,6 +76,8 @@ public class InventoryVehicle extends AbstractAggregateRoot {
         }
         this.order = orderId;
         this.state = VehicleState.RESERVED;
+        registerEvent(new VehicleReservedFromStockEvent(
+                UUID.randomUUID(), orderId.value(), this.vin.value(), Instant.now()));
     }
 
     // UC-INW-06: zwolnienie rezerwacji po anulowaniu zamówienia.
@@ -79,8 +86,32 @@ public class InventoryVehicle extends AbstractAggregateRoot {
             throw new InvalidVehicleStateException(
                     "Only a RESERVED vehicle can be released, was: " + this.state);
         }
+        String cancelledOrder = this.order.value();
         this.order = null;
         this.state = VehicleState.ON_STOCK;
+        registerEvent(new VehicleReservationCancelledEvent(
+                UUID.randomUUID(), cancelledOrder, this.vin.value(), Instant.now()));
+    }
+
+    // UC-INW-05: saldo rozliczone — auto (wciąż RESERVED) gotowe do wydania klientowi.
+    public void markReadyForHandover() {
+        if (this.state != VehicleState.RESERVED) {
+            throw new InvalidVehicleStateException(
+                    "Only a RESERVED vehicle can be marked ready for handover, was: " + this.state);
+        }
+        registerEvent(new VehicleReadyForHandoverEvent(
+                UUID.randomUUID(), this.order.value(), this.vin.value(), Instant.now()));
+    }
+
+    // UC-INW-06: fizyczne wydanie pojazdu klientowi (RESERVED -> HANDED_OVER).
+    public void handOver() {
+        if (this.state != VehicleState.RESERVED) {
+            throw new InvalidVehicleStateException(
+                    "Only a RESERVED vehicle can be handed over, was: " + this.state);
+        }
+        this.state = VehicleState.HANDED_OVER;
+        registerEvent(new VehicleInventoryReleasedEvent(
+                UUID.randomUUID(), this.order.value(), this.vin.value(), Instant.now()));
     }
 
     public VinNumber getVin() {

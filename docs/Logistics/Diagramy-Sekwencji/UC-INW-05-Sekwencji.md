@@ -4,7 +4,7 @@ box lightblue Adapter wejściowy (zdarzeniowy)
 participant Listener as InventoryEventListener
 end
 box lightgreen Warstwa aplikacji
-participant App as InventoryAppService
+participant App as YardManagementAppService<br/>«ManageYardUseCase»
 end
 box pink Warstwa dziedziny
 participant Veh as InventoryVehicle
@@ -14,7 +14,7 @@ participant Repo as VehicleRepository
 participant Bus as EventPublisher
 end
 
-    Listener->>App: on(SettlementCompleted {orderId})
+    Listener->>App: markVehicleReadyForHandover(orderId)<br/>(trigger: SettlementCompleted)
     App->>Repo: findByOrderId(orderId)
     Repo-->>App: InventoryVehicle (RESERVED)
     note over App: weryfikacja aktywnej rezerwacji dla VIN

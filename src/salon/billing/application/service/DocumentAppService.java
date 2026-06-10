@@ -4,6 +4,7 @@ import salon.billing.application.port.in.GenerateAdvanceCommand;
 import salon.billing.application.port.in.GenerateAdvanceUseCase;
 import salon.billing.application.port.in.GenerateInvoiceCommand;
 import salon.billing.application.port.in.GenerateInvoiceUseCase;
+import salon.billing.application.port.out.CrmIntegrationPort;
 import salon.billing.application.port.out.DocumentRepository;
 import salon.billing.application.port.out.NotificationPort;
 import salon.billing.application.port.out.PdfGeneratorPort;
@@ -26,6 +27,9 @@ import salon.shared.model.OrderId;
  * Matematykę księgową wykonuje InvoiceCalculationDomainService (na podstawie stanu Settlement),
  * walidację terminów płatności i konstrukcję agregatu — AccountingDocumentFactory. Serwis jedynie
  * koordynuje wywołania między domeną a portami wyjściowymi (repo, PDF, notyfikacje, magistrala).
+ *
+ * Dane nabywcy (BuyerDetails) dociągane są z Kontekstu Sprzedaży/CRM przez CrmIntegrationPort —
+ * zdarzenia wyzwalające (np. VehicleReservedFromStock) niosą tylko orderId/VIN.
  */
 public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoiceUseCase {
 
@@ -36,6 +40,7 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
     private final PdfGeneratorPort pdfGenerator;
     private final NotificationPort notification;
     private final EventPublisherPort eventPublisher;
+    private final CrmIntegrationPort crmIntegration;
     private final SellerDetails seller;
 
     public DocumentAppService(SettlementRepository settlementRepository,
@@ -45,6 +50,7 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
                               PdfGeneratorPort pdfGenerator,
                               NotificationPort notification,
                               EventPublisherPort eventPublisher,
+                              CrmIntegrationPort crmIntegration,
                               SellerDetails seller) {
         if (settlementRepository == null) {
             throw new IllegalArgumentException("settlementRepository must not be null.");
@@ -67,6 +73,9 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
         if (eventPublisher == null) {
             throw new IllegalArgumentException("eventPublisher must not be null.");
         }
+        if (crmIntegration == null) {
+            throw new IllegalArgumentException("crmIntegration must not be null.");
+        }
         if (seller == null) {
             throw new IllegalArgumentException("seller must not be null.");
         }
@@ -77,6 +86,7 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
         this.pdfGenerator = pdfGenerator;
         this.notification = notification;
         this.eventPublisher = eventPublisher;
+        this.crmIntegration = crmIntegration;
         this.seller = seller;
     }
 
@@ -90,7 +100,7 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
         Settlement settlement = loadSettlement(orderId);
 
         Money advanceAmount = this.invoiceCalculation.calculateAdvanceAmount(settlement);
-        BuyerDetails buyer = new BuyerDetails(command.buyerName(), command.buyerNip());
+        BuyerDetails buyer = loadBuyerDetails(orderId);
 
         AccountingDocument document = this.documentFactory.create(
                 orderId, buyer, this.seller, advanceAmount,
@@ -116,7 +126,7 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
         Settlement settlement = loadSettlement(orderId);
 
         Money finalAmount = this.invoiceCalculation.calculateFinalInvoiceAmount(settlement);
-        BuyerDetails buyer = new BuyerDetails(command.buyerName(), command.buyerNip());
+        BuyerDetails buyer = loadBuyerDetails(orderId);
 
         AccountingDocument document = this.documentFactory.create(
                 orderId, buyer, this.seller, finalAmount,
@@ -124,6 +134,15 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
 
         AccountingDocument issued = issueAndDeliver(document);
         return issued.getId().value();
+    }
+
+    // UC-FIR-01/02: dane klienta z modułu Sprzedaży/CRM (zamiast "z powietrza" w komendzie).
+    private BuyerDetails loadBuyerDetails(OrderId orderId) {
+        BuyerDetails buyer = this.crmIntegration.getCustomerDetails(orderId);
+        if (buyer == null) {
+            throw new IllegalStateException("No customer details in CRM for order " + orderId.value());
+        }
+        return buyer;
     }
 
     private Settlement loadSettlement(OrderId orderId) {

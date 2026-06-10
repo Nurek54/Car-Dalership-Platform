@@ -1,10 +1,11 @@
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Bus as Domain Event Bus<br/>(VehicleIsNotOnStock)
+    participant Bus as Domain Event Bus<br/>(VehicleIsNotOnStockEvent)
     participant Sub as BillingEventSubscriberAdapter<br/>«driving adapter»
     participant App as DocumentAppService<br/>«GenerateAdvanceUseCase»
     participant SRepo as SettlementRepository<br/>«out port»
+    participant Crm as CrmIntegrationAdapter<br/>«CrmIntegrationPort, ACL»
     participant Calc as InvoiceCalculationDomainService<br/>«domain service»
     participant Stl as Settlement<br/>«aggregate root»
     participant Fac as AccountingDocumentFactory<br/>«factory»
@@ -15,7 +16,7 @@ sequenceDiagram
     participant Pub as EventPublisherPort<br/>«out port»
     participant Klient
 
-    Bus->>Sub: VehicleIsNotOnStock
+    Bus->>Sub: VehicleIsNotOnStockEvent {orderId}
     Sub->>App: generateAdvance(GenerateAdvanceCommand)
 
     App->>SRepo: findByOrderId(orderId)
@@ -25,6 +26,10 @@ sequenceDiagram
     Calc->>Stl: getTotalAmount()
     Stl-->>Calc: Money(total)
     Calc-->>App: Money(advance = 10% total)
+
+    App->>Crm: getCustomerDetails(orderId)
+    Note over Crm: ACL do Kontekstu Sprzedaży/CRM —<br/>komenda niesie tylko orderId, dane klienta<br/>NIE pochodzą "z powietrza"
+    Crm-->>App: BuyerDetails (imię, nazwisko, NIP)
 
     App->>Fac: create(orderId, buyer, seller, amount, title, issuer)
     Fac->>Doc: createInvoice(...)

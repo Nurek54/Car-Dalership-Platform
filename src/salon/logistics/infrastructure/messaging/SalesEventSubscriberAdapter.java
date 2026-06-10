@@ -1,6 +1,6 @@
 package salon.logistics.infrastructure.messaging;
 
-import salon.logistics.application.InventoryAppService;
+import salon.logistics.application.port.in.HandleOrderEventsUseCase;
 
 /**
  * Adapter sterujący (driving) — subskrybent zdarzeń Sprzedaży w Kontekście Inwentarza i Logistyki.
@@ -10,13 +10,13 @@ import salon.logistics.application.InventoryAppService;
  */
 public class SalesEventSubscriberAdapter {
 
-    private final InventoryAppService inventoryAppService;
+    private final HandleOrderEventsUseCase orderEvents;
 
-    public SalesEventSubscriberAdapter(InventoryAppService inventoryAppService) {
-        if (inventoryAppService == null) {
-            throw new IllegalArgumentException("inventoryAppService must not be null.");
+    public SalesEventSubscriberAdapter(HandleOrderEventsUseCase orderEvents) {
+        if (orderEvents == null) {
+            throw new IllegalArgumentException("orderEvents must not be null.");
         }
-        this.inventoryAppService = inventoryAppService;
+        this.orderEvents = orderEvents;
     }
 
     public void handleOrderPlacedEvent(OrderActivatedEvent event) {
@@ -26,6 +26,6 @@ public class SalesEventSubscriberAdapter {
         if (event.orderId() == null || event.orderId().isBlank()) {
             throw new IllegalArgumentException("Identyfikator zamówienia (orderId) nie może być pusty");
         }
-        inventoryAppService.allocateVehicleForOrder(event.orderId(), event.specCodes());
+        orderEvents.allocateVehicleForOrder(event.orderId(), event.specCodes());
     }
 }

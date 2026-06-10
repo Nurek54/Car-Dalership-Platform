@@ -5,7 +5,7 @@ box lightblue Adapter wejściowy
 participant Rest as InventoryRestAdapter
 end
 box lightgreen Warstwa aplikacji
-participant App as InventoryAppService
+participant App as YardManagementAppService<br/>«ManageYardUseCase»
 end
 box pink Warstwa dziedziny
 participant Veh as InventoryVehicle
@@ -28,10 +28,10 @@ end
     else Główny: znaleziono oczekujące zamówienie
         Repo-->>App: OrderId
         App->>Veh: lockForOrder(orderId)
-        note over Veh: ON_STOCK → RESERVED (referencja OrderId)<br/>registerEvent(VehicleDeliveredToStock)
+        note over Veh: ON_STOCK → RESERVED (referencja OrderId)<br/>registerEvent(VehicleReservedFromStockEvent)
         App->>Repo: save(vehicle)
         App->>Veh: pullDomainEvents()
-        Veh-->>App: [VehicleDeliveredToStock]
-        App->>Bus: publish(VehicleDeliveredToStock)
+        Veh-->>App: [VehicleReservedFromStockEvent]
+        App->>Bus: publish(VehicleReservedFromStockEvent)
         App-->>Rest: 200 OK (Zarezerwowany)
     end

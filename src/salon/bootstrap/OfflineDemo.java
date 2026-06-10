@@ -10,6 +10,7 @@ import salon.billing.domain.model.settlement.SettlementFactory;
 import salon.billing.domain.service.InvoiceCalculationDomainService;
 import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
 import salon.billing.infrastructure.messaging.SettlementEventListener;
+import salon.billing.infrastructure.mock.CrmIntegrationMockAdapter;
 import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
 import salon.billing.infrastructure.mock.InMemorySettlementRepository;
 import salon.billing.infrastructure.mock.InProcessEventPublisherAdapter;
@@ -89,11 +90,11 @@ public class OfflineDemo {
                 settlementRepo, new InMemoryDocumentRepository(),
                 new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
                 new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), bus,
+                new CrmIntegrationMockAdapter(),
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
         String invoiceId = docs.generateInvoice(new GenerateInvoiceCommand(
-                "ORD-1", "Jan Kowalski", "1234567890",
-                "Faktura koncowa ORD-1", "ksiegowy@salon.pl"));
+                "ORD-1", "Faktura koncowa ORD-1", "ksiegowy@salon.pl"));
         System.out.println("[OK] Faktura wystawiona, id=" + invoiceId);
     }
 }

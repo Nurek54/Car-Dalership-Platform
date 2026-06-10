@@ -1,10 +1,11 @@
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Bus as Domain Event Bus<br/>(VehicleReservedFromStock)
+    participant Bus as Domain Event Bus<br/>(VehicleReservedFromStockEvent)
     participant Sub as BillingEventSubscriberAdapter<br/>«driving adapter»
     participant App as DocumentAppService<br/>«GenerateInvoiceUseCase»
     participant SRepo as SettlementRepository<br/>«out port»
+    participant Crm as CrmIntegrationAdapter<br/>«CrmIntegrationPort, ACL»
     participant Calc as InvoiceCalculationDomainService<br/>«domain service»
     participant Stl as Settlement<br/>«aggregate root»
     participant Fac as AccountingDocumentFactory<br/>«factory»
@@ -15,7 +16,7 @@ sequenceDiagram
     participant Pub as EventPublisherPort<br/>«out port»
     participant Klient
 
-    Bus->>Sub: VehicleReservedFromStock
+    Bus->>Sub: VehicleReservedFromStockEvent {orderId, vin}
     Sub->>App: generateInvoice(GenerateInvoiceCommand)
 
     App->>SRepo: findByOrderId(orderId)
@@ -26,6 +27,10 @@ sequenceDiagram
     Note over Stl: totalAmount - suma zaksięgowanych wpłat<br/>(uwzględnia wpłacony zadatek)
     Stl-->>Calc: Money(outstanding)
     Calc-->>App: Money(kwota pozostała do zapłaty)
+
+    App->>Crm: getCustomerDetails(orderId)
+    Note over Crm: ACL do Kontekstu Sprzedaży/CRM —<br/>VehicleReservedFromStock niesie tylko orderId/VIN,<br/>dane nabywcy dociągane po orderId
+    Crm-->>App: BuyerDetails (imię, nazwisko, NIP)
 
     App->>Fac: create(orderId, buyer, seller, amount, invoiceTitle, issuer)
     Fac->>Doc: createInvoice(...)

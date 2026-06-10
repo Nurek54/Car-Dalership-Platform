@@ -54,6 +54,9 @@ direction TB
     DPdf[[PdfGeneratorPort]]
     DNotif[[NotificationPort]]
 
+    %% DODANY PORT DO CRM
+    CrmPort[[CrmIntegrationPort]]
+
     DPort1 --> DApp
     DPort2 --> DApp
 
@@ -70,13 +73,14 @@ direction TB
     DApp --> DRepo
     DApp --> DPdf
     DApp --> DNotif
+    DApp --> CrmPort
 
 end
 
 %% =====================================================
 %% DOMAIN EVENTS
 %% =====================================================
-Event{{DomainEvent}}
+Event{{DomainEvent Bus}}
 Settlement -. generates .-> Event
 Document -. generates .-> Event
 
@@ -87,5 +91,5 @@ class SPort1,SPort2,DPort1,DPort2 port
 class SApp,DApp app
 class Settlement,Document,Event,DDomainSvc domain
 class PaymentEntity entity
-class SRepo,DRepo,DPdf,DNotif repository
+class SRepo,DRepo,DPdf,DNotif,CrmPort repository
 class SetFactory,DocFactory factory

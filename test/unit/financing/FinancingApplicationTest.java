@@ -1,4 +1,4 @@
-package unit.financing_and_insurance_context;
+package unit.financing;
 
 import org.junit.jupiter.api.Test;
 import salon.financing.domain.model.financing.ApplicationId;

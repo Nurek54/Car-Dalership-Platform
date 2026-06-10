@@ -1,4 +1,4 @@
-package unit.financing_and_insurance_context.events;
+package unit.financing.events;
 
 import org.junit.jupiter.api.Test;
 import salon.financing.domain.event.FinancingApprovedEvent;

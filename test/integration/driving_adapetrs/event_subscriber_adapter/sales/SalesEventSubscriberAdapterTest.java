@@ -8,7 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import salon.logistics.application.InventoryAppService;
+import salon.logistics.application.AllocationAppService;
 
 import java.util.List;
 
@@ -21,7 +21,7 @@ class SalesEventSubscriberAdapterTest {
 
     // Kaskader dla usługi aplikacji w Kontekście Inwentarza
     @Mock
-    private InventoryAppService inventoryAppService;
+    private AllocationAppService allocationAppService;
 
     // Testowany adapter - wstrzykujemy do niego kaskadera
     @InjectMocks
@@ -41,7 +41,7 @@ class SalesEventSubscriberAdapterTest {
         adapter.handleOrderPlacedEvent(validEvent);
 
         // Assert - Upewniamy się, że adapter przekazał zadanie do warstwy aplikacji
-        verify(inventoryAppService, times(1))
+        verify(allocationAppService, times(1))
                 .allocateVehicleForOrder("ORD-999", validEvent.specCodes());
     }
 
@@ -61,7 +61,7 @@ class SalesEventSubscriberAdapterTest {
                 .hasMessageContaining("Identyfikator zamówienia (orderId) nie może być pusty");
 
         // Gwarancja, że zepsute dane nie dotarły do logiki biznesowej
-        verify(inventoryAppService, never()).allocateVehicleForOrder(any(), any());
+        verify(allocationAppService, never()).allocateVehicleForOrder(any(), any());
     }
 
     // 3. MAPOWANIE BŁĘDÓW / DLQ (Przepuszczanie wyjątków wyżej dla RabbitMQ)
@@ -74,7 +74,7 @@ class SalesEventSubscriberAdapterTest {
 
         // Symulujemy awarię bazy danych (np. przerwane połączenie z PostgreSQL)
         doThrow(new RuntimeException("Brak połączenia z bazą danych"))
-                .when(inventoryAppService).allocateVehicleForOrder(any(), any());
+                .when(allocationAppService).allocateVehicleForOrder(any(), any());
 
         // Act & Assert
         // Wyjątek musi wylecieć z metody, żeby RabbitMQ wiedział, że ma wrzucić wiadomość do DLQ (Dead Letter Queue)

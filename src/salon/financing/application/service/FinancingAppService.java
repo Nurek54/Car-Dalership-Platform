@@ -3,14 +3,17 @@ package salon.financing.application.service;
 import salon.financing.application.port.in.FinancingRequestUseCase;
 import salon.financing.application.port.out.BankIntegrationAclPort;
 import salon.financing.application.BankValidationException;
+import salon.financing.application.port.out.CrmIntegrationPort;
 import salon.financing.application.port.out.FinancingRepository;
 import salon.financing.domain.event.FinancingApplicationFailed;
 import salon.financing.domain.model.financing.ApplicationId;
+import salon.financing.domain.model.financing.BuyerDetails;
 import salon.financing.domain.model.financing.CustomerId;
 import salon.financing.domain.model.financing.FinancingApplication;
 import salon.financing.domain.model.financing.FinancingApplicationFactory;
 import salon.shared.application.EventPublisherPort;
 import salon.shared.event.DomainEvent;
+import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 
 import java.time.Instant;
@@ -32,11 +35,13 @@ public class FinancingAppService implements FinancingRequestUseCase {
 
     private final FinancingRepository financingRepository;
     private final FinancingApplicationFactory applicationFactory;
+    private final CrmIntegrationPort crmIntegration;
     private final BankIntegrationAclPort bankAcl;
     private final EventPublisherPort eventPublisher;
 
     public FinancingAppService(FinancingRepository financingRepository,
                                FinancingApplicationFactory applicationFactory,
+                               CrmIntegrationPort crmIntegration,
                                BankIntegrationAclPort bankAcl,
                                EventPublisherPort eventPublisher) {
         if (financingRepository == null) {
@@ -44,6 +49,9 @@ public class FinancingAppService implements FinancingRequestUseCase {
         }
         if (applicationFactory == null) {
             throw new IllegalArgumentException("applicationFactory must not be null.");
+        }
+        if (crmIntegration == null) {
+            throw new IllegalArgumentException("crmIntegration must not be null.");
         }
         if (bankAcl == null) {
             throw new IllegalArgumentException("bankAcl must not be null.");
@@ -53,6 +61,7 @@ public class FinancingAppService implements FinancingRequestUseCase {
         }
         this.financingRepository = financingRepository;
         this.applicationFactory = applicationFactory;
+        this.crmIntegration = crmIntegration;
         this.bankAcl = bankAcl;
         this.eventPublisher = eventPublisher;
     }
@@ -67,8 +76,13 @@ public class FinancingAppService implements FinancingRequestUseCase {
         if (orderId == null || orderId.isBlank()) {
             throw new IllegalArgumentException("orderId must not be blank.");
         }
+        OrderId order = new OrderId(orderId);
+        // ACL: dane nabywcy i cena końcowa oferty zaciągane z Kontekstu Sprzedaży (CRM).
+        BuyerDetails buyerDetails = crmIntegration.getBuyerDetails(order);
+        Money moneyForFunding = crmIntegration.getOfferFinalPrice(order);
+
         FinancingApplication application =
-                applicationFactory.createFor(new OrderId(orderId), new CustomerId(customerId));
+                applicationFactory.createFor(order, new CustomerId(customerId), buyerDetails, moneyForFunding);
 
         application.submitApplication();
         financingRepository.save(application);

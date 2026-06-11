@@ -162,11 +162,18 @@ public class SalonWiringConfiguration {
     // --- Finansowanie ---
 
     @Bean
+    public salon.financing.application.port.out.CrmIntegrationPort financingCrmIntegrationPort(
+            SalesQueryFacade salesQueryFacade) {
+        return new salon.financing.infrastructure.integration.SalesCrmIntegrationAdapter(salesQueryFacade);
+    }
+
+    @Bean
     public FinancingAppService financingAppService(FinancingRepository financingRepository,
+                                                   salon.financing.application.port.out.CrmIntegrationPort financingCrmIntegrationPort,
                                                    BankIntegrationAclPort bankIntegrationAclPort,
                                                    EventPublisherPort eventPublisherPort) {
         return new FinancingAppService(financingRepository, new FinancingApplicationFactory(),
-                bankIntegrationAclPort, eventPublisherPort);
+                financingCrmIntegrationPort, bankIntegrationAclPort, eventPublisherPort);
     }
 
     // --- Adaptery sterujące (subskrybenty zdarzeń) jako beany ---

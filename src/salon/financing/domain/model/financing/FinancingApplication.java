@@ -3,6 +3,7 @@ package salon.financing.domain.model.financing;
 import salon.financing.domain.event.FinancingApprovedEvent;
 import salon.financing.domain.event.FinancingRejectedEvent;
 import salon.shared.event.AbstractAggregateRoot;
+import salon.shared.model.Money;
 import salon.shared.model.OrderId;
 
 import java.time.Instant;
@@ -22,11 +23,15 @@ public class FinancingApplication extends AbstractAggregateRoot {
     private final ApplicationId applicationId;
     private final OrderId orderId;
     private final CustomerId customerId;
+    private final BuyerDetails buyerDetails;
     private ApplicationState state;
+    private final Money moneyForFunding;
 
     public FinancingApplication(ApplicationId applicationId,
                                 OrderId orderId,
-                                CustomerId customerId) {
+                                CustomerId customerId,
+                                BuyerDetails buyerDetails,
+                                Money moneyForFunding) {
         if (applicationId == null) {
             throw new IllegalArgumentException("applicationId must not be null.");
         }
@@ -36,9 +41,17 @@ public class FinancingApplication extends AbstractAggregateRoot {
         if (customerId == null) {
             throw new IllegalArgumentException("customerId must not be null.");
         }
+        if (buyerDetails == null) {
+            throw new IllegalArgumentException("buyerDetails must not be null.");
+        }
+        if (moneyForFunding == null) {
+            throw new IllegalArgumentException("moneyForFunding must not be null.");
+        }
         this.applicationId = applicationId;
         this.orderId = orderId;
         this.customerId = customerId;
+        this.buyerDetails = buyerDetails;
+        this.moneyForFunding = moneyForFunding;
         this.state = ApplicationState.DRAFT;
     }
 
@@ -82,5 +95,13 @@ public class FinancingApplication extends AbstractAggregateRoot {
 
     public ApplicationState getState() {
         return this.state;
+    }
+
+    public BuyerDetails getBuyerDetails() {
+        return this.buyerDetails;
+    }
+
+    public Money getMoneyForFunding() {
+        return this.moneyForFunding;
     }
 }

@@ -20,4 +20,13 @@ public interface SalesQueryFacade {
      * @throws IllegalStateException    gdy zamówienie, oferta lub klient nie istnieją
      */
     CustomerSnapshotDto findBuyerForOrder(OrderId orderId);
+
+    /**
+     * Zwraca migawkę oferty źródłowej (m.in. cenę końcową) dla wskazanego zamówienia.
+     *
+     * @throws IllegalArgumentException gdy orderId jest null
+     * @throws IllegalStateException    gdy zamówienie lub oferta nie istnieją,
+     *                                  albo oferta nie ma jeszcze ceny końcowej
+     */
+    OfferSnapshotDto findOfferForOrder(OrderId orderId);
 }

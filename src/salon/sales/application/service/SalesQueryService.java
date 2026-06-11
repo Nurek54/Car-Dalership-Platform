@@ -2,6 +2,7 @@ package salon.sales.application.service;
 
 import org.springframework.stereotype.Service;
 import salon.sales.api.CustomerSnapshotDto;
+import salon.sales.api.OfferSnapshotDto;
 import salon.sales.api.SalesQueryFacade;
 import salon.sales.application.port.out.CustomerRepository;
 import salon.sales.application.port.out.OfferRepository;
@@ -57,5 +58,23 @@ public class SalesQueryService implements SalesQueryFacade {
                 .orElseThrow(() -> new IllegalStateException(
                         "No customer in CRM for id " + offer.getCustomerId().value()));
         return new CustomerSnapshotDto(customer.getFullName(), customer.getNip());
+    }
+
+    @Override
+    public OfferSnapshotDto findOfferForOrder(OrderId orderId) {
+        if (orderId == null) {
+            throw new IllegalArgumentException("orderId must not be null.");
+        }
+        Order order = this.orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No order in CRM for id " + orderId.value()));
+        Offer offer = this.offerRepository.findById(order.getOfferId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "No source offer in CRM for order " + orderId.value()));
+        if (offer.getFinalPrice() == null) {
+            throw new IllegalStateException(
+                    "Offer " + offer.getId().value() + " has no final price yet.");
+        }
+        return new OfferSnapshotDto(offer.getId().value(), offer.getFinalPrice());
     }
 }

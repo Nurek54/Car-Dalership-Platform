@@ -41,7 +41,7 @@ class ReleaseVehicleDomainTest {
     @Test
     void shouldRevertToReadyForHandoverWhenInventoryReleaseFails() {
 
-        Order order = prepareCompletedOrder();
+        Order order = prepareScheduledOrder();
         order.confirmHandover(); // Stan ostateczny: COMPLETED
         order.pullDomainEvents();
 

@@ -47,6 +47,24 @@ public class AccountingDocumentDatabaseAdapter implements DocumentRepository {
         return repository.findById(id.value()).map(this::toDomain);
     }
 
+    @Override
+    public java.util.List<AccountingDocument> findByOrderId(OrderId orderId) {
+        java.util.List<AccountingDocument> result = new java.util.ArrayList<>();
+        for (AccountingDocumentJpaEntity entity : repository.findByOrderId(orderId.value())) {
+            result.add(toDomain(entity));
+        }
+        return result;
+    }
+
+    @Override
+    public java.util.List<AccountingDocument> findAll() {
+        java.util.List<AccountingDocument> result = new java.util.ArrayList<>();
+        for (AccountingDocumentJpaEntity entity : repository.findAll()) {
+            result.add(toDomain(entity));
+        }
+        return result;
+    }
+
     private AccountingDocumentJpaEntity toEntity(AccountingDocument document) {
         AccountingDocumentJpaEntity entity = new AccountingDocumentJpaEntity();
         entity.id = document.getId().value();

@@ -12,7 +12,6 @@ import salon.sales.domain.exception.SpecificationNotFoundException;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static salon.shared.infrastructure.persistence.DomainReflection.get;
 
 @SpringBootTest
 @AutoConfigureWireMock(port = 8081)
@@ -32,7 +31,7 @@ class CatalogExternalApiAdapterTest {
         Money price = catalogAdapter.getSpecificationPrice("SPEC-OK");
 
         // JSON z zewnątrz zamienia się w hermetyczny Value Object
-        assertThat(price.amount()).isEqualTo(150000);
+        assertThat(price.amount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(150000));
         assertThat(price.currency()).isEqualTo("PLN");
     }
 

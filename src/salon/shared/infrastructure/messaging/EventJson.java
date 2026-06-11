@@ -10,7 +10,7 @@ import java.util.Map;
  * (same Stringi/UUID/Instant zapisane jako tekst), więc wystarczy płaska mapa klucz->wartość.
  * Dzięki temu cały moduł messaging zależy tylko od jednego JAR-a (amqp-client).
  *
- * Format na drucie:  {"type":"DepositRegisteredEvent","eventId":"...","orderId":"ORD-1", ...}
+ * Format na drucie:  {"type":"PaymentRegisteredEvent","eventId":"...","orderId":"ORD-1", ...}
  */
 public final class EventJson {
 

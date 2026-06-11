@@ -1,14 +1,16 @@
 package salon.billing.application.service;
 
-import salon.billing.application.port.in.GenerateAdvanceCommand;
+import salon.billing.application.command.GenerateAdvanceCommand;
 import salon.billing.application.port.in.GenerateAdvanceUseCase;
-import salon.billing.application.port.in.GenerateInvoiceCommand;
+import salon.billing.application.command.GenerateInvoiceCommand;
 import salon.billing.application.port.in.GenerateInvoiceUseCase;
 import salon.billing.application.port.out.CrmIntegrationPort;
 import salon.billing.application.port.out.DocumentRepository;
 import salon.billing.application.port.out.NotificationPort;
 import salon.billing.application.port.out.PdfGeneratorPort;
 import salon.billing.application.port.out.SettlementRepository;
+import salon.billing.domain.event.ErrorDuringInvoiceCreation;
+import salon.billing.domain.event.ErrorDuringPaymentRequest;
 import salon.billing.domain.model.document.AccountingDocument;
 import salon.billing.domain.model.document.AccountingDocumentFactory;
 import salon.billing.domain.model.document.BuyerDetails;
@@ -19,6 +21,9 @@ import salon.shared.application.EventPublisherPort;
 import salon.shared.event.DomainEvent;
 import salon.shared.model.Money;
 import salon.shared.model.OrderId;
+
+import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Realizuje UC-FIR-01 i UC-FIR-02 (warstwa aplikacji — orkiestracja).
@@ -91,29 +96,36 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
     }
 
     @Override
-    // UC-FIR-01: dokument zadatku.
+    // UC-FIR-01: dokument zadatku (prośba o wpłatę z danymi do przelewu).
     public String generateAdvance(GenerateAdvanceCommand command) {
         if (command == null) {
             throw new IllegalArgumentException("command must not be null.");
         }
         OrderId orderId = new OrderId(command.orderId());
-        Settlement settlement = loadSettlement(orderId);
+        try {
+            Settlement settlement = loadSettlement(orderId);
 
-        Money advanceAmount = this.invoiceCalculation.calculateAdvanceAmount(settlement);
-        BuyerDetails buyer = loadBuyerDetails(orderId);
+            Money advanceAmount = this.invoiceCalculation.calculateAdvanceAmount(settlement);
+            BuyerDetails buyer = loadBuyerDetails(orderId);
 
-        AccountingDocument document = this.documentFactory.create(
-                orderId, buyer, this.seller, advanceAmount,
-                "Zadatek - zamowienie " + orderId.value(), command.authorizedIssuer());
+            AccountingDocument document = this.documentFactory.create(
+                    orderId, buyer, this.seller, advanceAmount,
+                    "Zadatek - zamowienie " + orderId.value(), command.authorizedIssuer());
 
-        AccountingDocument issued = issueAndDeliver(document);
+            AccountingDocument issued = issueAndDeliver(document);
 
-        // UC-FIR-01: agregat salda żąda wpłaty zadatku -> zdarzenie dla reszty systemu.
-        settlement.requestAdvancePayment();
-        this.settlementRepository.save(settlement);
-        publishEvents(settlement);
+            // UC-FIR-01: agregat salda żąda wpłaty zadatku -> zdarzenie dla reszty systemu.
+            settlement.requestAdvancePayment();
+            this.settlementRepository.save(settlement);
+            publishEvents(settlement);
 
-        return issued.getId().value();
+            return issued.getId().value();
+        } catch (RuntimeException e) {
+            // A1 — Błąd danych: brak wymaganych informacji do wygenerowania prośby.
+            this.eventPublisher.publish(new ErrorDuringPaymentRequest(
+                    UUID.randomUUID(), orderId.value(), e.getMessage(), Instant.now()));
+            throw e;
+        }
     }
 
     @Override
@@ -123,17 +135,24 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
             throw new IllegalArgumentException("command must not be null.");
         }
         OrderId orderId = new OrderId(command.orderId());
-        Settlement settlement = loadSettlement(orderId);
+        try {
+            Settlement settlement = loadSettlement(orderId);
 
-        Money finalAmount = this.invoiceCalculation.calculateFinalInvoiceAmount(settlement);
-        BuyerDetails buyer = loadBuyerDetails(orderId);
+            Money finalAmount = this.invoiceCalculation.calculateFinalInvoiceAmount(settlement);
+            BuyerDetails buyer = loadBuyerDetails(orderId);
 
-        AccountingDocument document = this.documentFactory.create(
-                orderId, buyer, this.seller, finalAmount,
-                command.invoiceTitle(), command.authorizedIssuer());
+            AccountingDocument document = this.documentFactory.create(
+                    orderId, buyer, this.seller, finalAmount,
+                    command.invoiceTitle(), command.authorizedIssuer());
 
-        AccountingDocument issued = issueAndDeliver(document);
-        return issued.getId().value();
+            AccountingDocument issued = issueAndDeliver(document);
+            return issued.getId().value();
+        } catch (RuntimeException e) {
+            // A1 — Błąd generowania dokumentu (PDF/zapis).
+            this.eventPublisher.publish(new ErrorDuringInvoiceCreation(
+                    UUID.randomUUID(), orderId.value(), e.getMessage(), Instant.now()));
+            throw e;
+        }
     }
 
     // UC-FIR-01/02: dane klienta z modułu Sprzedaży/CRM (zamiast "z powietrza" w komendzie).

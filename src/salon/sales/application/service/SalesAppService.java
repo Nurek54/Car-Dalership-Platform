@@ -1,69 +1,91 @@
 package salon.sales.application.service;
 
+import org.springframework.stereotype.Service;
+import salon.catalog.application.port.out.CatalogRepository;
+import salon.sales.application.port.in.AcceptOfferUseCase;
 import salon.sales.application.port.in.ActivateOrderOnDepositUseCase;
-import salon.sales.application.port.in.CancelOrderCommand;
-import salon.sales.application.port.in.CancelOrderUseCase;
-import salon.sales.application.port.in.CreateOfferCommand;
-import salon.sales.application.port.in.CreateOfferUseCase;
-import salon.sales.application.port.in.CompleteHandoverUseCase;
-import salon.sales.application.port.in.CreateOrderCommand;
-import salon.sales.application.port.in.ScheduleHandoverCommand;
+import salon.sales.application.port.in.GenerateOfferUseCase;
+import salon.sales.application.port.in.ReleaseVehicleUseCase;
+import salon.sales.application.command.ScheduleHandoverCommand;
 import salon.sales.application.port.in.ScheduleHandoverUseCase;
-import salon.sales.application.port.in.StartConfiguratorSessionCommand;
-import salon.sales.application.port.in.StartConfiguratorSessionUseCase;
+import salon.sales.application.command.StartConfiguratorSessionCommand;
+import salon.sales.application.port.in.StartConfiguratorUseCase;
+import salon.sales.application.port.out.BillingIntegrationPort;
 import salon.sales.application.port.out.CustomerRepository;
-import salon.sales.application.port.out.FinancingIntegrationPort;
 import salon.sales.application.port.out.InventoryIntegrationPort;
+import salon.sales.application.port.out.OfferRepository;
+import salon.sales.application.port.out.OrderRepository;
+import salon.sales.domain.event.ConfiguratorSessionInitiatedEvent;
+import salon.sales.domain.exception.OfferNotFoundException;
+import salon.sales.domain.exception.OrderNotFoundException;
 import salon.sales.domain.model.customer.Customer;
+import salon.sales.domain.model.customer.CustomerId;
+import salon.sales.domain.model.offer.Offer;
+import salon.sales.domain.model.offer.OfferFactory;
 import salon.sales.domain.model.offer.OfferId;
+import salon.sales.domain.model.offer.OfferState;
+import salon.sales.domain.model.order.Order;
+import salon.sales.domain.model.order.OrderFactory;
+import salon.sales.domain.model.order.OrderState;
+import salon.shared.application.EventPublisherPort;
+import salon.shared.model.Money;
+import salon.shared.model.OrderId;
+import salon.shared.model.SpecificationId;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
- * Orkiestrator Kontekstu Sprzedaży i CRM — węzeł "SalesAppService"
- * z docs/Architecture/SalesArchitecture.md.
+ * Scentralizowana usługa aplikacyjna Kontekstu Sprzedaży i CRM — węzeł "SalesAppService"
+ * z docs/Architecture/SalesArchitecture.md (PDF rozdz. 3.3.3, Rys. 23).
  *
- * Spina porty wejściowe (UC-CRM-01..05 / UC-SPR-01..08) z fabrykami (OfferFactory/OrderFactory),
- * repozytoriami (Customer/Offer/Order) oraz portami integracyjnymi do Inwentarza i Finansowania.
- * Reguły biznesowe pozostają w agregatach; tutaj jest tylko koordynacja przypadków użycia.
+ * Obsługuje przypadki użycia UC-CRM-01..05:
+ *   startConfiguratorSession (UC-CRM-01, bezstanowy wyzwalacz),
+ *   generateOffer            (UC-CRM-02, wycena specyfikacji z portu Katalogu),
+ *   acceptOfferAndCreateOrder(UC-CRM-03, reguły ważności/konwersji w agregacie Offer),
+ *   activateOnDeposit        (UC-CRM-03 cz.2 — aktywacja po zaksięgowanej wpłacie),
+ *   markOrderAsReadyForHandover + scheduleHandover (UC-CRM-04),
+ *   confirmHandover          (UC-CRM-05, komenda ReleaseVehicle przez InventoryIntegrationPort),
+ *   cancelOrder, expireOutdatedOffers, revertHandoverOnInventoryError (kompensata A1).
  *
- * Logikę deleguje do wyspecjalizowanych usług: {@link ConfiguratorAppService} (UC-CRM-01),
- * {@link OfferAppService} (UC-CRM-02) i {@link OrderAppService} (UC-CRM-03..05), po których
- * wołają adaptery (REST, cron, subskrybenci zdarzeń). Porty integracyjne mogą być null w demo.
+ * Reguły biznesowe pozostają w agregatach (Offer/Order) i fabrykach (OfferFactory/
+ * OrderFactory); tutaj jest wyłącznie orkiestracja: pobranie agregatu, wywołanie metody,
+ * zapis i publikacja zdarzeń WYGENEROWANYCH PRZEZ AGREGAT (publishAll po zapisie).
+ * Porty integracyjne mogą być null w uruchomieniach częściowych (testy jednostkowe).
  */
+@Service
 public class SalesAppService
-        implements CreateOfferUseCase, CancelOrderUseCase, ActivateOrderOnDepositUseCase,
-        StartConfiguratorSessionUseCase, ScheduleHandoverUseCase, CompleteHandoverUseCase {
+        implements StartConfiguratorUseCase, GenerateOfferUseCase, AcceptOfferUseCase,
+        ActivateOrderOnDepositUseCase, ScheduleHandoverUseCase, ReleaseVehicleUseCase {
 
-    private final ConfiguratorAppService configuratorAppService;
-    private final OfferAppService offerAppService;
-    private final OrderAppService orderAppService;
     private final CustomerRepository customerRepository;
-    private final InventoryIntegrationPort inventoryPort;   // może być null (demo/offline)
-    private final FinancingIntegrationPort financingPort;   // może być null (demo/offline)
+    private final OfferRepository offerRepository;
+    private final OrderRepository orderRepository;
+    private final EventPublisherPort eventPublisher;
+    private final CatalogRepository catalogPort;
+    private final InventoryIntegrationPort inventoryPort;
+    private final BillingIntegrationPort billingPort;
 
-    public SalesAppService(ConfiguratorAppService configuratorAppService,
-                           OfferAppService offerAppService,
-                           OrderAppService orderAppService,
-                           CustomerRepository customerRepository,
+    private final OfferFactory offerFactory = new OfferFactory();
+    private final OrderFactory orderFactory = new OrderFactory();
+
+    public SalesAppService(CustomerRepository customerRepository,
+                           OfferRepository offerRepository,
+                           OrderRepository orderRepository,
+                           EventPublisherPort eventPublisher,
+                           CatalogRepository catalogPort,
                            InventoryIntegrationPort inventoryPort,
-                           FinancingIntegrationPort financingPort) {
-        if (configuratorAppService == null) {
-            throw new IllegalArgumentException("configuratorAppService must not be null.");
-        }
-        if (offerAppService == null) {
-            throw new IllegalArgumentException("offerAppService must not be null.");
-        }
-        if (orderAppService == null) {
-            throw new IllegalArgumentException("orderAppService must not be null.");
-        }
-        if (customerRepository == null) {
-            throw new IllegalArgumentException("customerRepository must not be null.");
-        }
-        this.configuratorAppService = configuratorAppService;
-        this.offerAppService = offerAppService;
-        this.orderAppService = orderAppService;
+                           BillingIntegrationPort billingPort) {
         this.customerRepository = customerRepository;
+        this.offerRepository = offerRepository;
+        this.orderRepository = orderRepository;
+        this.eventPublisher = eventPublisher;
+        this.catalogPort = catalogPort;
         this.inventoryPort = inventoryPort;
-        this.financingPort = financingPort;
+        this.billingPort = billingPort;
     }
 
     // --- Klient (CRM) ---
@@ -78,71 +100,213 @@ public class SalesAppService
 
     // --- UC-CRM-01: uruchomienie sesji konfiguratora ---
 
+    /**
+     * Bezstanowy wyzwalacz (PDF rozdz. 3.3.3): nie tworzy agregatów — generuje identyfikator
+     * sesji i emituje zdarzenie InitiateConfiguratorSession, na które reaguje Kontekst Katalogu.
+     */
     @Override
     public String startConfiguratorSession(StartConfiguratorSessionCommand command) {
-        return configuratorAppService.startConfiguratorSession(command);
+        if (command == null) {
+            throw new IllegalArgumentException("command must not be null.");
+        }
+        String sessionId = "CFG-" + UUID.randomUUID();
+        eventPublisher.publish(new ConfiguratorSessionInitiatedEvent(
+                UUID.randomUUID(),
+                sessionId,
+                command.customerId(),
+                command.salespersonId(),
+                Instant.now()));
+        return sessionId;
     }
 
-    // --- UC-CRM-02: oferta/proforma ---
+    // --- UC-CRM-02: wygenerowanie oferty proforma ---
 
+    /**
+     * Wycena specyfikacji pochodzi z modułu Katalogu (port wyjściowy, ACL) — komenda niesie
+     * tylko identyfikatory. Kreację deleguje do {@link OfferFactory}; oferta zostaje
+     * opublikowana ("Utworzona") i jest gotowa do prezentacji klientowi.
+     */
     @Override
-    public OfferId createOffer(CreateOfferCommand command) {
-        return offerAppService.createOffer(command);
+    public OfferId generateOffer(String customerId, String specificationId) {
+        if (customerId == null || customerId.isBlank()) {
+            throw new IllegalArgumentException("customerId must not be blank.");
+        }
+        if (specificationId == null || specificationId.isBlank()) {
+            throw new IllegalArgumentException("specificationId must not be blank.");
+        }
+        Money basePrice = catalogPort.getSpecificationPrice(specificationId);
+
+        Offer offer = offerFactory.createOffer(
+                new CustomerId(customerId), new SpecificationId(specificationId), basePrice);
+        offer.publishOffer();
+        offerRepository.save(offer);
+        return offer.getId();
     }
 
-    // --- UC-CRM-03: konwersja oferty w zamówienie ---
+    // --- UC-CRM-03 (cz.1): akceptacja oferty i utworzenie zamówienia ---
 
-    public String createOrderFromOffer(CreateOrderCommand command) {
-        return orderAppService.createOrderFromOffer(command);
+    /**
+     * Reguły ważności i konwersji egzekwuje agregat Offer (accept/toSnapshot);
+     * zamówienie buduje {@link OrderFactory} z niemutowalnej migawki oferty.
+     * Po zapisie publikowana jest cała paczka zdarzeń agregatu (OrderPlacedEvent),
+     * a Inwentarz dostaje zlecenie alokacji pojazdu/slotu produkcyjnego.
+     */
+    @Override
+    public String acceptOfferAndCreateOrder(OfferId offerId) {
+        if (offerId == null) {
+            throw new IllegalArgumentException("offerId must not be null.");
+        }
+        Offer offer = offerRepository.findById(offerId)
+                .orElseThrow(() -> new OfferNotFoundException(offerId.value()));
+
+        offer.accept();
+        Order order = orderFactory.createFromOffer(offer.getId(), offer.toSnapshot());
+
+        offerRepository.save(offer);
+        orderRepository.save(order);
+        eventPublisher.publishAll(order.pullDomainEvents());
+
+        if (inventoryPort != null) {
+            inventoryPort.allocateVehicleOrProductionSlot(order.getId().value());
+        }
+        return order.getId().value();
     }
 
-    // --- UC-CRM-03 (krok 5): aktywacja po zaksięgowaniu zadatku ---
+    // UC-CRM-03, scenariusz A1: klient odrzuca ofertę — nic nie jest emitowane.
+    public void rejectOffer(OfferId offerId) {
+        if (offerId == null) {
+            throw new IllegalArgumentException("offerId must not be null.");
+        }
+        Offer offer = offerRepository.findById(offerId)
+                .orElseThrow(() -> new OfferNotFoundException(offerId.value()));
+        offer.reject();
+        offerRepository.save(offer);
+    }
+
+    // --- UC-CRM-03 (cz.2): aktywacja po zaksięgowaniu wpłaty (Rys. 19/20 PDF) ---
 
     @Override
     public void activateOnDeposit(String orderId) {
-        orderAppService.activateOnDeposit(orderId);
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
+        }
+        Optional<Order> found = orderRepository.findById(new OrderId(orderId));
+        if (found.isEmpty()) {
+            System.out.println("[SalesAppService] No order for id " + orderId + " — deposit ignored.");
+            return;
+        }
+        Order order = found.get();
+        if (order.getState() != OrderState.DRAFT_CREATED && order.getState() != OrderState.DRAFT) {
+            System.out.println("[SalesAppService] Order " + orderId
+                    + " already active (" + order.getState() + ") — deposit event ignored.");
+            return;
+        }
+        order.activate();
+        orderRepository.save(order);
+        eventPublisher.publishAll(order.pullDomainEvents());
     }
 
     // --- UC-CRM-04: gotowość pojazdu i umówienie odbioru ---
 
-    /** Reakcja na gotowość pojazdu (sygnał z Inwentarza) — stan READY_FOR_HANDOVER. */
-    public void markReadyForHandover(String orderId) {
-        orderAppService.markReadyForHandover(orderId);
+    /**
+     * Krok 1-2: reakcja na VehicleReadyForHandoverEvent z Inwentarza — zamówienie przechodzi
+     * w "Gotowe do odbioru" i publikuje OrderReadyForHandoverEvent (powiadomienie Handlowca).
+     */
+    public void markOrderAsReadyForHandover(OrderId orderId) {
+        Order order = loadOrder(orderId);
+        order.markAsReadyForHandover();
+        orderRepository.save(order);
+        eventPublisher.publishAll(order.pullDomainEvents());
     }
 
+    /** Krok 4-5: Handlowiec wprowadza uzgodniony termin odbioru -> "Umówiony na odbiór". */
     @Override
     public void scheduleHandover(ScheduleHandoverCommand command) {
-        orderAppService.scheduleHandover(command);
+        if (command == null) {
+            throw new IllegalArgumentException("command must not be null.");
+        }
+        Order order = loadOrder(new OrderId(command.orderId()));
+        // Walidacja wejścia — błędna data odpada, zanim cokolwiek trafi do bazy (UC-CRM-04).
+        if (command.handoverDate().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Handover date cannot be in the past");
+        }
+        order.scheduleHandover(command.handoverDate());
+        orderRepository.save(order);
+        eventPublisher.publishAll(order.pullDomainEvents());
     }
 
     // --- UC-CRM-05: rejestracja fizycznego wydania pojazdu ---
 
+    /**
+     * Zamówienie przechodzi w "Zrealizowane" (Order.confirmHandover), Inwentarz dostaje
+     * komendę ReleaseVehicle (zdjęcie fizycznego auta ze stanu — UC-INW-06), a Rozliczenia
+     * domykają saldo końcowe. Błąd Inwentarza przerywa proces PRZED zapisem (zamówienie
+     * nie może zostać oznaczone jako zrealizowane przy blokadzie magazynowej).
+     */
     @Override
-    public void completeHandover(String orderId) {
-        orderAppService.completeHandover(orderId);
+    public void confirmHandover(OrderId orderId) {
+        Order order = loadOrder(orderId);
+        order.confirmHandover();
+
+        if (inventoryPort != null) {
+            inventoryPort.releasePhysicalVehicle(order.getVehicleId());
+        }
+        if (billingPort != null) {
+            billingPort.closeOrderBalance(order.getId().value());
+        }
+
+        orderRepository.save(order);
+        eventPublisher.publishAll(order.pullDomainEvents());
     }
 
-    // --- UC-CRM-03 (alt. A): anulowanie zamówienia ---
-
-    @Override
-    public void cancelOrder(CancelOrderCommand command) {
-        orderAppService.cancelOrder(command);
+    /**
+     * UC-CRM-05, A1: Inwentarz odmówił zwolnienia (VehicleInventoryReleasedError) — kompensata
+     * (saga): cofnięcie zamówienia do "Gotowe do odbioru" (data wydania jest czyszczona).
+     */
+    public void revertHandoverOnInventoryError(String orderId) {
+        Order order = loadOrder(new OrderId(orderId));
+        order.revertToReadyForHandover();
+        orderRepository.save(order);
+        eventPublisher.publishAll(order.pullDomainEvents());
     }
 
-    // Dostęp do współpracowników (dla wiring/adapterów), gdyby był potrzebny.
-    public OfferAppService offers() {
-        return this.offerAppService;
+    // --- Anulowanie zamówienia (rezygnacja klienta) ---
+
+    public void cancelOrder(String orderId, String reason) {
+        Order order = loadOrder(new OrderId(orderId));
+        order.cancelOrder(reason);
+        orderRepository.save(order);
+        eventPublisher.publishAll(order.pullDomainEvents());
     }
 
-    public OrderAppService orders() {
-        return this.orderAppService;
+    // --- Cron: wygaszanie przeterminowanych ofert (validityDate < dziś) ---
+
+    /**
+     * Oferty z przekroczoną datą ważności nie mogą już zostać zaakceptowane (regułę
+     * egzekwuje też agregat w accept()); zadanie cykliczne odrzuca przeterminowane,
+     * opublikowane oferty, aby nie zalegały w aktywnym obiegu handlowym.
+     */
+    public void expireOutdatedOffers() {
+        LocalDate today = LocalDate.now();
+        List<Offer> offers = offerRepository.findAll();
+        for (int i = 0; i < offers.size(); i++) {
+            Offer offer = offers.get(i);
+            if (offer.getState() == OfferState.PUBLISHED
+                    && offer.getValidityDate().isBefore(today)) {
+                offer.reject();
+                offerRepository.save(offer);
+            }
+        }
     }
 
-    public InventoryIntegrationPort inventory() {
-        return this.inventoryPort;
-    }
+    // --- pomocnicze ---
 
-    public FinancingIntegrationPort financing() {
-        return this.financingPort;
+    private Order loadOrder(OrderId orderId) {
+        if (orderId == null) {
+            throw new IllegalArgumentException("orderId must not be null.");
+        }
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(
+                        "Order with ID " + orderId.value() + " not found"));
     }
 }

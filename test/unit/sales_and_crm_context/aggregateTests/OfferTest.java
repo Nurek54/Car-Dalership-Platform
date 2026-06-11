@@ -2,7 +2,10 @@ package unit.sales_and_crm_context.aggregateTests;
 
 import org.junit.jupiter.api.Test;
 import salon.sales.domain.model.customer.CustomerId;
+import salon.sales.domain.exception.InvalidOfferStateException;
+import salon.sales.domain.exception.OfferImmutableException;
 import salon.sales.domain.model.offer.Offer;
+import salon.sales.domain.model.offer.OfferState;
 import salon.sales.domain.model.offer.OfferId;
 import salon.shared.model.Money;
 import salon.shared.model.SpecificationId;
@@ -68,7 +71,7 @@ class OfferTest {
         Offer offer = new Offer(
                 new OfferId("O-203"),
                 new CustomerId("C-001"),
-                new SpecificationId("SPEC-1"),
+                new SpecificationId("SPEC-1")
         );
         offer.publishOffer();
         offer.reject();

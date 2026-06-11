@@ -6,6 +6,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.port.out.OfferRepository;
+import salon.sales.domain.exception.DatabaseException;
+import salon.sales.domain.exception.OfferNotFoundException;
 import salon.sales.application.port.out.OrderRepository;
 import salon.sales.application.service.SalesAppService;
 import salon.sales.domain.model.customer.CustomerId;

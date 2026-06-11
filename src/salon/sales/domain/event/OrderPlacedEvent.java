@@ -5,8 +5,11 @@ import salon.shared.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-// "ZamowienieZlozone" (UC-SPR-02) — po podpisaniu umowy zamówienie zostaje formalnie złożone;
-// nasłuchuje m.in. Kontekst Inwentarza (alokacja pojazdu/utworzenie slotu produkcyjnego).
+/**
+ * "ZamowienieZlozone" (UC-CRM-03) — zamówienie powstało z zaakceptowanej oferty.
+ * Nasłuchują: Kontekst Rozliczeń (inicjalizacja salda) oraz Inwentarz
+ * (alokacja pojazdu / slotu produkcyjnego — handler OrderPlacedEventHandler).
+ */
 public record OrderPlacedEvent(UUID eventId,
                                String orderId,
                                Instant occurredOn) implements DomainEvent {

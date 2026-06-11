@@ -1,32 +1,39 @@
 package salon.sales.infrastructure.messaging;
 
-import salon.sales.application.service.OfferAppService;
-import salon.shared.event.CatalogVersionPublishedEvent;
+import salon.catalog.domain.event.CatalogUpdatedEvent;
+import salon.catalog.domain.event.SpecificationCompletedEvent;
 
 /**
- * Adapter sterujący (driving) — subskrybent zdarzeń Katalogu w Kontekście Sprzedaży (UC-KON-02).
+ * Adapter sterujący (driving) — subskrybent zdarzeń Kontekstu Katalogu i Konfiguratora
+ * w Kontekście Sprzedaży (komunikacja wg kanwy: SpecificationCompleted, CatalogUpdated).
  *
- * Po publikacji nowej wersji cennika unieważnia oferty oparte o starsze katalogi. Waliduje wejście
- * (ochrona przed uszkodzonymi danymi z kolejki); błędy warstwy aplikacji przepuszcza wyżej (DLQ).
+ * UC-CRM-02, warunek wstępny / krok 1: po odebraniu SpecificationCompleted system
+ * powiadamia Handlowca o nowej specyfikacji oczekującej na ofertowanie — samą ofertę
+ * Handlowiec generuje przez port IssueProformaUseCase.
  */
 public class CatalogEventSubscriberAdapter {
 
-    private final OfferAppService offerAppService;
-
-    public CatalogEventSubscriberAdapter(OfferAppService offerAppService) {
-        if (offerAppService == null) {
-            throw new IllegalArgumentException("offerAppService must not be null.");
+    /** UC-CRM-02, krok 1: nowa kompletna specyfikacja -> powiadomienie Handlowca. */
+    public void handleSpecificationCompleted(SpecificationCompletedEvent event) {
+        if (event == null) {
+            throw new IllegalArgumentException("event must not be null.");
         }
-        this.offerAppService = offerAppService;
+        if (event.specificationId() == null || event.specificationId().isBlank()) {
+            throw new IllegalArgumentException("Identyfikator specyfikacji jest wymagany");
+        }
+        System.out.println("[CatalogEventSubscriberAdapter] Specyfikacja " + event.specificationId()
+                + " gotowa do ofertowania — powiadamiam Handlowca.");
     }
 
-    public void handleCatalogVersionPublishedEvent(CatalogVersionPublishedEvent event) {
+    /** UC-KON-02: opublikowano nową wersję cennika — informacja dla zespołu sprzedaży. */
+    public void handleCatalogUpdated(CatalogUpdatedEvent event) {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
         if (event.catalogId() == null || event.catalogId().isBlank()) {
             throw new IllegalArgumentException("Identyfikator katalogu (catalogId) jest wymagany");
         }
-        offerAppService.invalidateOffersForOlderCatalogs(event.catalogId());
+        System.out.println("[CatalogEventSubscriberAdapter] Nowa wersja cennika " + event.catalogId()
+                + " — nowe oferty będą budowane na zaktualizowanym katalogu.");
     }
 }

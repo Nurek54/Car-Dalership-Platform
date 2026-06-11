@@ -1,6 +1,8 @@
 package salon.billing.domain.model.settlement;
 
+import salon.billing.domain.event.AdvancePaymentRegisteredEvent;
 import salon.billing.domain.event.AdvancePaymentRequestedEvent;
+import salon.billing.domain.event.PaymentRegisteredEvent;
 import salon.billing.domain.event.SettlementCompletedEvent;
 import salon.shared.event.AbstractAggregateRoot;
 import salon.shared.model.Money;
@@ -32,6 +34,7 @@ public class Settlement extends AbstractAggregateRoot {
     private final Money totalAmount;          // wartość kontraktu do rozliczenia
     private final List<Payment> payments;
     private SettlementStatus status;
+    private boolean advanceRequested;   // UC-FIR-01: czy poproszono klienta o zadatek
 
     public Settlement(SettlementId id, OrderId orderId, Money totalAmount) {
         if (id == null) {
@@ -48,13 +51,16 @@ public class Settlement extends AbstractAggregateRoot {
         this.totalAmount = totalAmount;
         this.payments = new ArrayList<>();
         this.status = SettlementStatus.OPEN;
+        this.advanceRequested = false;
     }
 
     /**
      * UC-FIR-01: zażądanie wpłaty zadatku. Agregat rejestruje zdarzenie domenowe,
      * dzięki któremu reszta systemu (np. Sprzedaż) może zareagować asynchronicznie.
+     * Zapamiętany fakt prośby pozwala rozpoznać pierwszą wpłatę jako zadatek.
      */
     public void requestAdvancePayment() {
+        this.advanceRequested = true;
         registerEvent(new AdvancePaymentRequestedEvent(
                 UUID.randomUUID(), this.id.value(), this.orderId.value(), Instant.now()));
     }
@@ -62,6 +68,8 @@ public class Settlement extends AbstractAggregateRoot {
     /**
      * UC-FIR-03: rejestracja pojedynczej wpłaty z wyciągu bankowego.
      * Dodaje encję lokalną do kolekcji i wykonuje ukryte przeliczenie salda.
+     * Krok 4: agregat ogłasza PaymentRegistered; pierwsza wpłata po prośbie o zadatek
+     * dodatkowo ogłasza AdvancePaymentRegistered (trigger UC-INW-02 — zlecenie produkcji).
      */
     public void registerPayment(String transactionId, Money amount) {
         if (amount == null) {
@@ -71,7 +79,16 @@ public class Settlement extends AbstractAggregateRoot {
             throw new IllegalArgumentException(
                     "Currency mismatch: " + amount.currency() + " and " + this.totalAmount.currency());
         }
+        boolean firstPayment = this.payments.isEmpty();
         this.payments.add(new Payment(transactionId, amount, LocalDateTime.now()));
+
+        registerEvent(new PaymentRegisteredEvent(
+                UUID.randomUUID(), this.id.value(), this.orderId.value(),
+                amount.amount(), amount.currency(), Instant.now()));
+        if (firstPayment && this.advanceRequested) {
+            registerEvent(new AdvancePaymentRegisteredEvent(
+                    UUID.randomUUID(), this.id.value(), this.orderId.value(), Instant.now()));
+        }
         recalculateBalance();
     }
 

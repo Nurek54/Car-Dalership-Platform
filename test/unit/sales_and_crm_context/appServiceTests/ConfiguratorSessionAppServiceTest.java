@@ -5,7 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import salon.sales.application.port.in.StartConfiguratorSessionCommand;
+import salon.sales.application.command.StartConfiguratorSessionCommand;
 import salon.sales.application.service.ConfiguratorAppService;
 import salon.sales.application.port.out.CustomerRepository;
 import salon.shared.application.EventPublisherPort;

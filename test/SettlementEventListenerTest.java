@@ -8,7 +8,8 @@ import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
 import salon.billing.infrastructure.messaging.SettlementEventListener;
 import salon.billing.infrastructure.mock.InMemorySettlementRepository;
 import salon.billing.infrastructure.mock.InProcessEventPublisherAdapter;
-import salon.billing.infrastructure.mock.PaymentGatewayMockAdapter;
+import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
+import salon.billing.infrastructure.mock.NotificationMockAdapter;
 import salon.shared.model.OrderId;
 
 import java.math.BigDecimal;
@@ -32,8 +33,8 @@ class SettlementEventListenerTest {
     private SettlementEventListener freshListener() {
         this.repository = new InMemorySettlementRepository();
         SettlementAppService appService = new SettlementAppService(
-                this.repository, new SettlementFactory(),
-                new InProcessEventPublisherAdapter(), new PaymentGatewayMockAdapter());
+                this.repository, new SettlementFactory(), new InMemoryDocumentRepository(),
+                new NotificationMockAdapter(), new InProcessEventPublisherAdapter());
         return new SettlementEventListener(appService);
     }
 

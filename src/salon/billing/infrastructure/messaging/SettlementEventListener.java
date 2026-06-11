@@ -9,11 +9,14 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Adapter WEJŚCIOWY (driving) sterowany zdarzeniem — inicjalizuje rozliczenie (UC-FIR-03).
+ * Adapter sterujący (driving) — subskrybent zdarzeń inicjujących rozliczenie.
  *
- * Broker dostarcza zdarzenie o złożeniu zamówienia, listener mapuje je i woła usługę aplikacji,
- * która przez SettlementFactory powołuje agregat salda. Domena/aplikacja nie wiedzą, że trigger
- * przyszedł z kolejki (zależność do wewnątrz). Idempotencyjność: Subskrybent pilnuje duplikatów.
+ * PDF rozdz. 3.7.3 ("Zarządzanie Wpłatami — Inicjalizacja"): złożenie nowego zamówienia
+ * wyzwala port wejściowy, który poprzez SettlementAppService oddelegowuje zadanie do
+ * SettlementFactory — fabryka powołuje agregat salda na podstawie zamówienia uzyskanego
+ * w zdarzeniu (OrderReadyForSettlement niesie orderId i wartość kontraktu).
+ *
+ * Idempotencja: duplikaty (ten sam eventId) są ignorowane po stronie subskrybenta.
  */
 public class SettlementEventListener {
 
@@ -27,17 +30,24 @@ public class SettlementEventListener {
         this.settlementAppService = settlementAppService;
     }
 
+    /** Nowe zamówienie gotowe do rozliczenia -> inicjalizacja agregatu salda. */
     public void on(OrderReadyForSettlementEvent event) {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
-        boolean firstTime = this.processedEventIds.add(event.eventId());
-        if (!firstTime) {
-            System.out.println("[SettlementEventListener] Duplicate event ignored: " + event.eventId());
+        if (isDuplicate(event.eventId())) {
             return;
         }
         OrderId orderId = new OrderId(event.orderId());
         Money contractValue = new Money(event.contractValue(), event.currency());
         this.settlementAppService.initializeSettlement(orderId, contractValue);
+    }
+
+    private boolean isDuplicate(UUID eventId) {
+        boolean firstTime = this.processedEventIds.add(eventId);
+        if (!firstTime) {
+            System.out.println("[SettlementEventListener] Duplicate event ignored: " + eventId);
+        }
+        return !firstTime;
     }
 }

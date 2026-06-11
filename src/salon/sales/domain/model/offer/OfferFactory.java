@@ -8,8 +8,9 @@ import salon.shared.model.SpecificationId;
  * Fabryka agregatu Offer (węzeł "OfferFactory" w docs/Architecture/SalesArchitecture.md:
  * AppSvc --> OfferFactory -. creates .-> Offer).
  *
- * Odpowiada za poprawne utworzenie nowej oferty (nadanie tożsamości {@link OfferId}
- * i ewentualne ustawienie ceny bazowej), zdejmując ten obowiązek z warstwy aplikacji.
+ * Odpowiada za poprawne utworzenie nowej oferty: nadaje tożsamość {@link OfferId}
+ * i weryfikuje dane wejściowe (cena bazowa z cennika musi być ściśle dodatnia),
+ * zdejmując ten obowiązek z warstwy aplikacji.
  */
 public class OfferFactory {
 
@@ -18,10 +19,13 @@ public class OfferFactory {
     }
 
     public Offer createOffer(CustomerId customerId, SpecificationId specificationId, Money basePrice) {
-        Offer offer = new Offer(OfferId.generate(), customerId, specificationId);
-        if (basePrice != null) {
-            offer.setBasePrice(basePrice);
+        if (basePrice != null && basePrice.amount().signum() <= 0) {
+            throw new InvalidOfferDataException(
+                    "Cannot create offer with zero or negative base price");
         }
-        return offer;
+        if (basePrice == null) {
+            return new Offer(OfferId.generate(), customerId, specificationId);
+        }
+        return new Offer(OfferId.generate(), customerId, specificationId, basePrice);
     }
 }

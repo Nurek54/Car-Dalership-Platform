@@ -1,12 +1,6 @@
 package salon.sales.domain.model.customer;
 
-/**
- * Value Object: dane kontaktowe Klienta. Niemutowalny (rekord) — patrz
- * docs/Agregate/Guidelines/value-object-audit.md.
- *
- * Zmiana danych kontaktowych odbywa się przez agregat {@code Customer}
- * (podmiana całego obiektu wartości), nigdy przez mutację tego rekordu.
- */
+/** Obiekt wartości: dane kontaktowe klienta (e-mail + telefon). Niemutowalny. */
 public record ContactData(String email, String phone) {
 
     public ContactData {
@@ -16,5 +10,13 @@ public record ContactData(String email, String phone) {
         if (phone == null || phone.isBlank()) {
             throw new IllegalArgumentException("phone must not be blank.");
         }
+    }
+
+    public String getEmail() {
+        return this.email;
+    }
+
+    public String getPhoneNumber() {
+        return this.phone;
     }
 }

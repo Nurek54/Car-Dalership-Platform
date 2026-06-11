@@ -2,34 +2,40 @@ sequenceDiagram
 autonumber
 actor H as Handlowiec
 participant REST as OrderRestApiAdapter
-participant OrderSvc as OrderAppService
+participant Sales as SalesAppService<br/>«ReleaseVehicleUseCase»
 participant Repo as OrderRepository
-participant Order as Order
+participant Order as Order<br/>«aggregate root»
+participant InvPort as InventoryIntegrationPort<br/>«out port»
+participant BilPort as BillingIntegrationPort<br/>«out port»
 participant Pub as EventPublisherPort
-participant Inv as Inwentarz (subskrybent)
 participant Sub as LogisticsEventSubscriberAdapter
 
-    note over H,Order: Warunek wstępny: zamówienie w stanie HANDOVER_SCHEDULED ("Umówiony na odbiór")
+    note over H,Sub: UC-CRM-05 — Rejestracja fizycznego wydania pojazdu
+    note over H,Order: warunek wstępny: zamówienie READY_FOR_HANDOVER lub HANDOVER_SCHEDULED
     H->>REST: POST /api/sales/orders/{orderId}/handover
-    REST->>OrderSvc: completeHandover(orderId)
-    OrderSvc->>Repo: findById(OrderId)
-    Repo-->>OrderSvc: Order
-    OrderSvc->>Order: completeHandover()
-    Order->>Order: HANDOVER_SCHEDULED -> COMPLETED&#59; registerEvent(VehicleHandedOverEvent)
-    OrderSvc->>Repo: save(Order)
-    OrderSvc->>Pub: publish(VehicleHandedOverEvent)
-    Pub-->>Inv: VehicleHandedOverEvent  [komenda ReleaseVehicle — zwolnienie pojazdu]
-    REST-->>H: 204 No Content
+    REST->>Sales: confirmHandover(OrderId)
+    Sales->>Repo: findById(OrderId)
+    Repo-->>Sales: Order
+    Sales->>Order: confirmHandover()
+    Order->>Order: -> COMPLETED ("Zrealizowane")&#59;<br/>registerEvent(OrderCompletedEvent + VehicleHandedOverEvent)
 
-    alt Inwentarz odmawia zwolnienia (blokada magazynowa)
-        Inv-->>Sub: handleVehicleInventoryReleasedError(VehicleInventoryReleasedError{orderId, reason})
-        Sub->>Sub: walidacja + powiadomienie Handlowca o blokadzie
-        Sub->>OrderSvc: revertHandoverOnInventoryError(orderId)
-        OrderSvc->>Repo: findById(OrderId)
-        Repo-->>OrderSvc: Order
-        OrderSvc->>Order: revertToReadyForHandover()
-        Order->>Order: COMPLETED -> READY_FOR_HANDOVER
-        OrderSvc->>Repo: save(Order)
-    else Sukces: pojazd zwolniony
-        Inv-->>Inv: zamówienie pozostaje COMPLETED ("Zrealizowane")
+    Sales->>InvPort: releasePhysicalVehicle(order.vehicleId)
+    note over InvPort: komenda ReleaseVehicle do Inwentarza (krok 3, UC-INW-06)&#59;<br/>blokada magazynowa -> InventoryLockedException przerywa proces PRZED zapisem
+    Sales->>BilPort: closeOrderBalance(orderId)
+    note over BilPort: Rozliczenia domykają saldo końcowe (PUT /api/billing/accounts/{id}/close)
+
+    Sales->>Repo: save(Order)
+    Sales->>Pub: publishAll([OrderCompletedEvent, VehicleHandedOverEvent])
+    note over Pub: routing: "order.completed", "vehicle.handed_over"<br/>(obsługa posprzedażowa + Rozliczenia)
+    REST-->>H: 200 OK
+
+    alt A1 — Odmowa Inwentarza (blokada magazynowa)
+        Sub-->>Sales: revertHandoverOnInventoryError(orderId)<br/>(trigger: VehicleInventoryReleasedError{orderId, reason})
+        Sales->>Repo: findById(OrderId)
+        Repo-->>Sales: Order
+        Sales->>Order: revertToReadyForHandover()
+        Order->>Order: COMPLETED -> READY_FOR_HANDOVER (kompensata / saga)&#59; handoverDate = null
+        Sales->>Repo: save(Order)
+    else Sukces: pojazd zwolniony (VehicleInventoryReleased)
+        Sub-->>Sub: zamówienie pozostaje COMPLETED ("Zrealizowane")
     end

@@ -8,12 +8,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Adapter WEJŚCIOWY (driving) kontekstu Sprzedaży: nasłuchuje zdarzenia "DepositRegisteredEvent"
+ * Adapter WEJŚCIOWY (driving) kontekstu Sprzedaży: nasłuchuje zdarzenia "PaymentRegisteredEvent"
  * (ZadatekZaksiegowany) przychodzącego Z ROZLICZEŃ PRZEZ KOLEJKĘ RabbitMQ i odpala aktywację
  * zamówienia (UC-SPR-02, krok 5).
  *
  * Idempotencyjność (3.4.2): to TUTAJ — po stronie subskrybenta — pilnujemy duplikatów po eventId.
- * Rejestrujemy ten handler w RabbitMqEventConsumer pod kluczem "DepositRegisteredEvent".
+ * Rejestrujemy ten handler w RabbitMqEventConsumer pod kluczem "PaymentRegisteredEvent"
+ * (zaksięgowana wpłata/zadatek z Kontekstu Rozliczeń — UC-CRM-03 cz.2, Rys. 19/20 PDF).
  */
 public class SalesDepositListener implements RabbitMqMessageHandler {
 

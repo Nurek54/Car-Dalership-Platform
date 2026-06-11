@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import salon.billing.application.port.in.ProcessPaymentCommand;
+import salon.billing.application.command.ProcessPaymentCommand;
 import salon.billing.application.service.SettlementAppService;
-import salon.sales.domain.exceptions.OfferExpiredException;
+import salon.sales.domain.exception.OfferExpiredException;
 
 import java.util.Map;
 
@@ -37,8 +37,7 @@ public class PaymentRestApiAdapter {
                 request.orderId(),
                 request.transactionId(),
                 request.amount(),
-                request.currency(),
-                null);
+                request.currency());
         settlementAppService.processPayment(command);
         return ResponseEntity.ok().build();
     }

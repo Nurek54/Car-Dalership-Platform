@@ -5,7 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import salon.sales.application.port.in.ScheduleHandoverCommand;
+import salon.sales.application.command.ScheduleHandoverCommand;
 import salon.sales.application.service.SalesAppService;
 import salon.sales.application.port.out.OrderRepository;
 import salon.shared.application.EventPublisherPort;

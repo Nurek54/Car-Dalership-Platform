@@ -9,10 +9,8 @@ import salon.shared.model.Money;
 import salon.sales.domain.exception.ExternalServiceUnavailableException;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.tngtech.archunit.base.DescribedPredicate.equalTo;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.springframework.mock.http.server.reactive.MockServerHttpRequest.post;
 
 @SpringBootTest
 @AutoConfigureWireMock(port = 8083)

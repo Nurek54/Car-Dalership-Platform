@@ -3,10 +3,10 @@ package salon.sales.infrastructure.persistence;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
-import java.math.BigDecimal;
+import java.time.LocalDate;
 
-/** Encja JPA zamówienia (UC-SPR-02, UC-SPR-03). */
 @Entity
 @Table(name = "orders")
 public class OrderJpaEntity {
@@ -14,11 +14,18 @@ public class OrderJpaEntity {
     @Id
     public String id;
     public String sourceOfferId;
-    public BigDecimal requiredDepositAmount;
+    // Kwoty trzymane tekstowo (toPlainString) — wierny round-trip BigDecimal bez zmiany skali.
+    public String requiredDepositAmount;
     public String requiredDepositCurrency;
-    public String signatureRef;
+    public String paymentMethod;
+    public String paymentStatus;
+    public LocalDate handoverDate;
+    public String vehicleId;
     public String state;
-    public String cancellationReason;
+
+    /** Blokada optymistyczna: konflikt wersji odrzuca zapis nieaktualnej kopii agregatu. */
+    @Version
+    public Long version;
 
     public OrderJpaEntity() {
     }

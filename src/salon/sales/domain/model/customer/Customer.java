@@ -58,11 +58,13 @@ public class Customer {
      */
     public void verifyTaxId() {
         if (this.nip == null || this.nip.isBlank()) {
-            throw new IllegalStateException("Customer has no NIP to verify.");
+            throw new salon.sales.domain.exception.InvalidTaxIdException(
+                    "Provided NIP format is invalid: customer has no NIP to verify.");
         }
         String digits = this.nip.replaceAll("\\s|-", "");
         if (!digits.matches("\\d{10}")) {
-            throw new IllegalStateException("Invalid NIP format: " + this.nip);
+            throw new salon.sales.domain.exception.InvalidTaxIdException(
+                    "Provided NIP format is invalid: " + this.nip);
         }
         this.taxIdVerified = true;
     }

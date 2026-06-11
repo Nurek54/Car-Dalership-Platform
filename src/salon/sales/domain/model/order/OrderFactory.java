@@ -6,15 +6,13 @@ import salon.shared.model.OrderId;
 
 /**
  * Fabryka agregatu Order (węzeł "OrderFactory" w docs/Architecture/SalesArchitecture.md,
- * opisana w docs/Agregate/Sales/order.md).
+ * PDF rozdz. 3.3.3 "Transformacja Agregatów").
  *
- * Buduje poprawne Zamówienie z migawki oferty ({@link OfferSnapshot}). Zgodnie z
- * docs/Agregate/Guidelines/value-object-audit.md fabryka wyciąga z oferty wyłącznie
- * niemutowalne obiekty wartości (OfferId, finalPrice) — NIE przyjmuje referencji do
- * agregatu Offer, dzięki czemu nie przenosimy referencji między korzeniami agregatów.
- *
- * Walidację stanu oferty (musi być PUBLISHED) wykonuje warstwa aplikacji PRZED
- * zbudowaniem migawki (patrz OrderAppService#createOrderFromOffer).
+ * Buduje poprawne Zamówienie z migawki zaakceptowanej oferty ({@link OfferSnapshot}).
+ * Zgodnie z docs/Agregate/Guidelines/value-object-audit.md fabryka wyciąga z oferty
+ * wyłącznie niemutowalne obiekty wartości (OfferId, finalPrice) — NIE przyjmuje
+ * referencji do agregatu Offer. Regułę "tylko z oferty ACCEPTED" egzekwuje sam
+ * agregat Offer w metodzie toSnapshot().
  */
 public class OrderFactory {
 
@@ -27,9 +25,12 @@ public class OrderFactory {
         }
         if (!offerId.equals(snapshot.offerId())) {
             throw new IllegalArgumentException(
-                    "Snapshot offerId does not match the provided offerId.");
+                    "Snapshot offerId does not match the provided offerId");
         }
         // requiredDeposit = finalPrice z oferty (może być null, jeśli nie wyceniono).
-        return new Order(OrderId.generate(), offerId, snapshot.finalPrice());
+        Order order = new Order(OrderId.generate(), offerId, snapshot.finalPrice());
+        // Formalne złożenie zamówienia ogłasza agregat (OrderPlacedEvent — m.in. dla Rozliczeń).
+        order.markPlaced();
+        return order;
     }
 }

@@ -1,6 +1,7 @@
 package unit.sales_and_crm_context.aggregateTests;
 
 import org.junit.jupiter.api.Test;
+import salon.sales.domain.exception.InvalidTaxIdException;
 import salon.sales.domain.model.customer.Address;
 import salon.sales.domain.model.customer.ContactData;
 import salon.sales.domain.model.customer.Customer;

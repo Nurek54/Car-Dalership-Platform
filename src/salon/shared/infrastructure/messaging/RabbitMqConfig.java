@@ -2,7 +2,7 @@ package salon.shared.infrastructure.messaging;
 
 /**
  * Stałe konfiguracyjne brokera. Jeden topic-exchange dla całego salonu;
- * routing key = prosta nazwa klasy zdarzenia (np. "DepositRegisteredEvent").
+ * routing key = prosta nazwa klasy zdarzenia (np. "PaymentRegisteredEvent").
  *
  * Połączenie (host/port/login) czytamy ze zmiennych środowiskowych z sensownym defaultem:
  *  - z IDE / `mvn exec:java` (na hoście) brak ENV -> "localhost" (jak dotychczas),

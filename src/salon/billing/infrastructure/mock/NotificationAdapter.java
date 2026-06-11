@@ -2,9 +2,14 @@ package salon.billing.infrastructure.mock;
 
 import salon.billing.application.port.out.NotificationPort;
 import salon.billing.domain.model.document.AccountingDocument;
+import salon.shared.model.Money;
 
 import java.util.logging.Logger;
 
+/**
+ * Adapter wyjściowy portu NotificationPort — symuluje wysyłkę e-maili (zamiast SMTP loguje).
+ * W środowisku docelowym zastępuje go adapter SMTP wstrzykiwany w pierścieniu infrastruktury.
+ */
 public class NotificationAdapter implements NotificationPort {
 
     private static final Logger LOGGER = Logger.getLogger(NotificationAdapter.class.getName());
@@ -26,6 +31,25 @@ public class NotificationAdapter implements NotificationPort {
                 recipientName,
                 documentId,
                 pdf.length
+        ));
+    }
+
+    @Override
+    public void notifyPaymentReminder(AccountingDocument document, Money outstandingBalance) {
+        if (document == null) {
+            throw new IllegalArgumentException("Document cannot be null");
+        }
+        if (outstandingBalance == null) {
+            throw new IllegalArgumentException("Outstanding balance cannot be null");
+        }
+
+        LOGGER.info(String.format(
+                "Sending payment reminder email. To: %s, Transfer title: %s, Outstanding: %s %s, Due: %s",
+                document.getBuyer().name(),
+                document.getInvoiceTitle(),
+                outstandingBalance.amount(),
+                outstandingBalance.currency(),
+                document.getDueDate()
         ));
     }
 }

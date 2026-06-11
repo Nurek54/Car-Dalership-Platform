@@ -2,25 +2,29 @@ sequenceDiagram
 autonumber
 participant MQ as RabbitMQ
 participant Listener as SalesDepositListener
-participant OrderSvc as OrderAppService
+participant Sales as SalesAppService<br/>«ActivateOrderOnDepositUseCase»
 participant OrderRepo as OrderRepository
-participant Order as Order
+participant Order as Order<br/>«aggregate root»
 participant Pub as EventPublisherPort
 
-    MQ-->>Listener: handle(event = DepositRegisteredEvent)
+    note over MQ,Pub: UC-CRM-03 (cz.2) — Aktywacja po zadatku (Rys. 19/20 PDF)
+    MQ-->>Listener: handle(event = PaymentRegisteredEvent {eventId, orderId})
     Listener->>Listener: processedEventIds.add(eventId)
     alt duplikat (eventId już przetworzony)
-        Listener-->>Listener: log + return
+        Listener-->>Listener: log + return (idempotencja po stronie subskrybenta)
     else pierwsze wystąpienie
-        Listener->>OrderSvc: activateOnDeposit(orderId)
-        OrderSvc->>OrderRepo: findById(OrderId)
-        OrderRepo-->>OrderSvc: Optional<Order>
+        Listener->>Sales: activateOnDeposit(orderId)
+        Sales->>OrderRepo: findById(OrderId)
+        OrderRepo-->>Sales: Optional<Order>
         alt order empty
-            OrderSvc-->>OrderSvc: log "deposit ignored" + return
+            Sales-->>Sales: log "deposit ignored" + return
+        else stan != DRAFT_CREATED/DRAFT
+            Sales-->>Sales: log "already active" + return (kolejna wpłata)
         else
-            OrderSvc->>Order: activate()
-            Order->>Order: state = IN_PROGRESS&#59; registerEvent(OrderActivatedEvent)
-            OrderSvc->>OrderRepo: save(Order)
-            OrderSvc->>Pub: publish(OrderActivatedEvent)
+            Sales->>Order: activate()
+            Order->>Order: DRAFT -> IN_PROGRESS ("W realizacji")&#59; registerEvent(OrderActivatedEvent)
+            Sales->>OrderRepo: save(Order)
+            Sales->>Pub: publishAll([OrderActivatedEvent])
+            note over Pub: handler OrderActivatedEventHandler -><br/>ManufacturingIntegrationPort.startVehicleRealization (realizacja rusza)
         end
     end

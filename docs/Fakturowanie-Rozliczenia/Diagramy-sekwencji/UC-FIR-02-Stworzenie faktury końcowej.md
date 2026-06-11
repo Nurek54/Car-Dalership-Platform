@@ -5,7 +5,7 @@ sequenceDiagram
     participant Sub as BillingEventSubscriberAdapter<br/>«driving adapter»
     participant App as DocumentAppService<br/>«GenerateInvoiceUseCase»
     participant SRepo as SettlementRepository<br/>«out port»
-    participant Crm as CrmIntegrationAdapter<br/>«CrmIntegrationPort, ACL»
+    participant Crm as SalesCrmIntegrationAdapter<br/>«CrmIntegrationPort, ACL»
     participant Calc as InvoiceCalculationDomainService<br/>«domain service»
     participant Stl as Settlement<br/>«aggregate root»
     participant Fac as AccountingDocumentFactory<br/>«factory»
@@ -29,8 +29,8 @@ sequenceDiagram
     Calc-->>App: Money(kwota pozostała do zapłaty)
 
     App->>Crm: getCustomerDetails(orderId)
-    Note over Crm: ACL do Kontekstu Sprzedaży/CRM —<br/>VehicleReservedFromStock niesie tylko orderId/VIN,<br/>dane nabywcy dociągane po orderId
-    Crm-->>App: BuyerDetails (imię, nazwisko, NIP)
+    Note over Crm: ACL/Query do Kontekstu Sprzedaży —<br/>VehicleReservedFromStock niesie tylko orderId/VIN,<br/>dane nabywcy dociągane po orderId
+    Crm-->>App: BuyerDetails (imię i nazwisko / nazwa, NIP)
 
     App->>Fac: create(orderId, buyer, seller, amount, invoiceTitle, issuer)
     Fac->>Doc: createInvoice(...)
@@ -38,8 +38,10 @@ sequenceDiagram
     Doc-->>Fac: AccountingDocument (DRAFT)
     Fac-->>App: AccountingDocument
 
+    App->>DRepo: save(document)
     App->>Pdf: generatePdf(document)
     Pdf-->>App: byte[] pdf
+    App->>Doc: markAsIssued()
     App->>DRepo: save(document)
 
     App->>Notif: notifyInvoiceIssued(document, pdf)
@@ -48,6 +50,6 @@ sequenceDiagram
     App->>Pub: publish(InvoiceCreatedEvent)
 
     alt A1 — Błąd generowania dokumentu (PDF/zapis)
-        App->>Pub: publish(ErrorDuringInvoiceCreation)
+        App->>Pub: publish(ErrorDuringInvoiceCreation {orderId, reason})
     end
 ```

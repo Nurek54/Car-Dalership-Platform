@@ -1,9 +1,5 @@
 package salon.sales.infrastructure.persistence;
 
-import salon.sales.infrastructure.persistence.OfferJpaEntity;
-import salon.sales.infrastructure.persistence.OfferJpaRepository;
-
-import salon.shared.infrastructure.persistence.DomainReflection;
 import org.springframework.stereotype.Component;
 import salon.sales.application.port.out.OfferRepository;
 import salon.sales.domain.model.customer.CustomerId;
@@ -11,19 +7,21 @@ import salon.sales.domain.model.offer.Discount;
 import salon.sales.domain.model.offer.Offer;
 import salon.sales.domain.model.offer.OfferId;
 import salon.sales.domain.model.offer.OfferState;
+import salon.shared.infrastructure.persistence.DomainReflection;
 import salon.shared.model.Money;
 import salon.shared.model.SpecificationId;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Adapter sterowany (driven) — persystencja oferty (port {@link OfferRepository}).
- *
- * Cena końcowa, rabat i stan (np. PENDING_DIRECTOR_APPROVAL) zależą od reguł domeny i wejściowego
- * limitu rabatu, którego nie przechowujemy; dlatego zmapowany stan odtwarzamy refleksją
- * w infrastrukturze, nie dotykając kodu kontekstu Sprzedaży.
+ * Adapter wyjściowy (DatabaseAdapter) portu OfferRepository — mapowanie agregatu Offer
+ * na model JPA. Stan i wycena odtwarzane przez DomainReflection (omijamy reguły maszyny
+ * stanów przy rehydratacji); kwoty round-tripowane tekstowo (bez zmiany skali BigDecimal).
+ * Wersja rekordu (@Version) wędruje z agregatem — zapis nieaktualnej kopii kończy się
+ * ObjectOptimisticLockingFailureException (saveAndFlush wymusza weryfikację od razu).
  */
 @Component
 public class OfferDatabaseAdapter implements OfferRepository {
@@ -36,7 +34,7 @@ public class OfferDatabaseAdapter implements OfferRepository {
 
     @Override
     public void save(Offer offer) {
-        repository.save(toEntity(offer));
+        repository.saveAndFlush(toEntity(offer));
     }
 
     @Override
@@ -60,18 +58,19 @@ public class OfferDatabaseAdapter implements OfferRepository {
         entity.customerId = offer.getCustomerId().value();
         entity.specificationId = offer.getSpecificationId().value();
         if (offer.getBasePrice() != null) {
-            entity.basePriceAmount = offer.getBasePrice().amount();
+            entity.basePriceAmount = offer.getBasePrice().amount().toPlainString();
             entity.basePriceCurrency = offer.getBasePrice().currency();
         }
         if (offer.getAppliedDiscount() != null) {
             entity.discountPercentage = offer.getAppliedDiscount().percentage();
         }
         if (offer.getFinalPrice() != null) {
-            entity.finalPriceAmount = offer.getFinalPrice().amount();
+            entity.finalPriceAmount = offer.getFinalPrice().amount().toPlainString();
             entity.finalPriceCurrency = offer.getFinalPrice().currency();
         }
         entity.validityDate = offer.getValidityDate();
         entity.state = offer.getState().name();
+        entity.version = (Long) DomainReflection.get(offer, "version");
         return entity;
     }
 
@@ -81,18 +80,21 @@ public class OfferDatabaseAdapter implements OfferRepository {
                 new CustomerId(entity.customerId),
                 new SpecificationId(entity.specificationId));
         if (entity.basePriceAmount != null) {
-            DomainReflection.set(offer, "basePrice", Money.of(entity.basePriceAmount, entity.basePriceCurrency));
+            DomainReflection.set(offer, "basePrice",
+                    new Money(new BigDecimal(entity.basePriceAmount), entity.basePriceCurrency));
         }
         if (entity.discountPercentage != null) {
             DomainReflection.set(offer, "appliedDiscount", new Discount(entity.discountPercentage));
         }
         if (entity.finalPriceAmount != null) {
-            DomainReflection.set(offer, "finalPrice", Money.of(entity.finalPriceAmount, entity.finalPriceCurrency));
+            DomainReflection.set(offer, "finalPrice",
+                    new Money(new BigDecimal(entity.finalPriceAmount), entity.finalPriceCurrency));
         }
         if (entity.validityDate != null) {
             DomainReflection.set(offer, "validityDate", entity.validityDate);
         }
         DomainReflection.set(offer, "state", OfferState.valueOf(entity.state));
+        DomainReflection.set(offer, "version", entity.version);
         return offer;
     }
 }

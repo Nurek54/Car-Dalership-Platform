@@ -1,5 +1,8 @@
 package salon.sales.domain.model.offer;
 
+import salon.sales.domain.exception.InvalidOfferStateException;
+import salon.sales.domain.exception.OfferExpiredException;
+import salon.sales.domain.exception.OfferImmutableException;
 import salon.sales.domain.model.customer.CustomerId;
 import salon.shared.model.Money;
 import salon.shared.model.SpecificationId;
@@ -8,14 +11,24 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Aggregate Root: oferta handlowa (UC-SPR-01).
+ * Aggregate Root: oferta handlowa / proforma (UC-CRM-02, UC-CRM-03).
  *
- * Reguła kluczowa (A1): rabat powyżej limitu Handlowca NIE jest przyznawany od ręki —
- * oferta natychmiast przechodzi w stan PENDING_DIRECTOR_APPROVAL (wymaga autoryzacji Dyrektora).
+ * Model zgodny z docs/Agregate/Sales/customer-offer-order.md oraz PDF (rozdz. 3.3.4):
+ *   pola:    id, customerId, specificationId, basePrice, finalPrice, validityDate, state
+ *   metody:  applyDiscount(Discount), publishOffer(), accept(), reject()
+ *   stany:   DRAFT -> PUBLISHED -> ACCEPTED | REJECTED (stany terminalne)
  *
- * basePrice jest opcjonalna (może dojść później); finalPrice liczymy tylko gdy znamy basePrice.
+ * Hermetyzacja decyzji cenowych: applyDiscount zamyka politykę rabatową wewnątrz agregatu,
+ * a konstruktor pilnuje, by cena bazowa była ściśle dodatnia (reguła danych oferty).
+ * Reguły ważności i konwersji również należą do agregatu (NIE do warstwy aplikacji):
+ *   - accept() odrzuca ofertę po terminie ważności (OfferExpiredException),
+ *   - po REJECTED/ACCEPTED oferta jest niemutowalna (OfferImmutableException),
+ *   - toSnapshot() można zbudować wyłącznie z oferty ACCEPTED.
  */
 public class Offer {
+
+    /** Maksymalny rabat dopuszczalny polityką salonu (w %), pilnowany przez agregat. */
+    private static final BigDecimal MAX_DISCOUNT_PERCENTAGE = new BigDecimal("20");
 
     private final OfferId id;
     private final CustomerId customerId;
@@ -26,6 +39,7 @@ public class Offer {
     private Money finalPrice;         // liczona z basePrice i rabatu
     private LocalDate validityDate;
     private OfferState state;
+    private Long version;             // znacznik wersji dla blokady optymistycznej (infrastruktura)
 
     public Offer(OfferId id, CustomerId customerId, SpecificationId specificationId) {
         if (id == null) {
@@ -45,86 +59,107 @@ public class Offer {
         this.finalPrice = null;
         this.validityDate = LocalDate.now().plusDays(14); // oferta ważna 14 dni
         this.state = OfferState.DRAFT;
+        this.version = null;
     }
 
-    // Cenę bazową można ustawić raz (np. po wycenie ze specyfikacji).
+    /** Wariant z ceną bazową (wycena specyfikacji z Katalogu) — cena musi być ściśle dodatnia. */
+    public Offer(OfferId id, CustomerId customerId, SpecificationId specificationId, Money basePrice) {
+        this(id, customerId, specificationId);
+        if (basePrice == null) {
+            throw new IllegalArgumentException("basePrice must not be null.");
+        }
+        if (basePrice.amount().signum() <= 0) {
+            throw new InvalidOfferDataException("Offer price must be strictly positive");
+        }
+        this.basePrice = basePrice;
+        recomputeFinalPrice();
+    }
+
+    /** Wariant dla tożsamości klienta współdzielonej przez Shared Kernel. */
+    public Offer(OfferId id, salon.shared.model.CustomerId customerId, SpecificationId specificationId, Money basePrice) {
+        this(id, new CustomerId(customerId.value()), specificationId, basePrice);
+    }
+
+    // Cenę bazową można ustawić na etapie roboczym (np. po wycenie ze specyfikacji).
     public void setBasePrice(Money basePrice) {
         if (basePrice == null) {
             throw new IllegalArgumentException("basePrice must not be null.");
+        }
+        if (basePrice.amount().signum() <= 0) {
+            throw new InvalidOfferDataException("Offer price must be strictly positive");
+        }
+        if (this.state != OfferState.DRAFT) {
+            throw new InvalidOfferStateException("Base price can only be set on a DRAFT offer.");
         }
         this.basePrice = basePrice;
         recomputeFinalPrice();
     }
 
     /**
-     * UC-SPR-01: przyznanie rabatu.
-     * Jeśli żądany rabat > limit Handlowca -> blokujemy i wymagamy zgody Dyrektora (A1).
-     * W przeciwnym razie rabat jest przyznany od ręki.
+     * Przyznanie rabatu (UC-CRM-02). Polityka rabatowa jest zamknięta w agregacie:
+     * rabat musi mieścić się w granicach dopuszczalnych przez salon.
      */
-    public void applyDiscount(Discount discount, DiscountLimit limit) {
+    public void applyDiscount(Discount discount) {
         if (discount == null) {
             throw new IllegalArgumentException("discount must not be null.");
         }
-        if (limit == null) {
-            throw new IllegalArgumentException("limit must not be null.");
-        }
         if (this.state != OfferState.DRAFT) {
-            throw new IllegalStateException("Discount can only be applied to a DRAFT offer.");
+            throw new InvalidOfferStateException("Discount can only be applied to a DRAFT offer.");
         }
-
-        if (discount.percentage().compareTo(limit.maxAllowed()) > 0) {
-            // Rabat przekracza limit -> wymaga autoryzacji Dyrektora.
-            this.appliedDiscount = discount;
-            this.state = OfferState.PENDING_DIRECTOR_APPROVAL;
-        } else {
-            // Rabat w granicach limitu -> przyznany od ręki.
-            this.appliedDiscount = discount;
-            recomputeFinalPrice();
+        if (discount.percentage().compareTo(MAX_DISCOUNT_PERCENTAGE) > 0) {
+            throw new IllegalArgumentException(
+                    "Discount " + discount.percentage() + "% exceeds the dealership policy limit of "
+                            + MAX_DISCOUNT_PERCENTAGE + "%.");
         }
-    }
-
-    // UC-SPR-01, A1: Dyrektor zatwierdza rabat -> oferta wraca do obiegu (DRAFT) i można ją wysłać.
-    public void approveDiscountByDirector() {
-        if (this.state != OfferState.PENDING_DIRECTOR_APPROVAL) {
-            throw new IllegalStateException("Only an offer pending director approval can be approved.");
-        }
+        this.appliedDiscount = discount;
         recomputeFinalPrice();
-        this.state = OfferState.DRAFT;
     }
 
-    // Wysłanie oferty klientowi.
-    public void publish() {
-        if (this.state == OfferState.PENDING_DIRECTOR_APPROVAL) {
-            throw new IllegalStateException("Offer needs director approval before it can be published.");
-        }
+    // UC-CRM-02, krok 4: wygenerowanie dokumentu proforma i prezentacja klientowi.
+    public void publishOffer() {
         if (this.state != OfferState.DRAFT) {
-            throw new IllegalStateException("Only a DRAFT offer can be published.");
+            throw new InvalidOfferStateException("Only a DRAFT offer can be published.");
         }
         this.state = OfferState.PUBLISHED;
     }
 
-    // Zamiana na zamówienie (UC-SPR-02).
-    public void markAsConverted() {
-        if (this.state != OfferState.PUBLISHED) {
-            throw new IllegalStateException("Only a PUBLISHED offer can be converted to an order.");
+    /**
+     * UC-CRM-03, krok 1-2: klient akceptuje warunki oferty.
+     * Reguły w agregacie: tylko PUBLISHED można zaakceptować, stany terminalne są
+     * niemutowalne, a oferta po terminie ważności jest odrzucana.
+     */
+    public void accept() {
+        if (this.state == OfferState.REJECTED) {
+            // Odrzucona oferta to zamknięty rozdział — klient musi dostać nową.
+            throw new OfferImmutableException(
+                    "Cannot change state of a REJECTED offer. "
+                            + "Cannot accept an offer that is already REJECTED.");
         }
-        this.state = OfferState.CONVERTED;
+        if (this.state != OfferState.PUBLISHED) {
+            throw new InvalidOfferStateException("Only PUBLISHED offers can be accepted");
+        }
+        if (this.validityDate.isBefore(LocalDate.now())) {
+            throw new OfferExpiredException("Offer " + this.id.value() + " has expired.");
+        }
+        this.state = OfferState.ACCEPTED;
     }
 
-    /**
-     * Wygaśnięcie/unieważnienie oferty.
-     * Używane przez Cron wygasłych ofert (UC-SPR-01 A2) oraz przy publikacji nowej wersji cennika.
-     * Oferta już CONVERTED nie może wygasnąć; dla pozostałych stanów operacja jest idempotentna.
-     */
-    public void expire() {
-        if (this.state == OfferState.CONVERTED) {
-            throw new IllegalStateException("A converted offer cannot expire.");
+    // UC-CRM-03, scenariusz A1: klient odrzuca ofertę — stan terminalny, nic nie jest emitowane.
+    // Odrzucić można zarówno zaprezentowaną (PUBLISHED), jak i roboczą (DRAFT) ofertę.
+    public void reject() {
+        if (this.state == OfferState.ACCEPTED || this.state == OfferState.REJECTED) {
+            throw new OfferImmutableException(
+                    "Cannot change state of a " + this.state + " offer.");
         }
-        this.state = OfferState.EXPIRED;
+        this.state = OfferState.REJECTED;
     }
 
     private void recomputeFinalPrice() {
-        if (this.basePrice == null || this.appliedDiscount == null) {
+        if (this.basePrice == null) {
+            return;
+        }
+        if (this.appliedDiscount == null) {
+            this.finalPrice = this.basePrice;
             return;
         }
         // finalPrice = basePrice * (1 - rabat/100)
@@ -135,10 +170,14 @@ public class Offer {
     }
 
     /**
-     * Niemutowalna migawka oferty dla {@code OrderFactory} (UC-SPR-02).
-     * Eksponujemy tylko obiekty wartości — nie samą referencję do agregatu.
+     * Niemutowalna migawka oferty dla {@code OrderFactory} (UC-CRM-03).
+     * Reguła konwersji siedzi w agregacie: zamówienie może powstać WYŁĄCZNIE
+     * z oferty zaakceptowanej przez klienta.
      */
     public OfferSnapshot toSnapshot() {
+        if (this.state != OfferState.ACCEPTED) {
+            throw new InvalidOfferStateException("Order can only be created from an ACCEPTED offer.");
+        }
         return new OfferSnapshot(this.id, this.customerId, this.specificationId, this.finalPrice);
     }
 

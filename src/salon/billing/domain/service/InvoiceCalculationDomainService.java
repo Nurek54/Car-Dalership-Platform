@@ -11,7 +11,7 @@ import java.math.BigDecimal;
  * W sposób kontrolowany sięga do stanu agregatu Settlement (uses state of) i wylicza kwoty:
  *  - faktury końcowej = wartość kontraktu - zaksięgowane wpłaty (saldo pozostałe),
  *  - zadatku = ustalony procent wartości kontraktu.
- * Zwraca czysty obiekt wartości Money — co drastycznie zwiększa testowalność matematyki.
+ * Zwraca czysty obiekt wartości Money - co drastycznie zwiększa testowalność matematyki.
  */
 public class InvoiceCalculationDomainService {
 

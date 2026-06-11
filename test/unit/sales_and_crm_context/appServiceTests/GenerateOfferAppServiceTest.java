@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import salon.catalog.application.port.out.CatalogRepository;
 import salon.sales.application.port.out.OfferRepository;
 import salon.sales.application.service.SalesAppService;
+import salon.sales.domain.exception.ExternalServiceUnavailableException;
 import salon.sales.domain.model.offer.Offer;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.shared.model.Money;

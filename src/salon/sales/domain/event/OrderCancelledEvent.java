@@ -6,11 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "ZamowienieAnulowane" (UC-SPR-03) — zamówienie zostało anulowane wraz z powodem.
- * Powód (reason) niesie informację dla Rozliczeń, jak potraktować zadatek.
- *
- * Uwaga: oprócz akcesora rekordu reason() udostępniamy też getReason() w stylu JavaBean,
- * bo testy odwołują się do event.getReason().
+ * "ZamowienieAnulowane" — klient zrezygnował z zamówienia (z podanym powodem).
+ * Nasłuchują: Kontekst Rozliczeń (rozliczenie zadatku) oraz Inwentarz (zwolnienie blokady).
  */
 public record OrderCancelledEvent(UUID eventId,
                                   String orderId,

@@ -51,7 +51,7 @@ class OfferDatabaseAdapterTest {
         databaseAdapter.save(savedOffer);
 
         Optional<Offer> updatedOffer = databaseAdapter.findById(offerId);
-        assertThat(updatedOffer.getState()).isEqualTo(OfferState.PUBLISHED);
+        assertThat(updatedOffer.get().getState()).isEqualTo(OfferState.PUBLISHED);
     }
 
     @Test

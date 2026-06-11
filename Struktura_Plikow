@@ -1,106 +1,403 @@
 =====================================================================
   SALON SAMOCHODOWY — STRUKTURA PROJEKTU (DDD + Architektura Heksagonalna)
-  Pakiet bazowy: src.salon   (zamiast dawnego main.java.com.salon)
+  Pakiet bazowy: src.salon   (Sources Root = korzeń projektu)
+
+  5 Kontekstów Ograniczonych (PDF, rozdz. 2.4):
+   - sales      <- Sprzedaż i CRM           (UC-CRM-01..05, SalesAppService + handlery zdarzeń)
+   - catalog    <- Katalog i konfigurator   (UC-KON-01..02, Catalog/SpecificationAppService)
+   - logistics  <- Inwentarz i logistyka    (UC-INW-01..06, InventoryManagementAppService)
+   - financing  <- Finansowanie             (UC-FIN-01..02, FinancingAppService + ACL banku)
+   - billing    <- Fakturowanie i rozliczenia (UC-FIR-01..03, Settlement/DocumentAppService)
+  + shared (Shared Kernel: Money, OrderId, CustomerId, SpecificationId, DomainEvent, RabbitMQ)
+  + bootstrap (Composition Root: wiring Springa + dema)
+
+  Każdy kontekst: domain/ (agregaty, zdarzenia, wyjątki, serwisy domenowe)
+                  application/ (porty in/out, komendy, handlery, usługa aplikacyjna)
+                  infrastructure/ (adaptery: web, messaging, persistence, external, mock)
+
+  Testy (test/): unit / integration (WireMock, @DataJpaTest, @WebMvcTest) /
+                 acceptance (pełny kontekst Spring + MockMvc) / arch (ArchUnit)
 =====================================================================
 
-KORZEŃ PROJEKTU (Sources Root = KORZEŃ projektu, dzięki temu pakiet zaczyna się od "src")
-.
-├── src/
-│   └── salon/
-│       │
-│       ├── shared/                                  <-- WSPÓLNY RDZEŃ (Shared Kernel)
-│       │   ├── model/
-│       │   │   ├── Money.java                       (VO; ma of(...) i getAmount())
-│       │   │   ├── OrderId.java                     (VO; używany przez Rozliczenia i Sprzedaż)
-│       │   │   └── SpecificationId.java             (VO; pomost Katalog -> Sprzedaż)
-│       │   ├── event/
-│       │   │   └── DomainEvent.java                 (marker: eventId() + occurredOn())
-│       │   ├── application/
-│       │   │   └── EventPublisherPort.java          (port wyjściowy: publish(DomainEvent))
-│       │   └── infrastructure/messaging/            <-- PRAWDZIWY RabbitMQ (NIE mock)
-│       │       ├── RabbitMqConfig.java              (exchange, kolejki, dane połączenia)
-│       │       ├── RabbitMqConnection.java          (połączenie + kanał + deklaracja exchange)
-│       │       ├── EventSerializer.java             (kontrakt serializacji)
-│       │       ├── RecordEventSerializer.java       (rekord -> JSON, jedyna refleksja w projekcie)
-│       │       ├── EventJson.java                   (mini JSON: build + parse, bez bibliotek)
-│       │       ├── RabbitMqEventPublisherAdapter.java  (implementuje EventPublisherPort -> basicPublish)
-│       │       ├── RabbitMqMessageHandler.java      (kontrakt obsługi odebranego zdarzenia)
-│       │       └── RabbitMqEventConsumer.java       (basicConsume + routing po typie zdarzenia)
-│       │
-│       ├── billing/                                 <-- KONTEKST: Fakturowanie i Rozliczenia (UC-ROZ)
-│       │   ├── domain/
-│       │   │   ├── model/
-│       │   │   │   ├── payment/{Payment, PaymentId(String), PaymentCategory}
-│       │   │   │   ├── document/{AccountingDocument(addLineItem!), DocumentLine, DocumentId(String),
-│       │   │   │   │             LineId, DocumentType, DocumentState, TaxDetails}
-│       │   │   │   └── settlement/{OrderSettlement(applyDeposit/Financing/TradeIn), SettlementId(String),
-│       │   │   │                   SettlementState}
-│       │   │   ├── service/{PaymentClassificationService, SettlementCalculationService}
-│       │   │   └── event/{DepositRegisteredEvent, AdvanceRegisteredEvent, InvoiceIssuedEvent}  (z eventId)
-│       │   ├── application/
-│       │   │   ├── port/in/{RegisterPaymentUseCase+Command, IssueDocumentUseCase+Command(String),
-│       │   │   │            CalculateSettlementUseCase+Command}
-│       │   │   ├── port/out/{PaymentRepository, DocumentRepository, SettlementRepository,
-│       │   │   │             KsefPort, KsefSendResult, PaymentGatewayPort, ExternalIntegrationPort}
-│       │   │   └── service/{PaymentAppService, DocumentAppService, SettlementAppService}
-│       │   └── infrastructure/
-│       │       ├── mock/{InMemory*Repository x3, KsefMockAdapter, PaymentGatewayMockAdapter,
-│       │       │         ExternalIntegrationMockAdapter, InProcessEventPublisherAdapter}
-│       │       ├── persistence/{Payment/Document/SettlementDatabaseAdapter}  (szkielety JPA)
-│       │       └── messaging/{OrderReadyForSettlementEvent, SettlementEventListener}  (wyzwala UC-ROZ-03)
-│       │
-│       ├── sales/                                   <-- KONTEKST: Sprzedaż i CRM (UC-SPR)
-│       │   ├── domain/
-│       │   │   ├── model/offer/{Offer, OfferId, CustomerId, OfferState, Discount, DiscountLimit}
-│       │   │   ├── model/order/{Order, OrderState, CancellationReason}
-│       │   │   └── event/{OrderActivatedEvent, DepositRetainedAsIncomeEvent, DepositRefundOrderedEvent}
-│       │   ├── application/
-│       │   │   ├── port/in/{CreateOfferUseCase+Command, CancelOrderUseCase+Command,
-│       │   │   │            ActivateOrderOnDepositUseCase}
-│       │   │   ├── port/out/{OfferRepository, OrderRepository}
-│       │   │   └── service/{OfferAppService, OrderAppService}
-│       │   └── infrastructure/
-│       │       ├── mock/{InMemoryOfferRepository, InMemoryOrderRepository}
-│       │       └── messaging/SalesDepositListener.java   <-- NASŁUCHUJE DepositRegisteredEvent Z KOLEJKI
-│       │
-│       ├── catalog/                                 <-- KONTEKST: Katalog i Konfigurator (UC-KAT)
-│       │   ├── domain/
-│       │   │   ├── model/catalog/{ProductCatalog, CatalogId, ModelYear, OptionCode, CatalogState,
-│       │   │   │                  CatalogOption, CatalogRule, RuleType}
-│       │   │   ├── model/specification/{VehicleSpecification, SpecificationState, RuleViolationException}
-│       │   │   └── service/RuleValidationDomainService.java
-│       │   ├── application/
-│       │   │   ├── port/in/{BuildSpecificationUseCase, UpdateCatalogUseCase}
-│       │   │   ├── port/out/{CatalogRepository, SpecificationRepository, ImporterApiPort}
-│       │   │   └── service/{SpecificationAppService, CatalogAppService}
-│       │   └── infrastructure/mock/{InMemoryCatalogRepository, InMemorySpecificationRepository,
-│       │                            ImporterApiMockAdapter}
-│       │
-│       └── bootstrap/                               <-- URUCHAMIALNE main()
-│           ├── OfflineDemo.java                      (cała domena, BEZ brokera)
-│           └── MessagingDemo.java                    (zadatek PRZECHODZI PRZEZ RabbitMQ do Sprzedaży)
-│
-├── test/                                            <-- Test Sources Root (osobny katalog)
-│   ├── com/salon/billing/infrastructure/messaging/
-│   │   └── SettlementEventListenerTest.java          (JUnit5; pakiet com.salon.billing...)
-│   └── unit/
-│       ├── invoicing_and_billing_context/{AccountingDocumentTest, OrderSettlementTest, PaymentTest}
-│       ├── sales_and_crm_context/{OfferTest, OrderTest}
-│       └── catalog_and_configurator_context/{ProductCatalogTest, VehicleSpecificationTest}
-│
-├── lib/        (amqp-client.jar + slf4j; w wersji z Maven nie jest potrzebny — patrz pom.xml)
-├── pom.xml
-└── schemat plikow   (ten plik)
 
----------------------------------------------------------------------
-JAK URUCHOMIĆ PRZEPŁYW PRZEZ KOLEJKĘ (MessagingDemo)
----------------------------------------------------------------------
-1. Wystartuj broker (Docker):
-      docker run -d --name salon-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management
-   (panel: http://localhost:15672 , login guest / guest)
-2. Uruchom main: src.salon.bootstrap.MessagingDemo
-   Zobaczysz: [RabbitMqPublisher] -> ... DepositRegisteredEvent
-              [RabbitMqConsumer:sales.inbox] <- ...
-              [SalesDepositListener] ... -> activating order
-              Stan zamówienia: IN_PROGRESS
-Bez brokera uruchom src.salon.bootstrap.OfflineDemo (cała domena działa lokalnie).
+src/salon/billing/application/command/
+    GenerateAdvanceCommand.java
+    GenerateInvoiceCommand.java
+    ProcessPaymentCommand.java
+
+src/salon/billing/application/port/in/
+    GenerateAdvanceUseCase.java
+    GenerateInvoiceUseCase.java
+    ProcessPaymentUseCase.java
+
+src/salon/billing/application/port/out/
+    CrmIntegrationPort.java
+    DocumentRepository.java
+    NotificationPort.java
+    PdfGeneratorPort.java
+    SettlementRepository.java
+
+src/salon/billing/application/service/
+    DocumentAppService.java
+    SettlementAppService.java
+
+src/salon/billing/domain/event/
+    AdvancePaymentRegisteredEvent.java
+    AdvancePaymentRequestedEvent.java
+    ErrorDuringInvoiceCreation.java
+    ErrorDuringPaymentRequest.java
+    InvoiceCreatedEvent.java
+    PaymentDeadlineExpiredEvent.java
+    PaymentRegisteredEvent.java
+    SettlementCompletedEvent.java
+
+src/salon/billing/domain/model/document/
+    AccountingDocument.java
+    AccountingDocumentFactory.java
+    BuyerDetails.java
+    DocumentId.java
+    DocumentStatus.java
+    SellerDetails.java
+
+src/salon/billing/domain/model/settlement/
+    Payment.java
+    Settlement.java
+    SettlementFactory.java
+    SettlementId.java
+    SettlementStatus.java
+
+src/salon/billing/domain/service/
+    InvoiceCalculationDomainService.java
+
+src/salon/billing/infrastructure/integration/
+    SalesCrmIntegrationAdapter.java
+
+src/salon/billing/infrastructure/messaging/
+    BillingEventSubscriberAdapter.java
+    OrderReadyForSettlementEvent.java
+    SettlementEventListener.java
+    VehicleIsNotOnStockEvent.java
+    VehicleReservedFromStockEvent.java
+
+src/salon/billing/infrastructure/mock/
+    InMemoryDocumentRepository.java
+    InMemorySettlementRepository.java
+    InProcessEventPublisherAdapter.java
+    NotificationAdapter.java
+    NotificationMockAdapter.java
+    PdfGeneratorMockAdapter.java
+
+src/salon/billing/infrastructure/persistence/
+    AccountingDocumentDatabaseAdapter.java
+    AccountingDocumentJpaEntity.java
+    AccountingDocumentJpaRepository.java
+    PaymentEmbeddable.java
+    SettlementDatabaseAdapter.java
+    SettlementJpaEntity.java
+    SettlementJpaRepository.java
+
+src/salon/billing/infrastructure/scheduling/
+    PaymentReminderCronJobAdapter.java
+
+src/salon/billing/infrastructure/web/
+    PaymentRequest.java
+    PaymentRestApiAdapter.java
+
+src/salon/bootstrap/
+    MessagingDemo.java
+    OfflineDemo.java
+    SalonApplication.java
+    SalonDemo.java
+    SalonWiringConfiguration.java
+
+src/salon/catalog/application/port/in/
+    BuildSpecificationUseCase.java
+    UpdateCatalogUseCase.java
+
+src/salon/catalog/application/port/out/
+    CatalogRepository.java
+    ImporterApiPort.java
+    SpecificationRepository.java
+
+src/salon/catalog/application/service/
+    CatalogAppService.java
+    SpecificationAppService.java
+
+src/salon/catalog/domain/event/
+    CatalogUpdateFailedEvent.java
+    CatalogUpdatedEvent.java
+    SpecificationCompletedEvent.java
+
+src/salon/catalog/domain/model/catalog/
+    CatalogId.java
+    CatalogOption.java
+    CatalogRule.java
+    CatalogState.java
+    ModelYear.java
+    OptionCode.java
+    ProductCatalog.java
+    RuleType.java
+
+src/salon/catalog/domain/model/specification/
+    RuleViolationException.java
+    SpecificationState.java
+    VehicleSpecification.java
+
+src/salon/catalog/domain/service/
+    RuleValidationDomainService.java
+
+src/salon/catalog/infrastructure/mock/
+    ImporterApiMockAdapter.java
+    InMemoryCatalogRepository.java
+    InMemorySpecificationRepository.java
+
+src/salon/catalog/infrastructure/persistence/
+    CatalogOptionEmbeddable.java
+    CatalogRuleEmbeddable.java
+    ProductCatalogDatabaseAdapter.java
+    ProductCatalogJpaEntity.java
+    ProductCatalogJpaRepository.java
+    VehicleSpecificationDatabaseAdapter.java
+    VehicleSpecificationJpaEntity.java
+    VehicleSpecificationJpaRepository.java
+
+src/salon/financing/application/
+    BankValidationException.java
+
+src/salon/financing/application/port/in/
+    FinancingRequestUseCase.java
+
+src/salon/financing/application/port/out/
+    BankIntegrationAclPort.java
+    FinancingRepository.java
+
+src/salon/financing/application/service/
+    FinancingAppService.java
+
+src/salon/financing/domain/event/
+    FinancingApplicationFailed.java
+    FinancingApprovedEvent.java
+    FinancingRejectedEvent.java
+
+src/salon/financing/domain/model/financing/
+    ApplicationId.java
+    ApplicationState.java
+    CustomerId.java
+    FinancingApplication.java
+    FinancingApplicationFactory.java
+
+src/salon/financing/infrastructure/mock/
+    BankIntegrationMockAdapter.java
+    InMemoryFinancingRepository.java
+
+src/salon/logistics/application/
+    FactoryOrderRejectedException.java
+    InventoryManagementAppService.java
+
+src/salon/logistics/application/port/in/
+    OrderFactoryVehicleUseCase.java
+    PrepareForHandoverUseCase.java
+    ReceiveVehicleUseCase.java
+    ReleaseInventoryUseCase.java
+    ReleaseReservationUseCase.java
+    ReserveVehicleUseCase.java
+
+src/salon/logistics/application/port/out/
+    FactoryIntegrationAclPort.java
+    InventoryRepository.java
+    SpecificationIntegrationPort.java
+
+src/salon/logistics/domain/event/
+    FactoryOrderFailedEvent.java
+    FactoryOrderPlacedEvent.java
+    VehicleDeliveredToStockEvent.java
+    VehicleInventoryReleasedError.java
+    VehicleInventoryReleasedEvent.java
+    VehicleIsNotOnStockEvent.java
+    VehicleReadyForHandoverEvent.java
+    VehicleReservationCancelledEvent.java
+    VehicleReservedFromStockEvent.java
+
+src/salon/logistics/domain/exceptions/
+    InvalidVehicleStateException.java
+
+src/salon/logistics/domain/model/vehicle/
+    ImporterData.java
+    InventoryVehicle.java
+    InventoryVehicleFactory.java
+    VehicleRole.java
+    VehicleState.java
+    VinNumber.java
+
+src/salon/logistics/infrastructure/messaging/
+    BillingEventSubscriberAdapter.java
+    FinancingEventSubscriberAdapter.java
+    SalesEventSubscriberAdapter.java
+
+src/salon/logistics/infrastructure/mock/
+    FactoryIntegrationMockAdapter.java
+    InMemoryInventoryRepository.java
+    SpecificationIntegrationMockAdapter.java
+
+src/salon/sales/application/command/
+    ScheduleHandoverCommand.java
+    StartConfiguratorSessionCommand.java
+
+src/salon/sales/application/handler/
+    BankTransferDeclaredEventHandler.java
+    ConfiguratorSessionInitiatedEventHandler.java
+    FinancingRequestedEventHandler.java
+    OrderActivatedEventHandler.java
+    OrderCancelledEventHandler.java
+    OrderPlacedEventHandler.java
+    OrderReadyForHandoverEventHandler.java
+    VehicleHandedOverEventHandler.java
+    VehicleReadyForHandoverEventHandler.java
+
+src/salon/sales/application/port/in/
+    AcceptOfferUseCase.java
+    ActivateOrderOnDepositUseCase.java
+    GenerateOfferUseCase.java
+    ReleaseVehicleUseCase.java
+    ScheduleHandoverUseCase.java
+    StartConfiguratorUseCase.java
+
+src/salon/sales/application/port/out/
+    AfterSalesIntegrationPort.java
+    BillingIntegrationPort.java
+    CatalogIntegrationPort.java
+    CustomerRepository.java
+    FinancingIntegrationPort.java
+    InventoryIntegrationPort.java
+    ManufacturingIntegrationPort.java
+    NotificationIntegrationPort.java
+    OfferRepository.java
+    OrderRepository.java
+
+src/salon/sales/application/service/
+    ConfiguratorAppService.java
+    SalesAppService.java
+
+src/salon/sales/domain/event/
+    BankTransferDeclaredEvent.java
+    ConfiguratorSessionInitiatedEvent.java
+    FinancingRequestedEvent.java
+    OrderActivatedEvent.java
+    OrderCancelledEvent.java
+    OrderCompletedEvent.java
+    OrderPlacedEvent.java
+    OrderReadyForHandoverEvent.java
+    VehicleHandedOverEvent.java
+    VehicleReadyForHandoverEvent.java
+
+src/salon/sales/domain/exception/
+    CustomerNotFoundException.java
+    DatabaseException.java
+    ExternalServiceUnavailableException.java
+    InvalidOfferStateException.java
+    InvalidTaxIdException.java
+    InventoryLockedException.java
+    OfferExpiredException.java
+    OfferImmutableException.java
+    OfferNotFoundException.java
+    OrderNotFoundException.java
+    SpecificationNotFoundException.java
+
+src/salon/sales/domain/model/customer/
+    Address.java
+    ContactData.java
+    Customer.java
+    CustomerId.java
+
+src/salon/sales/domain/model/offer/
+    Discount.java
+    InvalidOfferDataException.java
+    Offer.java
+    OfferFactory.java
+    OfferId.java
+    OfferSnapshot.java
+    OfferState.java
+
+src/salon/sales/domain/model/order/
+    FinancingRequestedEvent.java
+    InvalidOrderStateException.java
+    Order.java
+    OrderFactory.java
+    OrderState.java
+    PaymentMethod.java
+    PaymentStatus.java
+
+src/salon/sales/infrastructure/adapter/in/cron/
+    OfferExpirationCronJobAdapter.java
+
+src/salon/sales/infrastructure/adapter/in/messaging/
+    SalesEventSubscriberAdapter.java
+
+src/salon/sales/infrastructure/adapter/out/external/
+    BillingExternalApiAdapter.java
+    CatalogExternalApiAdapter.java
+    InventoryExternalApiAdapter.java
+
+src/salon/sales/infrastructure/adapter/out/messaging/
+    SalesEventBusAdapter.java
+
+src/salon/sales/infrastructure/integration/
+    FinancingEventBusAdapter.java
+    InventoryCommandAdapter.java
+
+src/salon/sales/infrastructure/messaging/
+    BillingEventSubscriberAdapter.java
+    CatalogEventSubscriberAdapter.java
+    LogisticsEventSubscriberAdapter.java
+    SalesDepositListener.java
+    VehicleInventoryReleasedError.java
+
+src/salon/sales/infrastructure/mock/
+    InMemoryCustomerRepository.java
+    InMemoryOfferRepository.java
+    InMemoryOrderRepository.java
+
+src/salon/sales/infrastructure/persistence/
+    OfferDatabaseAdapter.java
+    OfferJpaEntity.java
+    OfferJpaRepository.java
+    OrderDatabaseAdapter.java
+    OrderJpaEntity.java
+    OrderJpaRepository.java
+
+src/salon/sales/infrastructure/web/
+    CancelOrderRequest.java
+    InventoryWebhookRestAdapter.java
+    OfferRestApiAdapter.java
+    OrderRestApiAdapter.java
+    ScheduleHandoverRequest.java
+    SessionRestApiAdapter.java
+
+src/salon/shared/application/
+    EventPublisherPort.java
+
+src/salon/shared/event/
+    AbstractAggregateRoot.java
+    DomainEvent.java
+
+src/salon/shared/infrastructure/messaging/
+    EventJson.java
+    EventSerializer.java
+    RabbitMqConfig.java
+    RabbitMqConnection.java
+    RabbitMqEventConsumer.java
+    RabbitMqEventPublisherAdapter.java
+    RabbitMqMessageHandler.java
+    RecordEventSerializer.java
+
+src/salon/shared/infrastructure/persistence/
+    DomainReflection.java
+
+src/salon/shared/infrastructure/web/
+    RestValidationAdvice.java
+
+src/salon/shared/model/
+    CustomerId.java
+    Money.java
+    OrderId.java
+    SpecificationId.java

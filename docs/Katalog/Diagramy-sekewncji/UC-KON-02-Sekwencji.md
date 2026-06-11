@@ -1,63 +1,39 @@
 sequenceDiagram
 autonumber
-actor Klient
-participant API as SpecificationAppService<br/>(BuildSpecificationUseCase)
-participant RVS as RuleValidationDomainService
-participant Spec as VehicleSpecification<br/>(Aggregate Root)
+participant Ext as System zewnętrzny<br/>producenta/importera (Blackbox)
+participant Cron as CatalogUpdateCronJobAdapter /<br/>webhook «driving adapter»
+participant API as CatalogAppService<br/>(UpdateCatalogUseCase)
+participant Acl as ImporterApiPort<br/>«out port, ACL»
+participant Cat as ProductCatalog<br/>(Aggregate Root)
+participant Old as ProductCatalog (poprzednia wersja)
 participant CatRepo as CatalogRepository
-participant SpecRepo as SpecificationRepository
 participant Bus as EventPublisherPort
 
-    Note over Klient,Bus: Warunek wstępny: sesja zainicjowana (InitiateConfiguratorSession)
+    Note over Ext,Bus: UC-KON-02 — Automatyczna aktualizacja cennika i katalogu
 
-    Klient->>API: startSpecification(catalogId)
-    API->>Spec: new VehicleSpecification(id, CatalogId)
-    Note right of Spec: stan = DRAFT
-    API->>SpecRepo: save(specification)
-    API-->>Klient: SpecificationId
+    Ext-->>Cron: nowy pakiet danych katalogowych (webhook / szyna / API)
+    Cron->>API: publishNewCatalogVersion(modelYear, previousCatalogId)
 
-    loop Wybór pakietu / silnika / skrzyni / koloru
-        Klient->>API: addOption(specId, catalogId, optionCode)
-        API->>SpecRepo: findById(specId)
-        SpecRepo-->>API: VehicleSpecification
-        API->>RVS: validateAndAddOption(spec, OptionCode)
-        RVS->>CatRepo: findById(catalogId)
-        CatRepo-->>RVS: ProductCatalog
-        RVS->>Spec: addOption(option, catalog)
-        Note right of Spec: findOption + checkExclusions (EXCLUDES, Fail-fast)<br/>stan = IN_PROGRESS
-        alt Kombinacja dozwolona
-            Spec-->>RVS: ok
-            RVS-->>API: ok
-            API->>SpecRepo: save(specification)
-            API-->>Klient: 200 OK
-        else A1: Niedozwolona kombinacja (EXCLUDES)
-            Spec--xRVS: RuleViolationException
-            RVS--xAPI: RuleViolationException
-            API-->>Klient: blad - zmien silnik/skrzynie/pakiet
-            Note right of Spec: brak zapisu, brak zdarzenia
-        end
-    end
+    API->>Acl: fetchCurrentOptions(modelYear)
+    Note right of Acl: warstwa translacji (ACL): zagnieżdżone struktury<br/>zewnętrzne -> CatalogOption / CatalogRule (krok 2)
+    alt A1: błąd translacji lub walidacji danych (np. brak cen, zły format)
+        Acl--xAPI: wyjątek translacji / walidacja odrzuca pakiet
+        API->>Bus: publish(CatalogUpdateFailedEvent {modelYear, reason})
+        Note right of Bus: aktualizacja przerwana, pakiet odrzucony,<br/>szczegóły w logu dla wsparcia IT
+    else Główny: pakiet poprawny
+        Acl-->>API: List~CatalogOption~ (+ reguły)
+        API->>API: walidacja strukturalna i logiczna pakietu (krok 3)
 
-    alt Klient zatwierdza
-        Klient->>API: finalizeSpecification(specId)
-        API->>SpecRepo: findById(specId)
-        SpecRepo-->>API: VehicleSpecification
-        API->>RVS: assertComplete(spec)
-        RVS->>CatRepo: findById(catalogId)
-        CatRepo-->>RVS: ProductCatalog
-        Note right of RVS: weryfikacja regul REQUIRES (kompletnosc)
-        alt Konfiguracja kompletna
-            RVS-->>API: ok
-            API->>Spec: finalizeSpecification()
-            Note right of Spec: stan = FINAL<br/>registerEvent(SpecificationCompletedEvent)
-            API->>SpecRepo: save(specification)
-            API->>Bus: publish(SpecificationCompletedEvent)
-        else Brak wymaganej opcji (REQUIRES)
-            RVS--xAPI: RuleViolationException
-            API-->>Klient: blad - uzupelnij wymagane opcje
-            Note right of Spec: pozostaje IN_PROGRESS
-        end
-    else A2: Przerwanie sesji
-        Klient->>API: (opuszcza konfigurator)
-        Note over Spec: pozostaje w stanie DRAFT (wersja robocza)
+        API->>CatRepo: findById(previousCatalogId)
+        CatRepo-->>API: ProductCatalog (ACTIVE)
+        API->>Old: archive()
+        Note right of Old: ACTIVE -> ARCHIVED — stare wersje niemutowalne,<br/>historyczne specyfikacje zachowują spójność
+        API->>CatRepo: save(stary katalog)
+
+        API->>Cat: ProductCatalog.createActive(modelYear) + addOption/addRule
+        Note right of Cat: NOWA instancja agregatu z podbitą wersją<br/>registerEvent(CatalogUpdatedEvent)
+        API->>CatRepo: save(nowy katalog)
+
+        API->>Bus: publish(CatalogUpdatedEvent)
+        Note right of Bus: Sprzedaż/Konfigurator odświeżają widoki (krok 5)
     end

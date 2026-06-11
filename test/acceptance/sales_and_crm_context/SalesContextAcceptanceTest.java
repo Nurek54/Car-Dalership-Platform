@@ -23,6 +23,7 @@ import salon.sales.infrastructure.persistence.OrderDatabaseAdapter;
 import salon.sales.domain.event.*;
 import salon.shared.model.*;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -89,7 +90,7 @@ class SalesContextAcceptanceTest {
         offerRepository.save(offer);
 
         // Inwentarz potwierdzi, że ma wolne miejsce na produkcję (Zewnętrzne API - WireMock)
-        stubFor(post(urlEqualTo("/api/inventory/allocations"))
+        stubFor(WireMock.post(urlEqualTo("/api/inventory/allocations"))
                 .willReturn(aResponse().withStatus(201))); // 201 Created
 
         // Klient klika "Akceptuję" na stronie
@@ -201,7 +202,7 @@ class SalesContextAcceptanceTest {
         assertThat(completedOrder.getState()).isEqualTo(OrderState.COMPLETED);
 
         // Żądanie sieciowe PUT do działu Księgowości
-        verify(1, putRequestedFor(urlEqualTo("/api/billing/accounts/ORD-999/close")));
+        WireMock.verify(1, putRequestedFor(urlEqualTo("/api/billing/accounts/ORD-999/close")));
 
         // Event dla modułu Posprzedażowego
         verify(rabbitTemplate).convertAndSend(

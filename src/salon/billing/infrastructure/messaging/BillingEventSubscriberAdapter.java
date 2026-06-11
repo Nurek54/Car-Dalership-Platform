@@ -1,8 +1,8 @@
 package salon.billing.infrastructure.messaging;
 
-import salon.billing.application.port.in.GenerateAdvanceCommand;
+import salon.billing.application.command.GenerateAdvanceCommand;
 import salon.billing.application.port.in.GenerateAdvanceUseCase;
-import salon.billing.application.port.in.GenerateInvoiceCommand;
+import salon.billing.application.command.GenerateInvoiceCommand;
 import salon.billing.application.port.in.GenerateInvoiceUseCase;
 
 import java.util.Set;

@@ -34,7 +34,7 @@ public class RabbitMqEventConsumer {
         this.queueName = queueName;
     }
 
-    // Rejestrujemy zainteresowanie danym typem zdarzenia (np. "DepositRegisteredEvent").
+    // Rejestrujemy zainteresowanie danym typem zdarzenia (np. "PaymentRegisteredEvent").
     public void register(String eventType, RabbitMqMessageHandler handler) {
         if (eventType == null || eventType.isBlank()) {
             throw new IllegalArgumentException("eventType must not be blank.");

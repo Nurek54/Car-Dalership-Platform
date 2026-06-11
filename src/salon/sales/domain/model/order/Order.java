@@ -1,9 +1,9 @@
 package salon.sales.domain.model.order;
 
-import salon.sales.domain.event.DepositRefundOrderedEvent;
-import salon.sales.domain.event.DepositRetainedAsIncomeEvent;
+import salon.sales.domain.event.BankTransferDeclaredEvent;
 import salon.sales.domain.event.OrderActivatedEvent;
 import salon.sales.domain.event.OrderCancelledEvent;
+import salon.sales.domain.event.OrderCompletedEvent;
 import salon.sales.domain.event.OrderPlacedEvent;
 import salon.sales.domain.event.OrderReadyForHandoverEvent;
 import salon.sales.domain.event.VehicleHandedOverEvent;
@@ -17,38 +17,35 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Aggregate Root: zamówienie (UC-SPR-02, UC-SPR-03).
+ * Aggregate Root: zamówienie (UC-CRM-03, UC-CRM-04, UC-CRM-05).
  *
- * Reguła kluczowa (UC-SPR-03): po WYDANIU pojazdu zamówienia nie wolno już anulować —
- * cancelOrder rzuca wtedy wyjątkiem (blokada operacji), bo dalej idzie ścieżka reklamacji/serwisu.
+ * Model zgodny z docs/Agregate/Sales/customer-offer-order.md i docs/Agregate/Sales/order.md:
+ *   pola:    id, sourceOfferId, requiredDeposit, paymentMethod, paymentStatus,
+ *            handoverDate, state (+ vehicleId przypisany przy gotowości do wydania)
+ *   metody:  declarePaymentMethod, activate, markAsReadyForHandover, scheduleHandover,
+ *            confirmHandover, revertToReadyForHandover, cancelOrder
+ *   stany:   DRAFT_CREATED/DRAFT -> IN_PROGRESS -> READY_FOR_HANDOVER
+ *            -> HANDOVER_SCHEDULED -> COMPLETED (CANCELLED — rezygnacja klienta)
  *
- * Tworzenie zamówienia z oferty należy do dedykowanej fabryki
- * {@code salon.sales.domain.model.order.OrderFactory} (patrz docs/Agregate/Sales/order.md).
- * Fabryka korzysta z {@code OfferSnapshot} (obiekty wartości), nie z referencji do agregatu Offer.
- *
- * Zdarzenia domenowe: to agregat decyduje (na podstawie swojego stanu / powodu anulacji),
- * jakie zdarzenie wyemitować. Warstwa aplikacji tylko je ściąga i publikuje.
+ * Polityka płatności: declarePaymentMethod() hermetyzuje decyzję, które zdarzenie
+ * opuści agregat (BankTransferDeclaredEvent / FinancingRequestedEvent).
+ * Mechanizm kompensacyjny (saga): revertToReadyForHandover() pozwala bezpiecznie cofnąć
+ * zamówienie po odmowie wyksięgowania pojazdu przez Inwentarz (UC-CRM-05, A1) —
+ * czyszcząc ustaloną datę wydania.
  */
 public class Order extends AbstractAggregateRoot {
 
     private final OrderId id;
     private final OfferId sourceOfferId;
+    private final Money requiredDeposit;   // wynegocjowana wartość kontraktu (może być null)
 
-    private Money requiredDeposit;             // może dojść później (z oferty)
-    private String signatureRef;               // referencja podpisu umowy
+    private PaymentMethod paymentMethod;   // zadeklarowana forma płatności (UC-CRM-03, krok 4)
+    private PaymentStatus paymentStatus;   // synchronizowany ze zdarzeń Rozliczeń
+    private LocalDate handoverDate;        // ustalony termin odbioru (UC-CRM-04)
+    private String vehicleId;              // VIN przypisany, gdy pojazd jest gotowy (UC-CRM-04)
     private OrderState state;
-    private CancellationReason cancellationReason;
-    private LocalDate handoverDate;          // ustalony termin odbioru (UC-CRM-04)
+    private Long version;                  // znacznik wersji dla blokady optymistycznej (infrastruktura)
 
-    public Order(OrderId id, OfferId sourceOfferId) {
-        this(id, sourceOfferId, null);
-    }
-
-    /**
-     * Konstruktor używany przez {@code OrderFactory} oraz odtwarzanie z repozytorium:
-     * pozwala od razu ustawić wymagany zadatek (z {@code OfferSnapshot}).
-     * {@code requiredDeposit} może być null, jeśli oferty nie wyceniono.
-     */
     public Order(OrderId id, OfferId sourceOfferId, Money requiredDeposit) {
         if (id == null) {
             throw new IllegalArgumentException("id must not be null.");
@@ -59,69 +56,75 @@ public class Order extends AbstractAggregateRoot {
         this.id = id;
         this.sourceOfferId = sourceOfferId;
         this.requiredDeposit = requiredDeposit;
-        this.signatureRef = null;
-        this.state = OrderState.DRAFT_CREATED;
-        this.cancellationReason = CancellationReason.NONE;
+        this.paymentMethod = null;
+        this.paymentStatus = PaymentStatus.UNPAID;
         this.handoverDate = null;
+        this.vehicleId = null;
+        this.state = OrderState.DRAFT_CREATED;
+        this.version = null;
     }
 
-    // UC-SPR-02: podpis umowy -> zamówienie czeka na zadatek.
-    public void confirmSignature(String signatureRef) {
-        if (signatureRef == null || signatureRef.isBlank()) {
-            throw new IllegalArgumentException("signatureRef must not be blank.");
-        }
-        if (this.state != OrderState.DRAFT_CREATED) {
-            throw new IllegalStateException("Only a freshly created order can be signed.");
-        }
-        this.signatureRef = signatureRef;
-        this.state = OrderState.PENDING_PAYMENT;
-        // Po podpisie zamówienie jest formalnie złożone — ogłaszamy to światu (UC-SPR-02).
+    /**
+     * Wołane przez {@link OrderFactory} zaraz po utworzeniu: formalne złożenie zamówienia.
+     * Agregat ogłasza OrderPlacedEvent (m.in. dla Kontekstu Rozliczeń i Inwentarza)
+     * i przechodzi w stan DRAFT. Pakietowy zasięg — odtwarzanie z repozytorium
+     * NIE rejestruje tego zdarzenia.
+     */
+    void markPlaced() {
+        this.state = OrderState.DRAFT;
         registerEvent(new OrderPlacedEvent(
                 UUID.randomUUID(), this.id.value(), Instant.now()));
     }
 
-    // UC-SPR-02, krok 5: zadatek zaksięgowany (sygnał z Rozliczeń) -> uruchamiamy realizację.
+    /**
+     * UC-CRM-03, krok 4-5: klient deklaruje formę płatności. Agregat decyduje, które
+     * zdarzenie opuści kontekst: BankTransferDeclaredEvent (przelew, z kwotą kontraktu)
+     * albo FinancingRequestedEvent (kredyt/leasing — uruchamia UC-FIN-01).
+     */
+    public void declarePaymentMethod(PaymentMethod method) {
+        if (method == null) {
+            throw new IllegalArgumentException("method must not be null.");
+        }
+        if (this.state == OrderState.COMPLETED || this.state == OrderState.CANCELLED) {
+            throw new InvalidOrderStateException(
+                    "Cannot declare payment method. Order is already " + this.state);
+        }
+        if (this.paymentMethod != null) {
+            throw new InvalidOrderStateException("Payment method has already been declared.");
+        }
+        this.paymentMethod = method;
+
+        if (method == PaymentMethod.BANK_TRANSFER) {
+            registerEvent(new BankTransferDeclaredEvent(
+                    UUID.randomUUID(), this.id.value(), this.requiredDeposit, Instant.now()));
+        } else {
+            registerEvent(new FinancingRequestedEvent(
+                    UUID.randomUUID(), this.id, Instant.now()));
+        }
+    }
+
+    // UC-CRM-03 cz.2 (Rys. 19/20 PDF): zaksięgowana wpłata uruchamia realizację.
     public void activate() {
-        if (this.state != OrderState.PENDING_PAYMENT) {
-            throw new IllegalStateException("Only an order pending payment can be activated.");
+        if (this.state != OrderState.DRAFT_CREATED && this.state != OrderState.DRAFT) {
+            throw new InvalidOrderStateException(
+                    "Only a freshly placed order can be activated, was: " + this.state);
         }
         this.state = OrderState.IN_PROGRESS;
         registerEvent(new OrderActivatedEvent(
                 UUID.randomUUID(), this.id.value(), Instant.now()));
     }
 
-    /**
-     * UC-SPR-03: anulowanie zamówienia.
-     * Jeśli pojazd został już wydany — blokujemy operację (wyjątek).
-     * Wina klienta -> zatrzymujemy zadatek (DepositRetainedAsIncomeEvent),
-     * w przeciwnym razie -> zlecamy zwrot (DepositRefundOrderedEvent).
-     */
-    public void cancelOrder(CancellationReason reason, boolean isHandedOver) {
-        if (reason == null) {
-            throw new IllegalArgumentException("reason must not be null.");
+    /** Aktualizacja statusu opłacenia (sygnał z Kontekstu Rozliczeń). */
+    public void setPaymentStatus(PaymentStatus paymentStatus) {
+        if (paymentStatus == null) {
+            throw new IllegalArgumentException("paymentStatus must not be null.");
         }
-        if (isHandedOver) {
-            throw new IllegalStateException(
-                    "Cannot cancel order after the vehicle has been handed over.");
-        }
-        if (this.state == OrderState.CANCELLED || this.state == OrderState.COMPLETED) {
-            throw new IllegalStateException("Order is already " + this.state + ".");
-        }
-        this.cancellationReason = reason;
-        this.state = OrderState.CANCELLED;
+        this.paymentStatus = paymentStatus;
+    }
 
-        // Najpierw ogłaszamy sam fakt anulowania (wraz z powodem) — to zdarzenie nadrzędne (UC-SPR-03).
-        registerEvent(new OrderCancelledEvent(
-                UUID.randomUUID(), this.id.value(), reason.name(), Instant.now()));
-
-        // Następnie zdarzenie-polecenie dla Rozliczeń: jak potraktować zadatek.
-        if (reason == CancellationReason.CLIENT_FAULT) {
-            registerEvent(new DepositRetainedAsIncomeEvent(
-                    UUID.randomUUID(), this.id.value(), Instant.now()));
-        } else {
-            registerEvent(new DepositRefundOrderedEvent(
-                    UUID.randomUUID(), this.id.value(), Instant.now()));
-        }
+    /** Przypisanie fizycznego pojazdu (VIN) zgłoszonego przez Inwentarz. */
+    public void assignVehicle(String vehicleId) {
+        this.vehicleId = vehicleId;
     }
 
     /**
@@ -130,9 +133,9 @@ public class Order extends AbstractAggregateRoot {
      * zdarzenie, które wyzwala powiadomienie Handlowca.
      */
     public void markAsReadyForHandover() {
-        if (this.state != OrderState.IN_PROGRESS) {
-            throw new IllegalStateException(
-                    "Only an order in progress can become ready for handover.");
+        if (this.state == OrderState.COMPLETED || this.state == OrderState.CANCELLED) {
+            throw new InvalidOrderStateException(
+                    "Cannot change state to READY_FOR_HANDOVER. Order is already " + this.state);
         }
         this.state = OrderState.READY_FOR_HANDOVER;
         registerEvent(new OrderReadyForHandoverEvent(
@@ -140,8 +143,8 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /**
-     * UC-CRM-04, krok 4-5: Handlowiec ustala z klientem termin odbioru — zamówienie zostaje
-     * zablokowane w stanie "Umówiony na odbiór". Obsługuje także A1 (odroczony odbiór: dalsza data).
+     * UC-CRM-04, krok 4-5: Handlowiec ustala z klientem termin odbioru — zamówienie przechodzi
+     * w stan "Umówiony na odbiór". Obsługuje także A1 (odroczony odbiór: dalsza data).
      */
     public void scheduleHandover(LocalDate date) {
         if (date == null) {
@@ -149,23 +152,29 @@ public class Order extends AbstractAggregateRoot {
         }
         if (this.state != OrderState.READY_FOR_HANDOVER) {
             throw new IllegalStateException(
-                    "Handover can only be scheduled for an order ready for handover.");
+                    "Order must be in READY_FOR_HANDOVER state to schedule handover");
         }
         this.handoverDate = date;
         this.state = OrderState.HANDOVER_SCHEDULED;
     }
 
     /**
-     * UC-SPR-08: wydanie pojazdu klientowi — finalny krok zamówienia.
-     * Zamknięcie zamówienia (COMPLETED) i ogłoszenie zdarzenia o wydaniu auta,
-     * którego nasłuchują Rozliczenia (domknięcie salda) oraz obsługa posprzedażowa.
+     * UC-CRM-05: rejestracja fizycznego wydania pojazdu (podpisany protokół wydania).
+     * Dozwolone z "Umówiony na odbiór" oraz bezpośrednio z "Gotowe do odbioru" (klient
+     * odbiera auto na miejscu). Agregat ogłasza zamknięcie zamówienia (OrderCompletedEvent)
+     * oraz fakt wydania pojazdu (VehicleHandedOverEvent — m.in. dla Rozliczeń i obsługi
+     * posprzedażowej); komendę ReleaseVehicle do Inwentarza wysyła warstwa aplikacji.
      */
-    public void completeHandover() {
-        if (this.state != OrderState.HANDOVER_SCHEDULED) {
-            throw new IllegalStateException(
-                    "Only an order scheduled for handover can be completed (UC-CRM-05).");
+    public void confirmHandover() {
+        if (this.state != OrderState.HANDOVER_SCHEDULED
+                && this.state != OrderState.READY_FOR_HANDOVER) {
+            throw new InvalidOrderStateException(
+                    "Only an order ready or scheduled for handover can be completed (UC-CRM-05),"
+                            + " was: " + this.state);
         }
         this.state = OrderState.COMPLETED;
+        registerEvent(new OrderCompletedEvent(
+                UUID.randomUUID(), this.id.value(), Instant.now()));
         registerEvent(new VehicleHandedOverEvent(
                 UUID.randomUUID(), this.id.value(), Instant.now()));
     }
@@ -173,21 +182,44 @@ public class Order extends AbstractAggregateRoot {
     /**
      * UC-CRM-05, scenariusz A1: Inwentarz odmówił zwolnienia pojazdu
      * (VehicleInventoryReleasedError). Mechanizm kompensacyjny (saga): cofamy zamówienie do
-     * "Gotowe do odbioru", aby Handlowiec mógł ponowić odbiór po usunięciu blokady magazynowej.
+     * "Gotowe do odbioru" i czyścimy ustaloną datę wydania, aby Handlowiec mógł ponowić
+     * odbiór po usunięciu blokady magazynowej.
      */
     public void revertToReadyForHandover() {
         if (this.state != OrderState.COMPLETED && this.state != OrderState.HANDOVER_SCHEDULED) {
-            throw new IllegalStateException(
+            throw new InvalidOrderStateException(
                     "Only a completed or scheduled handover can be reverted to ready-for-handover.");
         }
         this.state = OrderState.READY_FOR_HANDOVER;
+        this.handoverDate = null;
+    }
+
+    /**
+     * Anulowanie zamówienia (rezygnacja klienta). Wydanego pojazdu nie można już anulować.
+     * Agregat ogłasza OrderCancelledEvent z powodem — m.in. dla Kontekstu Rozliczeń.
+     */
+    public void cancelOrder(String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("reason must not be blank.");
+        }
+        if (this.state == OrderState.COMPLETED) {
+            throw new InvalidOrderStateException(
+                    "Cannot cancel order after the vehicle has been handed over.");
+        }
+        if (this.state == OrderState.CANCELLED) {
+            throw new InvalidOrderStateException("Order is already CANCELLED.");
+        }
+        this.state = OrderState.CANCELLED;
+        registerEvent(new OrderCancelledEvent(
+                UUID.randomUUID(), this.id.value(), reason, Instant.now()));
     }
 
     public OrderId getId() {
         return this.id;
     }
 
-    public OfferId getSourceOfferId() {
+    /** Identyfikator oferty źródłowej (audytowalność: zamówienie oparte o zatwierdzone warunki). */
+    public OfferId getOfferId() {
         return this.sourceOfferId;
     }
 
@@ -195,19 +227,23 @@ public class Order extends AbstractAggregateRoot {
         return this.requiredDeposit;
     }
 
+    public PaymentMethod getPaymentMethod() {
+        return this.paymentMethod;
+    }
+
+    public PaymentStatus getPaymentStatus() {
+        return this.paymentStatus;
+    }
+
     public LocalDate getHandoverDate() {
         return this.handoverDate;
     }
 
-    public String getSignatureRef() {
-        return this.signatureRef;
+    public String getVehicleId() {
+        return this.vehicleId;
     }
 
     public OrderState getState() {
         return this.state;
-    }
-
-    public CancellationReason getCancellationReason() {
-        return this.cancellationReason;
     }
 }

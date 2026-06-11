@@ -1,19 +1,15 @@
 package salon.sales.application.port.out;
 
-import salon.sales.domain.model.order.Order;
-import salon.shared.model.SpecificationId;
-
 /**
- * Port wyjściowy (driven) integracji z Kontekstem Inwentarza/Logistyki —
- * węzeł "InventoryIntegrationPort" w docs/Architecture/SalesArchitecture.md.
- *
- * Sprzedaż prosi Inwentarz o alokację/rezerwację pojazdu pod złożone zamówienie
- * (np. po zdarzeniu OrderPlaced). Konkretną komunikację (REST/komunikat) realizuje adapter.
+ * Port wyjściowy (driven) do Kontekstu Inwentarza i Logistyki —
+ * węzeł "InventoryIntegrationPort" w docs/Architecture/SalesArchitecture.md
+ * (PDF rozdz. 3.3.3: "rezerwacje, zwalnianie blokad na placu").
  */
 public interface InventoryIntegrationPort {
 
-    /**
-     * Zleca alokację pojazdu zgodnego ze specyfikacją dla danego zamówienia.
-     */
-    void requestVehicleAllocation(Order order, SpecificationId specificationId);
+    /** UC-CRM-03/UC-INW-01..02: alokacja pojazdu z placu lub slotu produkcyjnego dla zamówienia. */
+    void allocateVehicleOrProductionSlot(String orderId);
+
+    /** UC-CRM-05, krok 3: komenda ReleaseVehicle — zdjęcie fizycznego auta ze stanu (UC-INW-06). */
+    void releasePhysicalVehicle(String vehicleId);
 }

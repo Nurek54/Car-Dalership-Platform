@@ -1,0 +1,37 @@
+package integration.sales_and_crm_context;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import salon.sales.infrastructure.adapter.in.cron.OfferExpirationCronJobAdapter;
+import salon.sales.application.service.SalesAppService;
+
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
+@SpringBootTest(classes = OfferExpirationCronJobAdapter.class)
+class OfferExpirationCronJobAdapterTest {
+
+    @Autowired private OfferExpirationCronJobAdapter cronJobAdapter;
+    @MockBean private SalesAppService salesAppService;
+
+    @Test
+    void shouldTriggerOfferExpirationJobSuccessfully() {
+        // Zegar systemowy (Spring Scheduler) odpala metodę w nocy
+        cronJobAdapter.expireOldOffersJob();
+
+        // AppService zostaje powiadomiony, aby sprawdził daty wszystkich ofert
+        verify(salesAppService).expireOutdatedOffers();
+    }
+
+    @Test
+    void shouldContinueRunningEvenIfAppServiceThrowsException() {
+        // AppService napotyka błąd
+        doThrow(new RuntimeException("Database timeout")).when(salesAppService).expireOutdatedOffers();
+
+        // Adapter wyłapuje błąd cyklicznego zadania, loguje go
+        // i kończy się bez wysadzania całego procesu dzięki czemu później cron odpali się ponownie
+        assertDoesNotThrow(() -> cronJobAdapter.expireOldOffersJob());
+    }
+}

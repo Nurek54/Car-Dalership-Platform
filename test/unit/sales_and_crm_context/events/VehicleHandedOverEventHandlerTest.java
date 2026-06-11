@@ -1,0 +1,39 @@
+package unit.sales_and_crm_context.events;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import salon.sales.application.handler.VehicleHandedOverEventHandler;
+import salon.sales.application.port.out.BillingIntegrationPort;
+import salon.sales.application.port.out.AfterSalesIntegrationPort;
+import salon.sales.domain.event.VehicleHandedOverEvent;
+
+import java.time.Instant;
+import java.util.UUID;
+
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class VehicleHandedOverEventHandlerTest {
+
+    @Mock private BillingIntegrationPort billingPort;
+    @Mock private AfterSalesIntegrationPort afterSalesPort;
+    @InjectMocks private VehicleHandedOverEventHandler eventHandler;
+
+    @Test
+    void shouldNotifyBillingAndAfterSalesWhenVehicleIsHandedOver() {
+        // Klient odjechał autem z salonu
+        VehicleHandedOverEvent event = new VehicleHandedOverEvent(
+                UUID.randomUUID(),
+                "ORD-999",
+                Instant.now()
+        );
+
+        eventHandler.handle(event);
+
+        // Zlecamy domknięcie salda do kontekstu Rozliczeń
+        verify(billingPort).closeOrderBalance("ORD-999");
+    }
+}

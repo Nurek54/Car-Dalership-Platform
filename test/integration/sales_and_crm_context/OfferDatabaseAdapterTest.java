@@ -1,0 +1,79 @@
+package integration.sales_and_crm_context;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import salon.sales.infrastructure.persistence.OfferDatabaseAdapter;
+import salon.sales.domain.model.offer.Offer;
+import salon.sales.domain.model.offer.OfferState;
+import salon.sales.domain.model.offer.OfferId;
+import salon.shared.model.CustomerId;
+import salon.shared.model.SpecificationId;
+import salon.shared.model.Money;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@DataJpaTest
+@Import(OfferDatabaseAdapter.class)
+class OfferDatabaseAdapterTest {
+
+    @Autowired private OfferDatabaseAdapter databaseAdapter;
+
+    @Test
+    void shouldSaveAndLoadDraftOffer() {
+        OfferId offerId = new OfferId("OFF-DB-1");
+        Offer offer = new Offer(offerId, new CustomerId("C-1"), new SpecificationId("S-1"), Money.of(150000, "PLN"));
+
+        databaseAdapter.save(offer);
+        Optional<Offer> loadedOffer = databaseAdapter.findById(offerId);
+
+        // Zapisane dane są te same przy odczycie
+        assertThat(loadedOffer).isPresent();
+        assertThat(loadedOffer.get().getState()).isEqualTo(OfferState.DRAFT);
+        assertThat(loadedOffer.get().getFinalPrice()).isEqualTo(Money.of(150000, "PLN"));
+    }
+
+    @Test
+    void shouldUpdateOfferStateToPublished() {
+        // Posiadamy zapisaną ofertę
+        OfferId offerId = new OfferId("OFF-DB-2");
+        Offer offer = new Offer(offerId, new CustomerId("C-2"), new SpecificationId("S-2"), Money.of(200000, "PLN"));
+        databaseAdapter.save(offer);
+
+        // Wyciągamy ją, zmieniamy stan (publikujemy) i zapisujemy
+        Offer savedOffer = databaseAdapter.findById(offerId).orElseThrow();
+        savedOffer.publishOffer();
+        databaseAdapter.save(savedOffer);
+
+        Optional<Offer> updatedOffer = databaseAdapter.findById(offerId);
+        assertThat(updatedOffer.getState()).isEqualTo(OfferState.PUBLISHED);
+    }
+
+    @Test
+    void shouldPreventConcurrentModificationsWithOptimisticLocking() {
+        // Mamy ofertę
+        OfferId offerId = new OfferId("OFF-DB-3");
+        Offer baseOffer = new Offer(offerId, new CustomerId("C-3"), new SpecificationId("S-3"), Money.of(100000, "PLN"));
+        databaseAdapter.save(baseOffer);
+
+        // Dwa osobne wątki wczytują te same dane
+        Offer viewA = databaseAdapter.findById(offerId).orElseThrow();
+        Offer viewB = databaseAdapter.findById(offerId).orElseThrow();
+
+        // Wątek A zapisuje zmiany (publikuje ofertę)
+        viewA.publishOffer();
+        databaseAdapter.save(viewA);
+
+        // Wątek B odrzuca i próbuje zapisać
+        viewB.reject();
+
+        // Baza odrzuca zapis wątku B z powodu nieaktualnej wersji obiektu (Optimistic Lock)
+        assertThatThrownBy(() -> databaseAdapter.save(viewB))
+                .isInstanceOf(ObjectOptimisticLockingFailureException.class);
+    }
+}

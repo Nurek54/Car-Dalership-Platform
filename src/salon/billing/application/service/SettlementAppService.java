@@ -6,6 +6,7 @@ import salon.billing.application.port.out.DocumentRepository;
 import salon.billing.application.port.out.NotificationPort;
 import salon.billing.application.port.out.SettlementRepository;
 import salon.billing.domain.event.PaymentDeadlineExpiredEvent;
+import salon.billing.domain.exception.SettlementNotFoundException;
 import salon.billing.domain.model.document.AccountingDocument;
 import salon.billing.domain.model.document.DocumentStatus;
 import salon.billing.domain.model.settlement.Settlement;
@@ -90,7 +91,7 @@ public class SettlementAppService implements ProcessPaymentUseCase {
 
         OrderId orderId = new OrderId(command.orderId());
         Settlement settlement = this.settlementRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new IllegalStateException(
+                .orElseThrow(() -> new SettlementNotFoundException(
                         "No settlement for order " + command.orderId()));
 
         Money amount = new Money(command.amount(), command.currency());

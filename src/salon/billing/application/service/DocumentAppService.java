@@ -11,6 +11,7 @@ import salon.billing.application.port.out.PdfGeneratorPort;
 import salon.billing.application.port.out.SettlementRepository;
 import salon.billing.domain.event.ErrorDuringInvoiceCreation;
 import salon.billing.domain.event.ErrorDuringPaymentRequest;
+import salon.billing.domain.exception.SettlementNotFoundException;
 import salon.billing.domain.model.document.AccountingDocument;
 import salon.billing.domain.model.document.AccountingDocumentFactory;
 import salon.billing.domain.model.document.BuyerDetails;
@@ -166,7 +167,7 @@ public class DocumentAppService implements GenerateAdvanceUseCase, GenerateInvoi
 
     private Settlement loadSettlement(OrderId orderId) {
         return this.settlementRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new IllegalStateException(
+                .orElseThrow(() -> new SettlementNotFoundException(
                         "No settlement for order " + orderId.value()));
     }
 

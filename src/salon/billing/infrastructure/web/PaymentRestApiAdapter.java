@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import salon.billing.application.command.ProcessPaymentCommand;
 import salon.billing.application.service.SettlementAppService;
-import salon.sales.domain.exception.OfferExpiredException;
+import salon.billing.domain.exception.SettlementNotFoundException;
 
 import java.util.Map;
 
@@ -42,9 +42,9 @@ public class PaymentRestApiAdapter {
         return ResponseEntity.ok().build();
     }
 
-    // Wpłata do nieistniejącego zamówienia -> 404 Not Found (zasób nieodnaleziony).
-    @ExceptionHandler(OfferExpiredException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(OfferExpiredException ex) {
+    // Wpłata do nieistniejącego rozliczenia/zamówienia -> 404 Not Found (zasób nieodnaleziony).
+    @ExceptionHandler(SettlementNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNotFound(SettlementNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 }

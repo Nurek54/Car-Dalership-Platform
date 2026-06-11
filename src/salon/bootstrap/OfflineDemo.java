@@ -23,6 +23,7 @@ import salon.catalog.domain.model.catalog.ProductCatalog;
 import salon.catalog.domain.model.catalog.RuleType;
 import salon.catalog.domain.model.specification.RuleViolationException;
 import salon.catalog.domain.model.specification.VehicleSpecification;
+import salon.sales.application.service.SalesQueryService;
 import salon.sales.domain.exception.InvalidOfferStateException;
 import salon.sales.domain.exception.OfferExpiredException;
 import salon.sales.domain.model.customer.Address;
@@ -136,7 +137,7 @@ public class OfflineDemo {
                 settlementRepo, documentRepo,
                 new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
                 new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), bus,
-                new SalesCrmIntegrationAdapter(orderRepo, offerRepo, customerRepo),
+                new SalesCrmIntegrationAdapter(new SalesQueryService(orderRepo, offerRepo, customerRepo)),
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
         String invoiceId = docs.generateInvoice(new GenerateInvoiceCommand(

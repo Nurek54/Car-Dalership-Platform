@@ -32,6 +32,7 @@ import salon.logistics.infrastructure.mock.SpecificationIntegrationMockAdapter;
 import salon.sales.application.command.ScheduleHandoverCommand;
 import salon.sales.application.command.StartConfiguratorSessionCommand;
 import salon.sales.application.service.SalesAppService;
+import salon.sales.application.service.SalesQueryService;
 import salon.sales.domain.event.OrderPlacedEvent;
 import salon.sales.domain.model.customer.Address;
 import salon.sales.domain.model.customer.ContactData;
@@ -93,7 +94,7 @@ public class SalonDemo {
                 settlementRepo, documentRepo,
                 new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
                 new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), bus,
-                new SalesCrmIntegrationAdapter(orderRepo, offerRepo, customerRepo),
+                new SalesCrmIntegrationAdapter(new SalesQueryService(orderRepo, offerRepo, customerRepo)),
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
         // --- Okablowanie choreografii (subskrypcje jak na kanwach kontekstów) ---

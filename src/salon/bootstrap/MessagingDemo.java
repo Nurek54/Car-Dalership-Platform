@@ -19,6 +19,7 @@ import salon.catalog.application.port.out.CatalogRepository;
 import salon.catalog.domain.model.catalog.CatalogId;
 import salon.catalog.domain.model.catalog.ProductCatalog;
 import salon.sales.application.service.SalesAppService;
+import salon.sales.application.service.SalesQueryService;
 import salon.sales.application.command.StartConfiguratorSessionCommand;
 import salon.sales.domain.model.customer.Address;
 import salon.sales.domain.model.customer.ContactData;
@@ -95,7 +96,7 @@ public class MessagingDemo {
                     settlementRepo, documentRepo,
                     new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
                     new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), billingPublisher,
-                    new SalesCrmIntegrationAdapter(orderRepo, offerRepo, customerRepo),
+                    new SalesCrmIntegrationAdapter(new SalesQueryService(orderRepo, offerRepo, customerRepo)),
                     new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
             System.out.println(">> generateAdvance(" + orderId + ") -> AdvancePaymentRequestedEvent (UC-FIR-01)...");

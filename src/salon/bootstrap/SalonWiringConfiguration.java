@@ -36,10 +36,8 @@ import salon.logistics.infrastructure.mock.FactoryIntegrationMockAdapter;
 import salon.logistics.infrastructure.mock.InMemoryInventoryRepository;
 import salon.logistics.infrastructure.mock.SpecificationIntegrationMockAdapter;
 
-import salon.sales.application.port.out.CustomerRepository;
+import salon.sales.api.SalesQueryFacade;
 import salon.sales.application.port.out.FinancingIntegrationPort;
-import salon.sales.application.port.out.OfferRepository;
-import salon.sales.application.port.out.OrderRepository;
 import salon.sales.application.service.SalesAppService;
 import salon.sales.infrastructure.integration.FinancingEventBusAdapter;
 import salon.sales.infrastructure.messaging.LogisticsEventSubscriberAdapter;
@@ -87,12 +85,14 @@ public class SalonWiringConfiguration {
         return new PdfGeneratorMockAdapter();
     }
 
-    /** UC-FIR-01/02: dane nabywcy dociągane z Kontekstu Sprzedaży (ACL, Query po OrderId). */
+    /**
+     * UC-FIR-01/02: dane nabywcy dociągane z Kontekstu Sprzedaży (ACL, Query po OrderId).
+     * Adapter zależy wyłącznie od publicznej fasady Sprzedaży (Published Language),
+     * a nie od jej repozytoriów i agregatów.
+     */
     @Bean
-    public CrmIntegrationPort crmIntegrationPort(OrderRepository orderRepository,
-                                                 OfferRepository offerRepository,
-                                                 CustomerRepository customerRepository) {
-        return new SalesCrmIntegrationAdapter(orderRepository, offerRepository, customerRepository);
+    public CrmIntegrationPort crmIntegrationPort(SalesQueryFacade salesQueryFacade) {
+        return new SalesCrmIntegrationAdapter(salesQueryFacade);
     }
 
     @Bean

@@ -26,6 +26,7 @@ class OrderPlacedEventHandlerTest {
         OrderPlacedEvent event = new OrderPlacedEvent(
                 UUID.randomUUID(),
                 "ORD-100",
+                "SPEC-100",
                 Instant.now()
         );
 

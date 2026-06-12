@@ -14,6 +14,7 @@ public class OrderJpaEntity {
     @Id
     public String id;
     public String sourceOfferId;
+    public String specificationId;
     // Kwoty trzymane tekstowo (toPlainString) — wierny round-trip BigDecimal bez zmiany skali.
     public String requiredDepositAmount;
     public String requiredDepositCurrency;

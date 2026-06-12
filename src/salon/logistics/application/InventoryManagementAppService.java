@@ -6,10 +6,11 @@ import salon.logistics.application.port.in.ReceiveVehicleUseCase;
 import salon.logistics.application.port.in.ReleaseInventoryUseCase;
 import salon.logistics.application.port.in.ReleaseReservationUseCase;
 import salon.logistics.application.port.in.ReserveVehicleUseCase;
+import salon.logistics.application.port.in.SynchronizeSpecificationUseCase;
 import salon.logistics.application.port.out.FactoryIntegrationAclPort;
 import salon.logistics.application.FactoryOrderRejectedException;
 import salon.logistics.application.port.out.InventoryRepository;
-import salon.logistics.application.port.out.SpecificationIntegrationPort;
+import salon.logistics.application.port.out.SpecificationReadModelPort;
 import salon.logistics.domain.event.FactoryOrderFailedEvent;
 import salon.logistics.domain.event.FactoryOrderPlacedEvent;
 import salon.logistics.domain.event.VehicleInventoryReleasedError;
@@ -22,6 +23,7 @@ import salon.logistics.domain.model.vehicle.VinNumber;
 import salon.shared.application.EventPublisherPort;
 import salon.shared.event.DomainEvent;
 import salon.shared.model.OrderId;
+import salon.shared.model.SpecificationId;
 
 import java.time.Instant;
 import java.util.List;
@@ -42,25 +44,26 @@ import java.util.UUID;
  */
 public class InventoryManagementAppService
         implements ReserveVehicleUseCase, OrderFactoryVehicleUseCase, ReceiveVehicleUseCase,
-        ReleaseReservationUseCase, PrepareForHandoverUseCase, ReleaseInventoryUseCase {
+        ReleaseReservationUseCase, PrepareForHandoverUseCase, ReleaseInventoryUseCase,
+        SynchronizeSpecificationUseCase {
 
     private final InventoryRepository inventoryRepository;
     private final InventoryVehicleFactory vehicleFactory;
-    private final SpecificationIntegrationPort specificationPort;
+    private final SpecificationReadModelPort specificationReadModel;
     private final FactoryIntegrationAclPort factoryAcl;
     private final EventPublisherPort eventPublisher;
 
     public InventoryManagementAppService(InventoryRepository inventoryRepository,
-                                         SpecificationIntegrationPort specificationPort,
+                                         SpecificationReadModelPort specificationReadModel,
                                          FactoryIntegrationAclPort factoryAcl,
                                          EventPublisherPort eventPublisher) {
         this(inventoryRepository, new InventoryVehicleFactory(),
-                specificationPort, factoryAcl, eventPublisher);
+                specificationReadModel, factoryAcl, eventPublisher);
     }
 
     public InventoryManagementAppService(InventoryRepository inventoryRepository,
                                          InventoryVehicleFactory vehicleFactory,
-                                         SpecificationIntegrationPort specificationPort,
+                                         SpecificationReadModelPort specificationReadModel,
                                          FactoryIntegrationAclPort factoryAcl,
                                          EventPublisherPort eventPublisher) {
         if (inventoryRepository == null) {
@@ -69,8 +72,8 @@ public class InventoryManagementAppService
         if (vehicleFactory == null) {
             throw new IllegalArgumentException("vehicleFactory must not be null.");
         }
-        if (specificationPort == null) {
-            throw new IllegalArgumentException("specificationPort must not be null.");
+        if (specificationReadModel == null) {
+            throw new IllegalArgumentException("specificationReadModel must not be null.");
         }
         if (factoryAcl == null) {
             throw new IllegalArgumentException("factoryAcl must not be null.");
@@ -80,20 +83,42 @@ public class InventoryManagementAppService
         }
         this.inventoryRepository = inventoryRepository;
         this.vehicleFactory = vehicleFactory;
-        this.specificationPort = specificationPort;
+        this.specificationReadModel = specificationReadModel;
         this.factoryAcl = factoryAcl;
         this.eventPublisher = eventPublisher;
     }
 
+    /** Zdarzenie SpecificationCompleted (Katalog) -> aktualizacja lokalnej kopii specyfikacji. */
+    @Override
+    public void registerSpecification(String specificationId, List<String> optionCodes) {
+        if (specificationId == null || specificationId.isBlank()) {
+            throw new IllegalArgumentException("specificationId must not be blank.");
+        }
+        this.specificationReadModel.saveSpecification(
+                new SpecificationId(specificationId), optionCodes);
+    }
+
+    /** Zdarzenie OrderPlaced (Sprzedaż) -> powiązanie zamówienia ze specyfikacją. */
+    @Override
+    public void linkOrderToSpecification(String orderId, String specificationId) {
+        OrderId id = requireOrderId(orderId);
+        if (specificationId == null || specificationId.isBlank()) {
+            throw new IllegalArgumentException("specificationId must not be blank.");
+        }
+        this.specificationReadModel.linkOrderToSpecification(
+                id, new SpecificationId(specificationId));
+    }
+
     /**
      * UC-INW-01: weryfikacja dostępności i rezerwacja pojazdu z placu.
-     * Trigger: FinancingApproved LUB BankTransferDeclared. Kody wyposażenia dociągane
-     * przez SpecificationIntegrationPort (zdarzenie niesie tylko orderId).
+     * Trigger: FinancingApproved LUB BankTransferDeclared. Kody wyposażenia czytane
+     * z lokalnego read modelu (zasilonego zdarzeniami SpecificationCompleted i OrderPlaced)
+     * — bez synchronicznego odpytywania innych kontekstów.
      */
     @Override
     public void reserveVehicleForOrder(String orderId) {
         OrderId id = requireOrderId(orderId);
-        List<String> specCodes = this.specificationPort.getSpecificationForOrder(id);
+        List<String> specCodes = requireSpecCodes(id);
 
         Optional<InventoryVehicle> found = this.inventoryRepository.findAvailableVehicle(specCodes);
         if (found.isEmpty()) {
@@ -111,9 +136,9 @@ public class InventoryManagementAppService
 
     /**
      * UC-INW-02: zlecenie produkcji pojazdu w fabryce. Trigger: AdvancePaymentRegistered.
-     * Przed wysłaniem zlecenia usługa synchronicznie pobiera kody wyposażenia (silnik,
-     * opcje, kolor) przez SpecificationIntegrationPort, a następnie wykorzystuje
-     * FactoryIntegrationAclPort do komunikacji z API producenta.
+     * Kody wyposażenia (silnik, opcje, kolor) czytane z lokalnego read modelu specyfikacji;
+     * FactoryIntegrationAclPort (ACL) komunikuje się z API producenta — to jedyna
+     * synchroniczna integracja tego przypadku użycia (system zewnętrzny, zgodnie z PDF).
      */
     @Override
     public void orderVehicleFromFactory(String orderId) {
@@ -126,7 +151,7 @@ public class InventoryManagementAppService
             return;
         }
 
-        List<String> specCodes = this.specificationPort.getSpecificationForOrder(id);
+        List<String> specCodes = requireSpecCodes(id);
         try {
             VinNumber vin = this.factoryAcl.placeFactoryOrder(id, specCodes);
             // Wirtualna instancja auta (IN_PRODUCTION) przypisana do zamówienia klienta.
@@ -229,6 +254,18 @@ public class InventoryManagementAppService
             throw new IllegalArgumentException("orderId must not be blank.");
         }
         return new OrderId(orderId);
+    }
+
+    /**
+     * Kody wyposażenia z lokalnego read modelu. Brak danych = naruszenie spójności
+     * ostatecznej (zdarzenia SpecificationCompleted/OrderPlaced jeszcze nie dotarły
+     * albo zostały zgubione) — zgłaszamy jawnie, zamiast rezerwować w ciemno.
+     */
+    private List<String> requireSpecCodes(OrderId orderId) {
+        return this.specificationReadModel.findCodesForOrder(orderId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No specification known for order " + orderId.value()
+                        + " — SpecificationCompleted/OrderPlaced events not received yet."));
     }
 
     private void publishEventsOf(InventoryVehicle vehicle) {

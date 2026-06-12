@@ -10,6 +10,7 @@ import salon.sales.domain.model.order.PaymentStatus;
 import salon.shared.infrastructure.persistence.DomainReflection;
 import salon.shared.model.Money;
 import salon.shared.model.OrderId;
+import salon.shared.model.SpecificationId;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -48,6 +49,9 @@ public class OrderDatabaseAdapter implements OrderRepository {
         OrderJpaEntity entity = new OrderJpaEntity();
         entity.id = order.getId().value();
         entity.sourceOfferId = order.getOfferId().value();
+        entity.specificationId = order.getSpecificationId() == null
+                ? null
+                : order.getSpecificationId().value();
         if (order.getRequiredDeposit() != null) {
             entity.requiredDepositAmount = order.getRequiredDeposit().amount().toPlainString();
             entity.requiredDepositCurrency = order.getRequiredDeposit().currency();
@@ -72,6 +76,7 @@ public class OrderDatabaseAdapter implements OrderRepository {
         Order order = new Order(
                 new OrderId(entity.id),
                 new OfferId(entity.sourceOfferId),
+                entity.specificationId == null ? null : new SpecificationId(entity.specificationId),
                 requiredDeposit);
         if (entity.paymentMethod != null) {
             DomainReflection.set(order, "paymentMethod", PaymentMethod.valueOf(entity.paymentMethod));

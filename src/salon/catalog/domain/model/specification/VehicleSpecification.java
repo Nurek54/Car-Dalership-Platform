@@ -123,7 +123,8 @@ public class VehicleSpecification extends AbstractAggregateRoot {
         }
         this.state = SpecificationState.FINAL;
         registerEvent(new SpecificationCompletedEvent(
-                UUID.randomUUID(), this.id.value(), this.catalogId.value(), Instant.now()));
+                UUID.randomUUID(), this.id.value(), this.catalogId.value(),
+                this.optionsPicked.stream().map(OptionCode::value).toList(), Instant.now()));
     }
 
     public List<OptionCode> getSelectedOptions() {

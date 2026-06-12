@@ -28,7 +28,7 @@ import salon.logistics.domain.event.VehicleIsNotOnStockEvent;
 import salon.logistics.domain.event.VehicleReadyForHandoverEvent;
 import salon.logistics.infrastructure.mock.FactoryIntegrationMockAdapter;
 import salon.logistics.infrastructure.mock.InMemoryInventoryRepository;
-import salon.logistics.infrastructure.mock.SpecificationIntegrationMockAdapter;
+import salon.logistics.infrastructure.mock.InMemorySpecificationReadModelAdapter;
 import salon.sales.application.command.ScheduleHandoverCommand;
 import salon.sales.application.command.StartConfiguratorSessionCommand;
 import salon.sales.application.service.SalesAppService;
@@ -71,7 +71,7 @@ public class SalonDemo {
         // --- INWENTARZ I LOGISTYKA ---
         InMemoryInventoryRepository inventoryRepo = new InMemoryInventoryRepository();
         InventoryManagementAppService inventory = new InventoryManagementAppService(
-                inventoryRepo, new SpecificationIntegrationMockAdapter(),
+                inventoryRepo, new InMemorySpecificationReadModelAdapter(),
                 new FactoryIntegrationMockAdapter(), bus);
 
         // --- SPRZEDAŻ I CRM ---
@@ -105,6 +105,10 @@ public class SalonDemo {
         bus.orderRepo = orderRepo;
 
         // ===== Scenariusz =====
+        // Symulacja zdarzenia SpecificationCompleted z Katalogu (demo pomija konfigurator):
+        // Inwentarz dostaje kody wyposażenia asynchronicznie i buduje lokalny read model.
+        inventory.registerSpecification("SPEC-1",
+                List.of("ENG-HYBRID", "COL-RED", "PKG-COMFORT"));
         sales.registerCustomer(new Customer(new CustomerId("CUST-1"), "Jan Kowalski", "1234563218",
                 new Address("Marszałkowska 1", "00-001", "Warszawa", "PL"),
                 new ContactData("jan.kowalski@example.com", "+48 600 100 200")));
@@ -207,6 +211,12 @@ public class SalonDemo {
         }
 
         private void dispatch(DomainEvent event) {
+            // Sprzedaż -> Inwentarz: OrderPlaced niesie specificationId -> powiązanie w read modelu
+            // (event-carried state transfer; UC-INW-01/02 czytają potem wyłącznie lokalne dane).
+            if (event instanceof OrderPlacedEvent e && inventory != null
+                    && e.specificationId() != null) {
+                inventory.linkOrderToSpecification(e.orderId(), e.specificationId());
+            }
             // Sprzedaż -> Rozliczenia: nowe zamówienie -> inicjalizacja salda (wartość kontraktu).
             if (event instanceof OrderPlacedEvent e && settlements != null && orderRepo != null) {
                 orderRepo.findById(new OrderId(e.orderId())).ifPresent(order ->

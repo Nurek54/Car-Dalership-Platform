@@ -30,11 +30,11 @@ import salon.financing.infrastructure.mock.InMemoryFinancingRepository;
 import salon.logistics.application.InventoryManagementAppService;
 import salon.logistics.application.port.out.FactoryIntegrationAclPort;
 import salon.logistics.application.port.out.InventoryRepository;
-import salon.logistics.application.port.out.SpecificationIntegrationPort;
+import salon.logistics.application.port.out.SpecificationReadModelPort;
 import salon.logistics.infrastructure.messaging.FinancingEventSubscriberAdapter;
 import salon.logistics.infrastructure.mock.FactoryIntegrationMockAdapter;
 import salon.logistics.infrastructure.mock.InMemoryInventoryRepository;
-import salon.logistics.infrastructure.mock.SpecificationIntegrationMockAdapter;
+import salon.logistics.infrastructure.mock.InMemorySpecificationReadModelAdapter;
 
 import salon.sales.api.SalesQueryFacade;
 import salon.sales.application.port.out.FinancingIntegrationPort;
@@ -70,9 +70,14 @@ public class SalonWiringConfiguration {
         return new FactoryIntegrationMockAdapter();
     }
 
+    /**
+     * Lokalny read model specyfikacji Inwentarza — zasilany asynchronicznie zdarzeniami
+     * SpecificationCompleted (Katalog) i OrderPlaced (Sprzedaż), zamiast synchronicznego
+     * odpytywania innych kontekstów.
+     */
     @Bean
-    public SpecificationIntegrationPort specificationIntegrationPort() {
-        return new SpecificationIntegrationMockAdapter();
+    public SpecificationReadModelPort specificationReadModelPort() {
+        return new InMemorySpecificationReadModelAdapter();
     }
 
     @Bean
@@ -121,11 +126,11 @@ public class SalonWiringConfiguration {
     @Bean
     public InventoryManagementAppService inventoryManagementAppService(
             InventoryRepository inventoryRepository,
-            SpecificationIntegrationPort specificationIntegrationPort,
+            SpecificationReadModelPort specificationReadModelPort,
             FactoryIntegrationAclPort factoryIntegrationAclPort,
             EventPublisherPort eventPublisherPort) {
         return new InventoryManagementAppService(inventoryRepository,
-                specificationIntegrationPort, factoryIntegrationAclPort, eventPublisherPort);
+                specificationReadModelPort, factoryIntegrationAclPort, eventPublisherPort);
     }
 
     // --- Fakturowanie i Rozliczenia ---
@@ -199,6 +204,14 @@ public class SalonWiringConfiguration {
     public salon.logistics.infrastructure.messaging.SalesEventSubscriberAdapter
     logisticsSalesEventSubscriberAdapter(InventoryManagementAppService inventoryManagementAppService) {
         return new salon.logistics.infrastructure.messaging.SalesEventSubscriberAdapter(
+                inventoryManagementAppService, inventoryManagementAppService);
+    }
+
+    /** Inwentarz <- Katalog: SpecificationCompleted zasila lokalny read model specyfikacji. */
+    @Bean
+    public salon.logistics.infrastructure.messaging.CatalogEventSubscriberAdapter
+    logisticsCatalogEventSubscriberAdapter(InventoryManagementAppService inventoryManagementAppService) {
+        return new salon.logistics.infrastructure.messaging.CatalogEventSubscriberAdapter(
                 inventoryManagementAppService);
     }
 

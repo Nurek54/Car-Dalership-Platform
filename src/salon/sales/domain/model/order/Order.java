@@ -11,6 +11,7 @@ import salon.sales.domain.model.offer.OfferId;
 import salon.shared.event.AbstractAggregateRoot;
 import salon.shared.model.Money;
 import salon.shared.model.OrderId;
+import salon.shared.model.SpecificationId;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -37,6 +38,7 @@ public class Order extends AbstractAggregateRoot {
 
     private final OrderId id;
     private final OfferId sourceOfferId;
+    private final SpecificationId specificationId; // specyfikacja z oferty (event-carried state transfer do Inwentarza)
     private final Money requiredDeposit;   // wynegocjowana wartość kontraktu (może być null)
 
     private PaymentMethod paymentMethod;   // zadeklarowana forma płatności (UC-CRM-03, krok 4)
@@ -47,6 +49,10 @@ public class Order extends AbstractAggregateRoot {
     private Long version;                  // znacznik wersji dla blokady optymistycznej (infrastruktura)
 
     public Order(OrderId id, OfferId sourceOfferId, Money requiredDeposit) {
+        this(id, sourceOfferId, null, requiredDeposit);
+    }
+
+    public Order(OrderId id, OfferId sourceOfferId, SpecificationId specificationId, Money requiredDeposit) {
         if (id == null) {
             throw new IllegalArgumentException("id must not be null.");
         }
@@ -55,6 +61,7 @@ public class Order extends AbstractAggregateRoot {
         }
         this.id = id;
         this.sourceOfferId = sourceOfferId;
+        this.specificationId = specificationId;
         this.requiredDeposit = requiredDeposit;
         this.paymentMethod = null;
         this.paymentStatus = PaymentStatus.UNPAID;
@@ -73,7 +80,9 @@ public class Order extends AbstractAggregateRoot {
     void markPlaced() {
         this.state = OrderState.DRAFT;
         registerEvent(new OrderPlacedEvent(
-                UUID.randomUUID(), this.id.value(), Instant.now()));
+                UUID.randomUUID(), this.id.value(),
+                this.specificationId == null ? null : this.specificationId.value(),
+                Instant.now()));
     }
 
     /**
@@ -221,6 +230,11 @@ public class Order extends AbstractAggregateRoot {
     /** Identyfikator oferty źródłowej (audytowalność: zamówienie oparte o zatwierdzone warunki). */
     public OfferId getOfferId() {
         return this.sourceOfferId;
+    }
+
+    /** Specyfikacja pojazdu z oferty źródłowej (może być null dla zamówień legacy). */
+    public SpecificationId getSpecificationId() {
+        return this.specificationId;
     }
 
     public Money getRequiredDeposit() {

@@ -29,7 +29,7 @@ class SalesEventBusAdapterTest {
     @Test
     void shouldPublishMultipleEventsToMessageBroker() {
         // AppService przekazuje paczkę złożoną z 2 zdarzeń
-        DomainEvent ev1 = new OrderPlacedEvent(UUID.randomUUID(), "ORD-111", Instant.now());
+        DomainEvent ev1 = new OrderPlacedEvent(UUID.randomUUID(), "ORD-111", "SPEC-111", Instant.now());
         DomainEvent ev2 = new OrderActivatedEvent(UUID.randomUUID(), "ORD-111", Instant.now());
 
         // Wołamy publikację całej paczki
@@ -44,7 +44,7 @@ class SalesEventBusAdapterTest {
     void shouldThrowExceptionWhenMessageBrokerIsDown() {
         // RabbitMQ nie działa, połączenie jest przerwane (Spring rzuca AmqpException)
         doThrow(new AmqpException("Connection refused")).when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Object.class));
-        DomainEvent ev1 = new OrderPlacedEvent(UUID.randomUUID(), "ORD-222", Instant.now());
+        DomainEvent ev1 = new OrderPlacedEvent(UUID.randomUUID(), "ORD-222", "SPEC-222", Instant.now());
 
         // Błąd infrastruktury musi zostać przepuszczony w górę,
         // aby AppService mógł wycofać transakcję w bazie danych

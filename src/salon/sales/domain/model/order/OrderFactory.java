@@ -28,7 +28,9 @@ public class OrderFactory {
                     "Snapshot offerId does not match the provided offerId");
         }
         // requiredDeposit = finalPrice z oferty (może być null, jeśli nie wyceniono).
-        Order order = new Order(OrderId.generate(), offerId, snapshot.finalPrice());
+        // specificationId z migawki — popłynie w OrderPlacedEvent do Inwentarza (UC-INW-01/02).
+        Order order = new Order(OrderId.generate(), offerId,
+                snapshot.specificationId(), snapshot.finalPrice());
         // Formalne złożenie zamówienia ogłasza agregat (OrderPlacedEvent — m.in. dla Rozliczeń).
         order.markPlaced();
         return order;

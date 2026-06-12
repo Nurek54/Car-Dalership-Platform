@@ -5,8 +5,9 @@ package salon.logistics.application.port.in;
  * węzeł "OrderFactoryVehicleUseCase" w docs/Inwentarz-Logistyka/LogisticsArchitecture.md.
  *
  * Wyzwalany zdarzeniem AdvancePaymentRegistered (opłacony zadatek). Kody wyposażenia
- * dociągane są synchronicznie przez SpecificationIntegrationPort, zlecenie wysyła
- * FactoryIntegrationAclPort. Kończy się emisją FactoryOrderPlaced lub FactoryOrderFailed (A1).
+ * czytane są z lokalnego read modelu specyfikacji (SpecificationReadModelPort, zasilanego
+ * zdarzeniami SpecificationCompleted/OrderPlaced), zlecenie wysyła FactoryIntegrationAclPort.
+ * Kończy się emisją FactoryOrderPlaced lub FactoryOrderFailed (A1).
  */
 public interface OrderFactoryVehicleUseCase {
 

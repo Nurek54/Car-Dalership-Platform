@@ -1,7 +1,7 @@
 package salon.sales.application.handler;
 
-import salon.sales.application.port.out.CatalogIntegrationPort;
-import salon.sales.domain.event.ConfiguratorSessionInitiatedEvent;
+import salon.sales.application.port.out.CatalogIntegration;
+import salon.sales.application.domain.event.ConfiguratorSessionInitiatedEvent;
 
 /**
  * Handler zdarzenia ConfiguratorSessionInitiated (UC-CRM-01):
@@ -9,9 +9,9 @@ import salon.sales.domain.event.ConfiguratorSessionInitiatedEvent;
  */
 public class ConfiguratorSessionInitiatedEventHandler {
 
-    private final CatalogIntegrationPort catalogPort;
+    private final CatalogIntegration catalogPort;
 
-    public ConfiguratorSessionInitiatedEventHandler(CatalogIntegrationPort catalogPort) {
+    public ConfiguratorSessionInitiatedEventHandler(CatalogIntegration catalogPort) {
         this.catalogPort = catalogPort;
     }
 

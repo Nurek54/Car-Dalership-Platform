@@ -5,15 +5,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import salon.sales.application.port.out.InventoryIntegrationPort;
-import salon.sales.application.service.SalesAppService;
-import salon.sales.application.port.out.OrderRepository;
-import salon.shared.application.EventPublisherPort;
-import salon.sales.domain.model.order.*;
-import salon.shared.model.Money;
-import salon.shared.model.OrderId;
-import salon.sales.domain.model.offer.OfferId;
-import salon.sales.domain.exception.InventoryLockedException;
+import salon.sales.application.domain.model.order.Order;
+import salon.sales.application.domain.model.order.OrderState;
+import salon.sales.application.port.out.InventoryIntegration;
+import salon.sales.application.service.SalesService;
+import salon.sales.application.port.out.OrderDatabaseRepository;
+import salon.common.application.EventPublisher;
+import salon.common.model.Money;
+import salon.common.model.OrderId;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.application.domain.exception.InventoryLockedException;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -26,11 +27,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ReleaseVehicleAppServiceTest {
 
-    @Mock private OrderRepository orderRepository;
-    @Mock private InventoryIntegrationPort inventoryPort;
-    @Mock private EventPublisherPort eventPublisher;
+    @Mock private OrderDatabaseRepository orderRepository;
+    @Mock private InventoryIntegration inventoryPort;
+    @Mock private EventPublisher eventPublisher;
 
-    @InjectMocks private SalesAppService salesAppService;
+    @InjectMocks private SalesService salesAppService;
 
     @Test
     void shouldExecuteConfirmHandoverUseCaseSuccessfully() { // SCENARIUSZ GŁÓWNY

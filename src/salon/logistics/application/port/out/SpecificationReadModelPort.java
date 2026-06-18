@@ -1,7 +1,7 @@
 package salon.logistics.application.port.out;
 
-import salon.shared.model.OrderId;
-import salon.shared.model.SpecificationId;
+import salon.common.model.OrderId;
+import salon.common.model.SpecificationId;
 
 import java.util.List;
 import java.util.Optional;

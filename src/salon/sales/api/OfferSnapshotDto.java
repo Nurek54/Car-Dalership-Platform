@@ -1,6 +1,6 @@
 package salon.sales.api;
 
-import salon.shared.model.Money;
+import salon.common.model.Money;
 
 /**
  * Published Language Kontekstu Sprzedaży i CRM — migawka oferty źródłowej zamówienia

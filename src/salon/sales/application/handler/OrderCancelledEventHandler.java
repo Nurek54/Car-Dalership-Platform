@@ -1,7 +1,7 @@
 package salon.sales.application.handler;
 
-import salon.sales.application.port.out.BillingIntegrationPort;
-import salon.sales.domain.event.OrderCancelledEvent;
+import salon.sales.application.port.out.BillingIntegration;
+import salon.sales.application.domain.event.OrderCancelledEvent;
 
 /**
  * Handler zdarzenia OrderCancelled: przekazuje powód anulowania do Kontekstu Rozliczeń
@@ -9,9 +9,9 @@ import salon.sales.domain.event.OrderCancelledEvent;
  */
 public class OrderCancelledEventHandler {
 
-    private final BillingIntegrationPort billingPort;
+    private final BillingIntegration billingPort;
 
-    public OrderCancelledEventHandler(BillingIntegrationPort billingPort) {
+    public OrderCancelledEventHandler(BillingIntegration billingPort) {
         this.billingPort = billingPort;
     }
 

@@ -6,9 +6,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import salon.sales.application.service.SalesAppService;
-import salon.sales.domain.exception.OrderNotFoundException;
-import salon.sales.infrastructure.web.OrderRestApiAdapter;
+import salon.sales.application.service.SalesService;
+import salon.sales.application.domain.exception.OrderNotFoundException;
+import salon.sales.infrastructure.in.web.OrderRestApiAdapter;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OrderRestAdapterTest {
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private SalesAppService salesAppService;
+    @MockBean private SalesService salesAppService;
 
     @Test
     void shouldAcceptScheduleHandoverRequestAndReturn200Ok() throws Exception {

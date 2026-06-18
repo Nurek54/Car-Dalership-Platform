@@ -6,9 +6,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.handler.VehicleHandedOverEventHandler;
-import salon.sales.application.port.out.BillingIntegrationPort;
+import salon.sales.application.port.out.BillingIntegration;
 import salon.sales.application.port.out.AfterSalesIntegrationPort;
-import salon.sales.domain.event.VehicleHandedOverEvent;
+import salon.sales.application.domain.event.VehicleHandedOverEvent;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -18,7 +18,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class VehicleHandedOverEventHandlerTest {
 
-    @Mock private BillingIntegrationPort billingPort;
+    @Mock private BillingIntegration billingPort;
     @Mock private AfterSalesIntegrationPort afterSalesPort;
     @InjectMocks private VehicleHandedOverEventHandler eventHandler;
 

@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import salon.sales.infrastructure.adapter.in.cron.OfferExpirationCronJobAdapter;
-import salon.sales.application.service.SalesAppService;
+import salon.sales.infrastructure.in.cron.OfferExpirationCronJobAdapter;
+import salon.sales.application.service.SalesService;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 class OfferExpirationCronJobAdapterTest {
 
     @Autowired private OfferExpirationCronJobAdapter cronJobAdapter;
-    @MockBean private SalesAppService salesAppService;
+    @MockBean private SalesService salesAppService;
 
     @Test
     void shouldTriggerOfferExpirationJobSuccessfully() {

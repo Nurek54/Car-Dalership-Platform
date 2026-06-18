@@ -1,16 +1,16 @@
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import salon.billing.application.service.SettlementAppService;
-import salon.billing.domain.model.settlement.Settlement;
-import salon.billing.domain.model.settlement.SettlementFactory;
-import salon.billing.domain.model.settlement.SettlementStatus;
-import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
-import salon.billing.infrastructure.messaging.SettlementEventListener;
-import salon.billing.infrastructure.mock.InMemorySettlementRepository;
-import salon.billing.infrastructure.mock.InProcessEventPublisherAdapter;
-import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
-import salon.billing.infrastructure.mock.NotificationMockAdapter;
-import salon.shared.model.OrderId;
+import salon.billing.application.service.PaymentProcessService;
+import salon.billing.application.domain.model.settlement.Settlement;
+import salon.billing.application.domain.model.settlement.SettlementFactory;
+import salon.billing.application.domain.model.settlement.SettlementStatus;
+import salon.billing.infrastructure.in.messaging.OrderReadyForSettlementEvent;
+import salon.billing.infrastructure.in.messaging.SettlementEventListener;
+import salon.billing.infrastructure.out.mock.InMemorySettlementRepository;
+import salon.billing.infrastructure.out.mock.InProcessEventPublisherAdapter;
+import salon.billing.infrastructure.out.mock.InMemoryDocumentRepository;
+import salon.billing.infrastructure.out.mock.NotificationMockAdapter;
+import salon.common.model.OrderId;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -32,7 +32,7 @@ class SettlementEventListenerTest {
 
     private SettlementEventListener freshListener() {
         this.repository = new InMemorySettlementRepository();
-        SettlementAppService appService = new SettlementAppService(
+        PaymentProcessService appService = new PaymentProcessService(
                 this.repository, new SettlementFactory(), new InMemoryDocumentRepository(),
                 new NotificationMockAdapter(), new InProcessEventPublisherAdapter());
         return new SettlementEventListener(appService);

@@ -4,13 +4,13 @@ import org.springframework.stereotype.Service;
 import salon.sales.api.CustomerSnapshotDto;
 import salon.sales.api.OfferSnapshotDto;
 import salon.sales.api.SalesQueryFacade;
-import salon.sales.application.port.out.CustomerRepository;
-import salon.sales.application.port.out.OfferRepository;
-import salon.sales.application.port.out.OrderRepository;
-import salon.sales.domain.model.customer.Customer;
-import salon.sales.domain.model.offer.Offer;
-import salon.sales.domain.model.order.Order;
-import salon.shared.model.OrderId;
+import salon.sales.application.port.out.CustomerDatabaseRepository;
+import salon.sales.application.port.out.OfferDatabaseRepository;
+import salon.sales.application.port.out.OrderDatabaseRepository;
+import salon.sales.application.domain.model.customer.Customer;
+import salon.sales.application.domain.model.offer.Offer;
+import salon.sales.application.domain.model.order.Order;
+import salon.common.model.OrderId;
 
 /**
  * Implementacja fasady zapytań {@link SalesQueryFacade} Kontekstu Sprzedaży i CRM.
@@ -22,13 +22,13 @@ import salon.shared.model.OrderId;
 @Service
 public class SalesQueryService implements SalesQueryFacade {
 
-    private final OrderRepository orderRepository;
-    private final OfferRepository offerRepository;
-    private final CustomerRepository customerRepository;
+    private final OrderDatabaseRepository orderRepository;
+    private final OfferDatabaseRepository offerRepository;
+    private final CustomerDatabaseRepository customerRepository;
 
-    public SalesQueryService(OrderRepository orderRepository,
-                             OfferRepository offerRepository,
-                             CustomerRepository customerRepository) {
+    public SalesQueryService(OrderDatabaseRepository orderRepository,
+                             OfferDatabaseRepository offerRepository,
+                             CustomerDatabaseRepository customerRepository) {
         if (orderRepository == null) {
             throw new IllegalArgumentException("orderRepository must not be null.");
         }

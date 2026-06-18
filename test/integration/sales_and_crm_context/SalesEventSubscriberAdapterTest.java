@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import salon.sales.infrastructure.adapter.in.messaging.SalesEventSubscriberAdapter;
-import salon.sales.application.service.SalesAppService;
-import salon.sales.domain.event.VehicleReadyForHandoverEvent;
-import salon.sales.domain.exception.OrderNotFoundException;
+import salon.sales.infrastructure.in.messaging.SalesEventSubscriberAdapter;
+import salon.sales.application.service.SalesService;
+import salon.sales.application.domain.event.VehicleReadyForHandoverEvent;
+import salon.sales.application.domain.exception.OrderNotFoundException;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 class SalesEventSubscriberAdapterTest {
 
     @Autowired private SalesEventSubscriberAdapter subscriberAdapter;
-    @MockBean private SalesAppService salesAppService;
+    @MockBean private SalesService salesAppService;
 
     @Test
     void shouldConsumeMessageAndTriggerAppServiceSuccessfully() {

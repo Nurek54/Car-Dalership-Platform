@@ -1,10 +1,10 @@
 package unit.sales_and_crm_context.aggregateTests;
 
 import org.junit.jupiter.api.Test;
-import salon.sales.domain.model.offer.OfferId;
-import salon.sales.domain.model.order.*;
-import salon.shared.model.Money;
-import salon.shared.model.OrderId;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.application.domain.model.order.*;
+import salon.common.model.Money;
+import salon.common.model.OrderId;
 
 import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.*;

@@ -6,10 +6,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import salon.sales.infrastructure.adapter.out.messaging.SalesEventBusAdapter;
-import salon.sales.domain.event.OrderPlacedEvent;
-import salon.sales.domain.event.OrderActivatedEvent;
-import salon.shared.event.DomainEvent;
+import salon.sales.infrastructure.out.messaging.SalesEventBusAdapter;
+import salon.sales.application.domain.event.OrderPlacedEvent;
+import salon.sales.application.domain.event.OrderActivatedEvent;
+import salon.common.event.DomainEvent;
 
 import java.time.Instant;
 import java.util.List;

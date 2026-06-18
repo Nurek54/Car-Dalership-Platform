@@ -5,18 +5,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import salon.sales.application.port.out.OfferRepository;
-import salon.sales.domain.exception.DatabaseException;
-import salon.sales.domain.exception.OfferNotFoundException;
-import salon.sales.application.port.out.OrderRepository;
-import salon.sales.application.service.SalesAppService;
-import salon.sales.domain.model.customer.CustomerId;
-import salon.sales.domain.model.offer.Offer;
-import salon.sales.domain.model.offer.OfferId;
-import salon.sales.domain.model.order.Order;
-import salon.shared.application.EventPublisherPort;
-import salon.shared.model.Money;
-import salon.shared.model.SpecificationId;
+import salon.sales.application.port.out.OfferDatabaseRepository;
+import salon.sales.application.domain.exception.DatabaseException;
+import salon.sales.application.domain.exception.OfferNotFoundException;
+import salon.sales.application.port.out.OrderDatabaseRepository;
+import salon.sales.application.service.SalesService;
+import salon.sales.application.domain.model.customer.CustomerId;
+import salon.sales.application.domain.model.offer.Offer;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.application.domain.model.order.Order;
+import salon.common.application.EventPublisher;
+import salon.common.model.Money;
+import salon.common.model.SpecificationId;
 
 import java.util.Optional;
 
@@ -30,11 +30,11 @@ import static org.mockito.Mockito.*;
 class AcceptOfferAppServiceTest {
 
     @Mock
-    private OfferRepository offerRepository;
-    @Mock private OrderRepository orderRepository;
-    @Mock private EventPublisherPort eventPublisher;
+    private OfferDatabaseRepository offerRepository;
+    @Mock private OrderDatabaseRepository orderRepository;
+    @Mock private EventPublisher eventPublisher;
     @InjectMocks
-    private SalesAppService salesAppService;
+    private SalesService salesAppService;
 
     @Test
     void shouldAcceptOfferAndSaveOrder() {

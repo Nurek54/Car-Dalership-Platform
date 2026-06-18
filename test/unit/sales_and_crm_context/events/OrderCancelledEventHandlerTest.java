@@ -6,8 +6,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.handler.OrderCancelledEventHandler;
-import salon.sales.application.port.out.BillingIntegrationPort;
-import salon.sales.domain.event.OrderCancelledEvent;
+import salon.sales.application.port.out.BillingIntegration;
+import salon.sales.application.domain.event.OrderCancelledEvent;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class OrderCancelledEventHandlerTest {
 
-    @Mock private BillingIntegrationPort billingPort;
+    @Mock private BillingIntegration billingPort;
     @InjectMocks private OrderCancelledEventHandler eventHandler;
 
     @Test

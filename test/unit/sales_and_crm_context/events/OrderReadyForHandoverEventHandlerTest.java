@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.handler.OrderReadyForHandoverEventHandler;
 import salon.sales.application.port.out.NotificationIntegrationPort;
-import salon.sales.domain.event.OrderReadyForHandoverEvent;
+import salon.sales.application.domain.event.OrderReadyForHandoverEvent;
 
 import java.time.Instant;
 import java.util.UUID;

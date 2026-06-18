@@ -1,8 +1,8 @@
 package salon.logistics.application.port.out;
 
-import salon.logistics.domain.model.vehicle.ImporterData;
-import salon.logistics.domain.model.vehicle.VinNumber;
-import salon.shared.model.OrderId;
+import salon.logistics.application.domain.model.vehicle.ImporterData;
+import salon.logistics.application.domain.model.vehicle.VinNumber;
+import salon.common.model.OrderId;
 
 import java.util.List;
 

@@ -2,45 +2,45 @@ package salon.bootstrap;
 
 import salon.billing.application.command.GenerateInvoiceCommand;
 import salon.billing.application.command.ProcessPaymentCommand;
-import salon.billing.application.service.DocumentAppService;
-import salon.billing.application.service.SettlementAppService;
-import salon.billing.domain.model.document.AccountingDocumentFactory;
-import salon.billing.domain.model.document.SellerDetails;
-import salon.billing.domain.model.settlement.SettlementFactory;
-import salon.billing.domain.service.InvoiceCalculationDomainService;
-import salon.billing.infrastructure.integration.SalesCrmIntegrationAdapter;
-import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
-import salon.billing.infrastructure.messaging.SettlementEventListener;
-import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
-import salon.billing.infrastructure.mock.InMemorySettlementRepository;
-import salon.billing.infrastructure.mock.InProcessEventPublisherAdapter;
-import salon.billing.infrastructure.mock.NotificationMockAdapter;
-import salon.billing.infrastructure.mock.PdfGeneratorMockAdapter;
-import salon.catalog.domain.model.catalog.CatalogOption;
-import salon.catalog.domain.model.catalog.CatalogRule;
-import salon.catalog.domain.model.catalog.OptionCode;
-import salon.catalog.domain.model.catalog.ProductCatalog;
-import salon.catalog.domain.model.catalog.RuleType;
-import salon.catalog.domain.model.specification.RuleViolationException;
-import salon.catalog.domain.model.specification.VehicleSpecification;
+import salon.billing.application.service.DocumentGenerationService;
+import salon.billing.application.service.PaymentProcessService;
+import salon.billing.application.domain.model.document.AccountingDocumentFactory;
+import salon.billing.application.domain.model.document.SellerDetails;
+import salon.billing.application.domain.model.settlement.SettlementFactory;
+import salon.billing.application.domain.service.InvoiceCalculationService;
+import salon.billing.infrastructure.out.integration.SalesCrmIntegrationAdapter;
+import salon.billing.infrastructure.in.messaging.OrderReadyForSettlementEvent;
+import salon.billing.infrastructure.in.messaging.SettlementEventListener;
+import salon.billing.infrastructure.out.mock.InMemoryDocumentRepository;
+import salon.billing.infrastructure.out.mock.InMemorySettlementRepository;
+import salon.billing.infrastructure.out.mock.InProcessEventPublisherAdapter;
+import salon.billing.infrastructure.out.mock.NotificationMockAdapter;
+import salon.billing.infrastructure.out.mock.PdfGeneratorMockAdapter;
+import salon.catalog.application.domain.model.catalog.CatalogOption;
+import salon.catalog.application.domain.model.catalog.CatalogRule;
+import salon.catalog.application.domain.model.catalog.OptionCode;
+import salon.catalog.application.domain.model.catalog.ProductCatalog;
+import salon.catalog.application.domain.model.catalog.RuleType;
+import salon.catalog.application.domain.model.specification.RuleViolationException;
+import salon.catalog.application.domain.model.specification.VehicleSpecification;
 import salon.sales.application.service.SalesQueryService;
-import salon.sales.domain.exception.InvalidOfferStateException;
-import salon.sales.domain.exception.OfferExpiredException;
-import salon.sales.domain.model.customer.Address;
-import salon.sales.domain.model.customer.ContactData;
-import salon.sales.domain.model.customer.Customer;
-import salon.sales.domain.model.customer.CustomerId;
-import salon.sales.domain.model.offer.Discount;
-import salon.sales.domain.model.offer.Offer;
-import salon.sales.domain.model.offer.OfferId;
-import salon.sales.domain.model.order.Order;
-import salon.sales.domain.model.order.OrderFactory;
-import salon.sales.domain.model.order.PaymentMethod;
-import salon.sales.infrastructure.mock.InMemoryCustomerRepository;
-import salon.sales.infrastructure.mock.InMemoryOfferRepository;
-import salon.sales.infrastructure.mock.InMemoryOrderRepository;
-import salon.shared.model.Money;
-import salon.shared.model.SpecificationId;
+import salon.sales.application.domain.exception.InvalidOfferStateException;
+import salon.sales.application.domain.exception.OfferExpiredException;
+import salon.sales.application.domain.model.customer.Address;
+import salon.sales.application.domain.model.customer.ContactData;
+import salon.sales.application.domain.model.customer.Customer;
+import salon.sales.application.domain.model.customer.CustomerId;
+import salon.sales.application.domain.model.offer.Discount;
+import salon.sales.application.domain.model.offer.Offer;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.application.domain.model.order.Order;
+import salon.sales.application.domain.model.order.OrderFactory;
+import salon.sales.application.domain.model.order.PaymentMethod;
+import salon.sales.infrastructure.out.mock.InMemoryCustomerRepository;
+import salon.sales.infrastructure.out.mock.InMemoryOfferRepository;
+import salon.sales.infrastructure.out.mock.InMemoryOrderRepository;
+import salon.common.model.Money;
+import salon.common.model.SpecificationId;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -102,7 +102,7 @@ public class OfflineDemo {
         System.out.println("\n=== FAKTUROWANIE I ROZLICZENIA: UC-FIR-02 / 03 ===");
         InProcessEventPublisherAdapter bus = new InProcessEventPublisherAdapter();
 
-        // Repozytoria CRM potrzebne adapterowi CrmIntegrationPort (dane nabywcy po orderId).
+        // Repozytoria CRM potrzebne adapterowi SalesIntegration (dane nabywcy po orderId).
         InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
         InMemoryOfferRepository offerRepo = new InMemoryOfferRepository();
         InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
@@ -116,7 +116,7 @@ public class OfflineDemo {
         InMemoryDocumentRepository documentRepo = new InMemoryDocumentRepository();
 
         // --- UC-FIR-03: inicjalizacja salda + rejestracja wpłat ---
-        SettlementAppService settlements = new SettlementAppService(
+        PaymentProcessService settlements = new PaymentProcessService(
                 settlementRepo, new SettlementFactory(), documentRepo,
                 new NotificationMockAdapter(), bus);
 
@@ -133,9 +133,9 @@ public class OfflineDemo {
         System.out.println("[OK] Saldo " + order.getId().value() + " rozliczone (status SETTLED).");
 
         // --- UC-FIR-02: faktura końcowa (dane nabywcy dociągnięte z kontekstu Sprzedaży) ---
-        DocumentAppService docs = new DocumentAppService(
+        DocumentGenerationService docs = new DocumentGenerationService(
                 settlementRepo, documentRepo,
-                new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
+                new InvoiceCalculationService(), new AccountingDocumentFactory(),
                 new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), bus,
                 new SalesCrmIntegrationAdapter(new SalesQueryService(orderRepo, offerRepo, customerRepo)),
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
@@ -148,7 +148,7 @@ public class OfflineDemo {
         try {
             Offer stale = new Offer(OfferId.generate(), new CustomerId("CUST-3"), SpecificationId.generate());
             stale.publishOffer();
-            salon.shared.infrastructure.persistence.DomainReflection.set(
+            salon.common.infrastructure.persistence.DomainReflection.set(
                     stale, "validityDate", java.time.LocalDate.now().minusDays(1));
             stale.accept();
         } catch (OfferExpiredException e) {

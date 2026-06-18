@@ -1,7 +1,7 @@
 package salon.sales.application.handler;
 
-import salon.sales.application.port.out.InventoryIntegrationPort;
-import salon.sales.domain.event.OrderPlacedEvent;
+import salon.sales.application.port.out.InventoryIntegration;
+import salon.sales.application.domain.event.OrderPlacedEvent;
 
 /**
  * Handler zdarzenia OrderPlaced (UC-CRM-03): nowo złożone zamówienie zgłasza się do
@@ -9,9 +9,9 @@ import salon.sales.domain.event.OrderPlacedEvent;
  */
 public class OrderPlacedEventHandler {
 
-    private final InventoryIntegrationPort inventoryPort;
+    private final InventoryIntegration inventoryPort;
 
-    public OrderPlacedEventHandler(InventoryIntegrationPort inventoryPort) {
+    public OrderPlacedEventHandler(InventoryIntegration inventoryPort) {
         this.inventoryPort = inventoryPort;
     }
 

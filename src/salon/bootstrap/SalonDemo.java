@@ -2,51 +2,49 @@ package salon.bootstrap;
 
 import salon.billing.application.command.GenerateAdvanceCommand;
 import salon.billing.application.command.ProcessPaymentCommand;
-import salon.billing.application.service.DocumentAppService;
-import salon.billing.application.service.SettlementAppService;
-import salon.billing.domain.event.AdvancePaymentRegisteredEvent;
-import salon.billing.domain.event.AdvancePaymentRequestedEvent;
-import salon.billing.domain.event.PaymentRegisteredEvent;
-import salon.billing.domain.event.SettlementCompletedEvent;
-import salon.billing.domain.model.document.AccountingDocumentFactory;
-import salon.billing.domain.model.document.SellerDetails;
-import salon.billing.domain.model.settlement.SettlementFactory;
-import salon.billing.domain.service.InvoiceCalculationDomainService;
-import salon.billing.infrastructure.integration.SalesCrmIntegrationAdapter;
-import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
-import salon.billing.infrastructure.mock.InMemorySettlementRepository;
-import salon.billing.infrastructure.mock.NotificationMockAdapter;
-import salon.billing.infrastructure.mock.PdfGeneratorMockAdapter;
-import salon.catalog.application.port.out.CatalogRepository;
-import salon.catalog.domain.model.catalog.CatalogId;
-import salon.catalog.domain.model.catalog.ProductCatalog;
-import salon.logistics.application.InventoryManagementAppService;
-import salon.logistics.domain.event.FactoryOrderPlacedEvent;
-import salon.logistics.domain.event.VehicleDeliveredToStockEvent;
-import salon.logistics.domain.event.VehicleInventoryReleasedEvent;
-import salon.logistics.domain.event.VehicleIsNotOnStockEvent;
-import salon.logistics.domain.event.VehicleReadyForHandoverEvent;
-import salon.logistics.infrastructure.mock.FactoryIntegrationMockAdapter;
-import salon.logistics.infrastructure.mock.InMemoryInventoryRepository;
-import salon.logistics.infrastructure.mock.InMemorySpecificationReadModelAdapter;
+import salon.billing.application.service.DocumentGenerationService;
+import salon.billing.application.service.PaymentProcessService;
+import salon.billing.application.domain.event.AdvancePaymentRegisteredEvent;
+import salon.billing.application.domain.event.AdvancePaymentRequestedEvent;
+import salon.billing.application.domain.event.PaymentRegisteredEvent;
+import salon.billing.application.domain.event.SettlementCompletedEvent;
+import salon.billing.application.domain.model.document.AccountingDocumentFactory;
+import salon.billing.application.domain.model.document.SellerDetails;
+import salon.billing.application.domain.model.settlement.SettlementFactory;
+import salon.billing.application.domain.service.InvoiceCalculationService;
+import salon.billing.infrastructure.out.integration.SalesCrmIntegrationAdapter;
+import salon.billing.infrastructure.out.mock.InMemoryDocumentRepository;
+import salon.billing.infrastructure.out.mock.InMemorySettlementRepository;
+import salon.billing.infrastructure.out.mock.NotificationMockAdapter;
+import salon.billing.infrastructure.out.mock.PdfGeneratorMockAdapter;
+import salon.logistics.application.service.InventoryManagementService;
+import salon.logistics.application.domain.event.FactoryOrderPlacedEvent;
+import salon.logistics.application.domain.event.VehicleDeliveredToStockEvent;
+import salon.logistics.application.domain.event.VehicleInventoryReleasedEvent;
+import salon.logistics.application.domain.event.VehicleIsNotOnStockEvent;
+import salon.logistics.application.domain.event.VehicleReadyForHandoverEvent;
+import salon.logistics.infrastructure.out.mock.FactoryIntegrationMockAdapter;
+import salon.logistics.infrastructure.out.mock.InMemoryInventoryRepository;
+import salon.logistics.infrastructure.out.mock.InMemorySpecificationReadModelAdapter;
 import salon.sales.application.command.ScheduleHandoverCommand;
 import salon.sales.application.command.StartConfiguratorSessionCommand;
-import salon.sales.application.service.SalesAppService;
+import salon.sales.application.service.SalesService;
 import salon.sales.application.service.SalesQueryService;
-import salon.sales.domain.event.OrderPlacedEvent;
-import salon.sales.domain.model.customer.Address;
-import salon.sales.domain.model.customer.ContactData;
-import salon.sales.domain.model.customer.Customer;
-import salon.sales.domain.model.customer.CustomerId;
-import salon.sales.domain.model.offer.OfferId;
-import salon.sales.infrastructure.integration.InventoryCommandAdapter;
-import salon.sales.infrastructure.mock.InMemoryCustomerRepository;
-import salon.sales.infrastructure.mock.InMemoryOfferRepository;
-import salon.sales.infrastructure.mock.InMemoryOrderRepository;
-import salon.shared.application.EventPublisherPort;
-import salon.shared.event.DomainEvent;
-import salon.shared.model.Money;
-import salon.shared.model.OrderId;
+import salon.sales.application.domain.event.OrderPlacedEvent;
+import salon.sales.application.domain.model.customer.Address;
+import salon.sales.application.domain.model.customer.ContactData;
+import salon.sales.application.domain.model.customer.Customer;
+import salon.sales.application.domain.model.customer.CustomerId;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.infrastructure.out.integration.InventoryCommandAdapter;
+import salon.sales.infrastructure.out.mock.InMemoryCustomerRepository;
+import salon.sales.infrastructure.out.mock.InMemoryOfferRepository;
+import salon.sales.infrastructure.out.mock.InMemoryOrderRepository;
+import salon.sales.infrastructure.out.mock.InMemorySpecificationPriceReadModelAdapter;
+import salon.common.application.EventPublisher;
+import salon.common.event.DomainEvent;
+import salon.common.model.Money;
+import salon.common.model.OrderId;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -70,7 +68,7 @@ public class SalonDemo {
 
         // --- INWENTARZ I LOGISTYKA ---
         InMemoryInventoryRepository inventoryRepo = new InMemoryInventoryRepository();
-        InventoryManagementAppService inventory = new InventoryManagementAppService(
+        InventoryManagementService inventory = new InventoryManagementService(
                 inventoryRepo, new InMemorySpecificationReadModelAdapter(),
                 new FactoryIntegrationMockAdapter(), bus);
 
@@ -78,21 +76,21 @@ public class SalonDemo {
         InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
         InMemoryOfferRepository offerRepo = new InMemoryOfferRepository();
         InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
-        SalesAppService sales = new SalesAppService(
+        SalesService sales = new SalesService(
                 customerRepo, offerRepo, orderRepo, bus,
-                new DemoCatalogPriceList(),                                  // wycena z Katalogu
+                new InMemorySpecificationPriceReadModelAdapter(),            // read model wyceny (UC-CRM-02)
                 new InventoryCommandAdapter(inventory, inventory, inventoryRepo),
                 null);                                                       // billing przez zdarzenia
 
         // --- FAKTUROWANIE I ROZLICZENIA ---
         InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
         InMemoryDocumentRepository documentRepo = new InMemoryDocumentRepository();
-        SettlementAppService settlements = new SettlementAppService(
+        PaymentProcessService settlements = new PaymentProcessService(
                 settlementRepo, new SettlementFactory(), documentRepo,
                 new NotificationMockAdapter(), bus);
-        DocumentAppService documents = new DocumentAppService(
+        DocumentGenerationService documents = new DocumentGenerationService(
                 settlementRepo, documentRepo,
-                new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
+                new InvoiceCalculationService(), new AccountingDocumentFactory(),
                 new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), bus,
                 new SalesCrmIntegrationAdapter(new SalesQueryService(orderRepo, offerRepo, customerRepo)),
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
@@ -109,6 +107,8 @@ public class SalonDemo {
         // Inwentarz dostaje kody wyposażenia asynchronicznie i buduje lokalny read model.
         inventory.registerSpecification("SPEC-1",
                 List.of("ENG-HYBRID", "COL-RED", "PKG-COMFORT"));
+        // Sprzedaż dostaje tym samym zdarzeniem wyliczoną cenę katalogową (read model wyceny).
+        sales.registerSpecificationPrice("SPEC-1", Money.of(100000, "PLN"));
         sales.registerCustomer(new Customer(new CustomerId("CUST-1"), "Jan Kowalski", "1234563218",
                 new Address("Marszałkowska 1", "00-001", "Warszawa", "PL"),
                 new ContactData("jan.kowalski@example.com", "+48 600 100 200")));
@@ -155,39 +155,16 @@ public class SalonDemo {
         System.out.println("\n[OK] Pełny cykl PDF (Long Track) zakończony.");
     }
 
-    /** Cennik demo: każda specyfikacja wyceniana na 100 000 PLN (UC-CRM-02). */
-    private static final class DemoCatalogPriceList implements CatalogRepository {
-        @Override
-        public Money getSpecificationPrice(String specificationId) {
-            return Money.of(new BigDecimal("100000"), "PLN");
-        }
-
-        @Override
-        public void save(ProductCatalog catalog) {
-            throw new UnsupportedOperationException("Demo price list is read-only.");
-        }
-
-        @Override
-        public Optional<ProductCatalog> findById(CatalogId id) {
-            return Optional.empty();
-        }
-
-        @Override
-        public List<ProductCatalog> findAll() {
-            return List.of();
-        }
-    }
-
     /**
      * Magistrala in-process: rozsyła zdarzenia domenowe do subskrybentów innych kontekstów
      * dokładnie tak, jak na kanwach (Inbound/Outbound Communication).
      */
-    private static final class InProcessChoreographyBus implements EventPublisherPort {
+    private static final class InProcessChoreographyBus implements EventPublisher {
 
-        SalesAppService sales;
-        InventoryManagementAppService inventory;
-        DocumentAppService documents;
-        SettlementAppService settlements;
+        SalesService sales;
+        InventoryManagementService inventory;
+        DocumentGenerationService documents;
+        PaymentProcessService settlements;
         InMemoryOrderRepository orderRepo;
 
         private final List<DomainEvent> pending = new ArrayList<>();

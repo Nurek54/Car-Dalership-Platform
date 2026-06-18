@@ -2,11 +2,11 @@ package salon.sales.application.service;
 
 import org.springframework.stereotype.Service;
 import salon.sales.application.command.StartConfiguratorSessionCommand;
-import salon.sales.application.port.in.StartConfiguratorUseCase;
-import salon.sales.application.port.out.CustomerRepository;
-import salon.sales.domain.event.ConfiguratorSessionInitiatedEvent;
-import salon.sales.domain.exception.CustomerNotFoundException;
-import salon.shared.application.EventPublisherPort;
+import salon.sales.application.port.in.StartConfigurator;
+import salon.sales.application.port.out.CustomerDatabaseRepository;
+import salon.sales.application.domain.event.ConfiguratorSessionInitiatedEvent;
+import salon.sales.application.domain.exception.CustomerNotFoundException;
+import salon.common.application.EventPublisher;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -20,13 +20,13 @@ import java.util.UUID;
  * Katalogu); tutaj jest tylko inicjacja szansy sprzedaży i emisja zdarzenia.
  */
 @Service
-public class ConfiguratorAppService implements StartConfiguratorUseCase {
+public class ConfiguratorAppService implements StartConfigurator {
 
-    private final CustomerRepository customerRepository;
-    private final EventPublisherPort eventPublisher;
+    private final CustomerDatabaseRepository customerRepository;
+    private final EventPublisher eventPublisher;
 
-    public ConfiguratorAppService(CustomerRepository customerRepository,
-                                  EventPublisherPort eventPublisher) {
+    public ConfiguratorAppService(CustomerDatabaseRepository customerRepository,
+                                  EventPublisher eventPublisher) {
         this.customerRepository = customerRepository;
         this.eventPublisher = eventPublisher;
     }

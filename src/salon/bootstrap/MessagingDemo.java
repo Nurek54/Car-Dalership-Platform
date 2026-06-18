@@ -2,47 +2,43 @@ package salon.bootstrap;
 
 import salon.billing.application.command.GenerateAdvanceCommand;
 import salon.billing.application.command.ProcessPaymentCommand;
-import salon.billing.application.service.DocumentAppService;
-import salon.billing.application.service.SettlementAppService;
-import salon.billing.domain.model.document.AccountingDocumentFactory;
-import salon.billing.domain.model.document.SellerDetails;
-import salon.billing.domain.model.settlement.SettlementFactory;
-import salon.billing.domain.service.InvoiceCalculationDomainService;
-import salon.billing.infrastructure.integration.SalesCrmIntegrationAdapter;
-import salon.billing.infrastructure.messaging.OrderReadyForSettlementEvent;
-import salon.billing.infrastructure.messaging.SettlementEventListener;
-import salon.billing.infrastructure.mock.InMemoryDocumentRepository;
-import salon.billing.infrastructure.mock.InMemorySettlementRepository;
-import salon.billing.infrastructure.mock.NotificationMockAdapter;
-import salon.billing.infrastructure.mock.PdfGeneratorMockAdapter;
-import salon.catalog.application.port.out.CatalogRepository;
-import salon.catalog.domain.model.catalog.CatalogId;
-import salon.catalog.domain.model.catalog.ProductCatalog;
-import salon.sales.application.service.SalesAppService;
+import salon.billing.application.service.DocumentGenerationService;
+import salon.billing.application.service.PaymentProcessService;
+import salon.billing.application.domain.model.document.AccountingDocumentFactory;
+import salon.billing.application.domain.model.document.SellerDetails;
+import salon.billing.application.domain.model.settlement.SettlementFactory;
+import salon.billing.application.domain.service.InvoiceCalculationService;
+import salon.billing.infrastructure.out.integration.SalesCrmIntegrationAdapter;
+import salon.billing.infrastructure.in.messaging.OrderReadyForSettlementEvent;
+import salon.billing.infrastructure.in.messaging.SettlementEventListener;
+import salon.billing.infrastructure.out.mock.InMemoryDocumentRepository;
+import salon.billing.infrastructure.out.mock.InMemorySettlementRepository;
+import salon.billing.infrastructure.out.mock.NotificationMockAdapter;
+import salon.billing.infrastructure.out.mock.PdfGeneratorMockAdapter;
+import salon.sales.application.service.SalesService;
 import salon.sales.application.service.SalesQueryService;
 import salon.sales.application.command.StartConfiguratorSessionCommand;
-import salon.sales.domain.model.customer.Address;
-import salon.sales.domain.model.customer.ContactData;
-import salon.sales.domain.model.customer.Customer;
-import salon.sales.domain.model.customer.CustomerId;
-import salon.sales.domain.model.offer.OfferId;
-import salon.sales.infrastructure.messaging.SalesDepositListener;
-import salon.sales.infrastructure.mock.InMemoryCustomerRepository;
-import salon.sales.infrastructure.mock.InMemoryOfferRepository;
-import salon.sales.infrastructure.mock.InMemoryOrderRepository;
-import salon.shared.application.EventPublisherPort;
-import salon.shared.infrastructure.messaging.RabbitMqConfig;
-import salon.shared.infrastructure.messaging.RabbitMqConnection;
-import salon.shared.infrastructure.messaging.RabbitMqEventConsumer;
-import salon.shared.infrastructure.messaging.RabbitMqEventPublisherAdapter;
-import salon.shared.infrastructure.messaging.RecordEventSerializer;
-import salon.shared.model.Money;
-import salon.shared.model.OrderId;
+import salon.sales.application.domain.model.customer.Address;
+import salon.sales.application.domain.model.customer.ContactData;
+import salon.sales.application.domain.model.customer.Customer;
+import salon.sales.application.domain.model.customer.CustomerId;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.infrastructure.in.messaging.SalesDepositListener;
+import salon.sales.infrastructure.out.mock.InMemoryCustomerRepository;
+import salon.sales.infrastructure.out.mock.InMemoryOfferRepository;
+import salon.sales.infrastructure.out.mock.InMemoryOrderRepository;
+import salon.sales.infrastructure.out.mock.InMemorySpecificationPriceReadModelAdapter;
+import salon.common.application.EventPublisher;
+import salon.common.infrastructure.messaging.RabbitMqConfig;
+import salon.common.infrastructure.messaging.RabbitMqConnection;
+import salon.common.infrastructure.messaging.RabbitMqEventConsumer;
+import salon.common.infrastructure.messaging.RabbitMqEventPublisherAdapter;
+import salon.common.infrastructure.messaging.RecordEventSerializer;
+import salon.common.model.Money;
+import salon.common.model.OrderId;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -62,15 +58,17 @@ public class MessagingDemo {
             InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
             InMemoryOfferRepository offerRepo = new InMemoryOfferRepository();
             InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
-            EventPublisherPort salesPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
-            SalesAppService sales = new SalesAppService(
+            EventPublisher salesPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
+            SalesService sales = new SalesService(
                     customerRepo, offerRepo, orderRepo, salesPublisher,
-                    new FixedPriceCatalog(), null, null);
+                    new InMemorySpecificationPriceReadModelAdapter(), null, null);
 
             sales.registerCustomer(new Customer(new CustomerId("CUST-DEMO"), "Jan Kowalski",
                     "1234563218", new Address("Marszałkowska 1", "00-001", "Warszawa", "PL"),
                     new ContactData("jan.kowalski@example.com", "+48 600 100 200")));
             sales.startConfiguratorSession(new StartConfiguratorSessionCommand("CUST-DEMO", "SP-7"));
+            // Wycena katalogowa przyszłaby zdarzeniem SpecificationCompleted (demo pomija konfigurator).
+            sales.registerSpecificationPrice("SPEC-DEMO", Money.of(100000, "PLN"));
             OfferId offerId = sales.generateOffer("CUST-DEMO", "SPEC-DEMO");
             String orderId = sales.acceptOfferAndCreateOrder(offerId);
 
@@ -80,11 +78,11 @@ public class MessagingDemo {
             salesConsumer.start();
 
             // --- FAKTUROWANIE I ROZLICZENIA ---
-            EventPublisherPort billingPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
+            EventPublisher billingPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
             InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
             InMemoryDocumentRepository documentRepo = new InMemoryDocumentRepository();
 
-            SettlementAppService settlements = new SettlementAppService(
+            PaymentProcessService settlements = new PaymentProcessService(
                     settlementRepo, new SettlementFactory(), documentRepo,
                     new NotificationMockAdapter(), billingPublisher);
 
@@ -92,9 +90,9 @@ public class MessagingDemo {
             listener.on(new OrderReadyForSettlementEvent(
                     UUID.randomUUID(), orderId, new BigDecimal("100000"), "PLN", Instant.now()));
 
-            DocumentAppService docs = new DocumentAppService(
+            DocumentGenerationService docs = new DocumentGenerationService(
                     settlementRepo, documentRepo,
-                    new InvoiceCalculationDomainService(), new AccountingDocumentFactory(),
+                    new InvoiceCalculationService(), new AccountingDocumentFactory(),
                     new PdfGeneratorMockAdapter(), new NotificationMockAdapter(), billingPublisher,
                     new SalesCrmIntegrationAdapter(new SalesQueryService(orderRepo, offerRepo, customerRepo)),
                     new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
@@ -110,29 +108,6 @@ public class MessagingDemo {
             Thread.sleep(1500);
             System.out.println(">> Stan zamówienia po przejściu zdarzenia przez kolejkę: "
                     + orderRepo.findById(new OrderId(orderId)).get().getState());
-        }
-    }
-
-    /** Cennik demo: stała wycena specyfikacji (UC-CRM-02). */
-    private static final class FixedPriceCatalog implements CatalogRepository {
-        @Override
-        public Money getSpecificationPrice(String specificationId) {
-            return Money.of(new BigDecimal("100000"), "PLN");
-        }
-
-        @Override
-        public void save(ProductCatalog catalog) {
-            throw new UnsupportedOperationException("Demo price list is read-only.");
-        }
-
-        @Override
-        public Optional<ProductCatalog> findById(CatalogId id) {
-            return Optional.empty();
-        }
-
-        @Override
-        public List<ProductCatalog> findAll() {
-            return List.of();
         }
     }
 }

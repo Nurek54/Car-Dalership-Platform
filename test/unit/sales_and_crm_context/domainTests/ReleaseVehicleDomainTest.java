@@ -1,11 +1,12 @@
 package unit.sales_and_crm_context.domainTests;
 
 import org.junit.jupiter.api.Test;
-import salon.sales.domain.model.order.*;
-import salon.sales.domain.model.offer.OfferId;
-import salon.shared.model.Money;
-import salon.shared.model.OrderId;
-import salon.sales.domain.event.OrderCompletedEvent;
+import salon.sales.application.domain.model.order.Order;
+import salon.sales.application.domain.model.order.OrderState;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.common.model.Money;
+import salon.common.model.OrderId;
+import salon.sales.application.domain.event.OrderCompletedEvent;
 
 import java.time.LocalDate;
 

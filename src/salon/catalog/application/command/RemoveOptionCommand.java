@@ -1,7 +1,9 @@
-package salon.catalog.application.dto;
+package salon.catalog.application.command;
 
 /**
  * Polecenie usunięcia wcześniej dobranej opcji ze specyfikacji.
+ *
+ * Należy do warstwy aplikacji (kontrakt portu wejściowego BuildSpecification).
  */
 public record RemoveOptionCommand(String specificationId, String optionCode) {
 

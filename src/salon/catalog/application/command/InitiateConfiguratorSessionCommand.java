@@ -1,4 +1,4 @@
-package salon.catalog.application.dto;
+package salon.catalog.application.command;
 
 /**
  * Model danych wejściowych (polecenie) dla otwarcia sesji konfiguratora.

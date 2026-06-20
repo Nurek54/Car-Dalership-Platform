@@ -10,7 +10,8 @@ import java.util.List;
  *
  * Wg PDF (rozdz. 4): usługa zwraca MINIMALNE dane wyjściowe – zalecany obiekt
  * wartości / DTO, nie agregat ani encję. Dzięki temu model dziedziny nie wycieka
- * do adapterów wejściowych.
+ * do adapterów wejściowych. Należy do warstwy aplikacji (kontrakt portu wejściowego),
+ * obok – nie wewnątrz – pakietu application.port (porty muszą być interfejsami).
  */
 public record SpecificationView(String specificationId,
                                 String catalogId,

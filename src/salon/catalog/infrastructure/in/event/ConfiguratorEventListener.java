@@ -1,6 +1,6 @@
 package salon.catalog.infrastructure.in.event;
 
-import salon.catalog.application.dto.InitiateConfiguratorSessionCommand;
+import salon.catalog.application.command.InitiateConfiguratorSessionCommand;
 import salon.catalog.application.dto.SpecificationView;
 import salon.catalog.application.port.in.BuildSpecification;
 import org.springframework.stereotype.Component;

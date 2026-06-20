@@ -1,9 +1,9 @@
 package salon.catalog.application.port.in;
 
-import salon.catalog.application.dto.AddOptionCommand;
-import salon.catalog.application.dto.FinalizeSpecificationCommand;
-import salon.catalog.application.dto.InitiateConfiguratorSessionCommand;
-import salon.catalog.application.dto.RemoveOptionCommand;
+import salon.catalog.application.command.AddOptionCommand;
+import salon.catalog.application.command.FinalizeSpecificationCommand;
+import salon.catalog.application.command.InitiateConfiguratorSessionCommand;
+import salon.catalog.application.command.RemoveOptionCommand;
 import salon.catalog.application.dto.SpecificationView;
 
 /**

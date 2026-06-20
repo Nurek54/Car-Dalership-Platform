@@ -1,9 +1,12 @@
-package salon.catalog.application.dto;
+package salon.catalog.application.command;
 
 /**
  * Polecenie dobrania opcji do specyfikacji (UC-KON-01, kroki 2–3).
  * Identyfikatory i kody przekazywane jako proste typy – mapowane na obiekty
  * dziedziny dopiero w usłudze aplikacji.
+ *
+ * Polecenie należy do warstwy aplikacji (kontrakt portu wejściowego BuildSpecification);
+ * adapter sterujący buduje je z danych zewnętrznych i przekazuje do portu.
  */
 public record AddOptionCommand(String specificationId, String optionCode) {
 

@@ -5,9 +5,13 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-// "PojazdGotowyDoWydania" (UC-INW-05) — saldo rozliczone, auto czeka na odbiór klienta.
-public record VehicleReadyForHandoverEvent(UUID eventId,
-                                           String orderId,
-                                           String vin,
-                                           Instant occurredOn) implements DomainEvent {
+/**
+ * UC-INW-05: saldo zamówienia rozliczone — pojazd zmienił status na "Gotowy do wydania".
+ */
+public record VehicleReadyForHandoverEvent(String orderId, String vin,
+                                           UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public VehicleReadyForHandoverEvent(String orderId, String vin) {
+        this(orderId, vin, UUID.randomUUID(), Instant.now());
+    }
 }

@@ -5,8 +5,13 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-// "FinansowanieOdrzucone" (UC-FIN-01 A2).
-public record FinancingRejectedEvent(UUID eventId,
-                                     String orderId,
-                                     Instant occurredOn) implements DomainEvent {
+/**
+ * UC-FIN-02 / A1: bank wydał decyzję negatywną. Zdarzenie trafia do Kontekstu Sprzedaży i CRM.
+ */
+public record FinancingRejectedEvent(String orderId,
+                                     UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public FinancingRejectedEvent(String orderId) {
+        this(orderId, UUID.randomUUID(), Instant.now());
+    }
 }

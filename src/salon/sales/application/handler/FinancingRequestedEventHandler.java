@@ -20,6 +20,6 @@ public class FinancingRequestedEventHandler {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
-        this.financePort.startCreditCheckProcess(event.orderId());
+        this.financePort.submitFinancingApplication(event.orderId());
     }
 }

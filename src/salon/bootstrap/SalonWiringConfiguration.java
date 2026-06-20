@@ -34,9 +34,9 @@ import salon.financing.infrastructure.in.messaging.FinancingEventListener;
 // (fabryki, RuleValidationService, Clock). Ręczne beany kolidowałyby z beanami skanowanymi.
 
 import salon.logistics.application.service.InventoryManagementService;
-import salon.logistics.application.port.out.FactoryIntegrationAclPort;
+import salon.logistics.application.port.out.ImporterACL;
 import salon.logistics.application.port.out.VehicleDatabaseRepository;
-import salon.logistics.application.port.out.SpecificationReadModelPort;
+import salon.logistics.application.port.out.CatalogIntegration;
 import salon.logistics.infrastructure.in.messaging.FinancingEventSubscriberAdapter;
 import salon.logistics.infrastructure.out.mock.FactoryIntegrationMockAdapter;
 import salon.logistics.infrastructure.out.mock.InMemoryInventoryRepository;
@@ -70,18 +70,19 @@ public class SalonWiringConfiguration {
         return new InMemoryInventoryRepository();
     }
 
+    /** Port wyjściowy „ImporterACL" (Rysunek 37) — integracja z systemem fabryki/importera. */
     @Bean
-    public FactoryIntegrationAclPort factoryIntegrationAclPort() {
+    public ImporterACL importerAcl() {
         return new FactoryIntegrationMockAdapter();
     }
 
     /**
-     * Lokalny read model specyfikacji Inwentarza — zasilany asynchronicznie zdarzeniami
-     * SpecificationCompleted (Katalog) i OrderPlaced (Sprzedaż), zamiast synchronicznego
-     * odpytywania innych kontekstów.
+     * Port wyjściowy „CatalogIntegration" (Rysunek 37) — lokalna kopia danych Katalogu
+     * zasilana asynchronicznie zdarzeniami SpecificationCompleted (Katalog) i OrderPlaced (Sprzedaż),
+     * zamiast synchronicznego odpytywania innych kontekstów.
      */
     @Bean
-    public SpecificationReadModelPort specificationReadModelPort() {
+    public CatalogIntegration catalogIntegration() {
         return new InMemorySpecificationReadModelAdapter();
     }
 
@@ -140,11 +141,11 @@ public class SalonWiringConfiguration {
     @Bean
     public InventoryManagementService inventoryManagementAppService(
             VehicleDatabaseRepository inventoryRepository,
-            SpecificationReadModelPort specificationReadModelPort,
-            FactoryIntegrationAclPort factoryIntegrationAclPort,
+            CatalogIntegration catalogIntegration,
+            ImporterACL importerAcl,
             EventPublisher eventPublisherPort) {
         return new InventoryManagementService(inventoryRepository,
-                specificationReadModelPort, factoryIntegrationAclPort, eventPublisherPort);
+                catalogIntegration, importerAcl, eventPublisherPort);
     }
 
     // --- Fakturowanie i Rozliczenia ---
@@ -227,19 +228,21 @@ public class SalonWiringConfiguration {
         return new LogisticsEventSubscriberAdapter(salesAppService);
     }
 
+    /** Inwentarz <- Sprzedaż: OrderPlaced (powiązanie spec.) oraz komenda ReleaseVehicle (UC-INW-06). */
     @Bean
     public salon.logistics.infrastructure.in.messaging.SalesEventSubscriberAdapter
-    logisticsSalesEventSubscriberAdapter(InventoryManagementService inventoryManagementAppService) {
+    logisticsSalesEventSubscriberAdapter(CatalogIntegration catalogIntegration,
+                                         InventoryManagementService inventoryManagementAppService) {
         return new salon.logistics.infrastructure.in.messaging.SalesEventSubscriberAdapter(
-                inventoryManagementAppService, inventoryManagementAppService);
+                catalogIntegration, inventoryManagementAppService);
     }
 
-    /** Inwentarz <- Katalog: SpecificationCompleted zasila lokalny read model specyfikacji. */
+    /** Inwentarz <- Katalog: SpecificationCompleted zasila lokalną kopię danych Katalogu. */
     @Bean
     public salon.logistics.infrastructure.in.messaging.CatalogEventSubscriberAdapter
-    logisticsCatalogEventSubscriberAdapter(InventoryManagementService inventoryManagementAppService) {
+    logisticsCatalogEventSubscriberAdapter(CatalogIntegration catalogIntegration) {
         return new salon.logistics.infrastructure.in.messaging.CatalogEventSubscriberAdapter(
-                inventoryManagementAppService);
+                catalogIntegration);
     }
 
     @Bean

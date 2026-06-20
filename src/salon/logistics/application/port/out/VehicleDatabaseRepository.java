@@ -1,15 +1,17 @@
 package salon.logistics.application.port.out;
 
+import salon.common.model.OrderId;
 import salon.logistics.application.domain.model.vehicle.InventoryVehicle;
 import salon.logistics.application.domain.model.vehicle.VinNumber;
-import salon.common.model.OrderId;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Port wyjściowy: repozytorium agregatu InventoryVehicle —
- * węzeł "VehicleDatabaseRepository" w docs/Inwentarz-Logistyka/LogisticsArchitecture.md.
+ * PORT WYJŚCIOWY (Rysunek 37) – „VehicleDatabaseRepository”.
+ *
+ * Lokalna baza pojazdów na placu (Stock). Inwentarz jest jedynym właścicielem informacji
+ * o tym, do jakiego zamówienia przypisany jest dany VIN i czy fizycznie jest on na placu.
  */
 public interface VehicleDatabaseRepository {
 
@@ -20,10 +22,4 @@ public interface VehicleDatabaseRepository {
     Optional<InventoryVehicle> findByOrderId(OrderId orderId);
 
     List<InventoryVehicle> findAll();
-
-    /**
-     * UC-INW-01, krok 2: wyszukanie wolnego pojazdu (status ON_STOCK, rola STOCK)
-     * pasującego do specyfikacji z zamówienia.
-     */
-    Optional<InventoryVehicle> findAvailableVehicle(List<String> specCodes);
 }

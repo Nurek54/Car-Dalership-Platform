@@ -1,11 +1,10 @@
 package salon.logistics.application.port.in;
 
 /**
- * Port wejściowy UC-INW-05: przygotowanie pojazdu do wydania po rozliczeniu —
- * węzeł "PrepareForHandover" w docs/Inwentarz-Logistyka/LogisticsArchitecture.md.
+ * PORT WEJŚCIOWY (Rysunek 37) – „PrepareForHandover”.
  *
- * Wyzwalany zdarzeniem SettlementCompleted (saldo = 0). Pojazd (RESERVED) zostaje
- * oznaczony jako "Gotowy do wydania", kontekst emituje VehicleReadyForHandoverEvent.
+ * UC-INW-05: po pełnym rozliczeniu salda (SettlementCompleted) zmiana statusu pojazdu
+ * na „Gotowy do wydania”.
  */
 public interface PrepareForHandover {
 

@@ -1,277 +1,203 @@
 package salon.logistics.application.service;
 
-import salon.logistics.application.domain.exception.FactoryOrderRejectedException;
-
-import salon.logistics.application.port.in.OrderFactoryVehicleUseCase;
-import salon.logistics.application.port.in.PrepareForHandover;
-import salon.logistics.application.port.in.ReceiveVehicle;
-import salon.logistics.application.port.in.ReleaseVehicle;
-import salon.logistics.application.port.in.ReleaseReservationUseCase;
-import salon.logistics.application.port.in.ReserveVehicle;
-import salon.logistics.application.port.in.SynchronizeSpecificationUseCase;
-import salon.logistics.application.port.out.FactoryIntegrationAclPort;
-import salon.logistics.application.port.out.VehicleDatabaseRepository;
-import salon.logistics.application.port.out.SpecificationReadModelPort;
+import salon.common.application.EventPublisher;
+import salon.common.model.OrderId;
 import salon.logistics.application.domain.event.FactoryOrderFailedEvent;
 import salon.logistics.application.domain.event.FactoryOrderPlacedEvent;
-import salon.logistics.application.domain.event.VehicleInventoryReleasedError;
+import salon.logistics.application.domain.event.VehicleDeliveredToStockEvent;
+import salon.logistics.application.domain.event.VehicleInventoryReleasedErrorEvent;
+import salon.logistics.application.domain.event.VehicleInventoryReleasedEvent;
 import salon.logistics.application.domain.event.VehicleIsNotOnStockEvent;
-import salon.logistics.application.domain.exception.InvalidVehicleStateException;
+import salon.logistics.application.domain.event.VehicleReadyForHandoverEvent;
+import salon.logistics.application.domain.event.VehicleReservationCancelledEvent;
+import salon.logistics.application.domain.event.VehicleReservedFromStockEvent;
+import salon.logistics.application.domain.exception.FactoryOrderFailedException;
+import salon.logistics.application.domain.exception.IllegalVehicleStateException;
+import salon.logistics.application.domain.exception.VehicleNotFoundException;
 import salon.logistics.application.domain.model.vehicle.ImporterData;
 import salon.logistics.application.domain.model.vehicle.InventoryVehicle;
 import salon.logistics.application.domain.model.vehicle.InventoryVehicleFactory;
+import salon.logistics.application.domain.model.vehicle.SpecificationId;
+import salon.logistics.application.domain.model.vehicle.VehicleState;
 import salon.logistics.application.domain.model.vehicle.VinNumber;
-import salon.common.application.EventPublisher;
-import salon.common.event.DomainEvent;
-import salon.common.model.OrderId;
-import salon.common.model.SpecificationId;
+import salon.logistics.application.port.in.PrepareForHandover;
+import salon.logistics.application.port.in.ReceiveVehicle;
+import salon.logistics.application.port.in.ReleaseVehicle;
+import salon.logistics.application.port.in.ReserveVehicle;
+import salon.logistics.application.port.out.CatalogIntegration;
+import salon.logistics.application.port.out.ImporterACL;
+import salon.logistics.application.port.out.VehicleDatabaseRepository;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
- * Scentralizowana usługa aplikacyjna Kontekstu Inwentarza i Logistyki —
- * węzeł "InventoryManagementService" w docs/Inwentarz-Logistyka/LogisticsArchitecture.md
- * (PDF rozdz. 3.5.3 "Scentralizowana Orkiestracja i Izolacja Logiki").
+ * USŁUGA APLIKACJI (Rysunek 37) – „InventoryManagementService”.
  *
- * Wszystkie przypadki użycia (UC-INW-01..06) mają własne dedykowane porty wejściowe,
- * ale ich wykonanie jest delegowane do tej jednej usługi (redukcja Class Explosion).
- * Wyłączna odpowiedzialność: orkiestracja — pobranie/utworzenie agregatu InventoryVehicle,
- * wywołanie mutacji stanu, utrwalenie wyników i publikacja zdarzeń WYGENEROWANYCH
- * PRZEZ AGREGAT. Zdarzenia procesowe bez agregatu (VehicleIsNotOnStock, FactoryOrderPlaced,
- * FactoryOrderFailed, VehicleInventoryReleasedError) emituje usługa.
+ * Jedyny punkt orkiestracji Kontekstu Inwentarza i Logistyki. Realizuje cztery porty wejściowe
+ * z diagramu architektury: {@link ReserveVehicle}, {@link ReceiveVehicle}, {@link ReleaseVehicle}
+ * i {@link PrepareForHandover} (pokrywając UC-INW-01..06), korzystając z czterech portów wyjściowych:
+ * {@link VehicleDatabaseRepository}, {@link CatalogIntegration}, {@link ImporterACL} i wspólnego
+ * {@link EventPublisher}. Operacje NIEBIZNESOWE (pobranie agregatu, zapis, emisja zdarzeń) są tutaj;
+ * reguły cyklu życia pojazdu — w agregacie {@link InventoryVehicle}.
  */
-public class InventoryManagementService
-        implements ReserveVehicle, OrderFactoryVehicleUseCase, ReceiveVehicle,
-        ReleaseReservationUseCase, PrepareForHandover, ReleaseVehicle,
-        SynchronizeSpecificationUseCase {
+public class InventoryManagementService implements
+        ReserveVehicle, ReceiveVehicle, ReleaseVehicle, PrepareForHandover {
 
-    private final VehicleDatabaseRepository inventoryRepository;
-    private final InventoryVehicleFactory vehicleFactory;
-    private final SpecificationReadModelPort specificationReadModel;
-    private final FactoryIntegrationAclPort factoryAcl;
+    private final VehicleDatabaseRepository vehicleRepository;
+    private final CatalogIntegration catalogIntegration;
+    private final ImporterACL importerAcl;
     private final EventPublisher eventPublisher;
+    private final InventoryVehicleFactory vehicleFactory = new InventoryVehicleFactory();
 
-    public InventoryManagementService(VehicleDatabaseRepository inventoryRepository,
-                                         SpecificationReadModelPort specificationReadModel,
-                                         FactoryIntegrationAclPort factoryAcl,
-                                         EventPublisher eventPublisher) {
-        this(inventoryRepository, new InventoryVehicleFactory(),
-                specificationReadModel, factoryAcl, eventPublisher);
-    }
-
-    public InventoryManagementService(VehicleDatabaseRepository inventoryRepository,
-                                         InventoryVehicleFactory vehicleFactory,
-                                         SpecificationReadModelPort specificationReadModel,
-                                         FactoryIntegrationAclPort factoryAcl,
-                                         EventPublisher eventPublisher) {
-        if (inventoryRepository == null) {
-            throw new IllegalArgumentException("inventoryRepository must not be null.");
+    public InventoryManagementService(VehicleDatabaseRepository vehicleRepository,
+                                      CatalogIntegration catalogIntegration,
+                                      ImporterACL importerAcl,
+                                      EventPublisher eventPublisher) {
+        if (vehicleRepository == null) {
+            throw new IllegalArgumentException("vehicleRepository must not be null.");
         }
-        if (vehicleFactory == null) {
-            throw new IllegalArgumentException("vehicleFactory must not be null.");
+        if (catalogIntegration == null) {
+            throw new IllegalArgumentException("catalogIntegration must not be null.");
         }
-        if (specificationReadModel == null) {
-            throw new IllegalArgumentException("specificationReadModel must not be null.");
-        }
-        if (factoryAcl == null) {
-            throw new IllegalArgumentException("factoryAcl must not be null.");
+        if (importerAcl == null) {
+            throw new IllegalArgumentException("importerAcl must not be null.");
         }
         if (eventPublisher == null) {
             throw new IllegalArgumentException("eventPublisher must not be null.");
         }
-        this.inventoryRepository = inventoryRepository;
-        this.vehicleFactory = vehicleFactory;
-        this.specificationReadModel = specificationReadModel;
-        this.factoryAcl = factoryAcl;
+        this.vehicleRepository = vehicleRepository;
+        this.catalogIntegration = catalogIntegration;
+        this.importerAcl = importerAcl;
         this.eventPublisher = eventPublisher;
     }
 
-    /** Zdarzenie SpecificationCompleted (Katalog) -> aktualizacja lokalnej kopii specyfikacji. */
-    @Override
+    // ===== Zasilanie lokalnej kopii danych Katalogu (port wyjściowy CatalogIntegration) =====
+    // Metody pomocnicze wołane przez korzeń kompozycji / demo; subskrybenty zdarzeń mogą też
+    // pisać bezpośrednio do portu CatalogIntegration.
+
     public void registerSpecification(String specificationId, List<String> optionCodes) {
-        if (specificationId == null || specificationId.isBlank()) {
-            throw new IllegalArgumentException("specificationId must not be blank.");
-        }
-        this.specificationReadModel.saveSpecification(
-                new SpecificationId(specificationId), optionCodes);
+        this.catalogIntegration.saveSpecification(specificationId, optionCodes);
     }
 
-    /** Zdarzenie OrderPlaced (Sprzedaż) -> powiązanie zamówienia ze specyfikacją. */
-    @Override
     public void linkOrderToSpecification(String orderId, String specificationId) {
-        OrderId id = requireOrderId(orderId);
-        if (specificationId == null || specificationId.isBlank()) {
-            throw new IllegalArgumentException("specificationId must not be blank.");
-        }
-        this.specificationReadModel.linkOrderToSpecification(
-                id, new SpecificationId(specificationId));
+        this.catalogIntegration.linkOrderToSpecification(orderId, specificationId);
     }
 
-    /**
-     * UC-INW-01: weryfikacja dostępności i rezerwacja pojazdu z placu.
-     * Trigger: FinancingApproved LUB BankTransferDeclared. Kody wyposażenia czytane
-     * z lokalnego read modelu (zasilonego zdarzeniami SpecificationCompleted i OrderPlaced)
-     * — bez synchronicznego odpytywania innych kontekstów.
-     */
+    // ===== ReserveVehicle: UC-INW-01 (rezerwacja z placu) + UC-INW-02 (zlecenie produkcji) =====
+
     @Override
     public void reserveVehicleForOrder(String orderId) {
-        OrderId id = requireOrderId(orderId);
-        List<String> specCodes = requireSpecCodes(id);
+        OrderId order = new OrderId(orderId);
+        Optional<String> specificationId = this.catalogIntegration.findSpecificationByOrder(orderId);
 
-        Optional<InventoryVehicle> found = this.inventoryRepository.findAvailableVehicle(specCodes);
-        if (found.isEmpty()) {
-            // A1: samochodu nie ma na placu -> wstrzymujemy rezerwację, emitujemy VehicleIsNotOnStock
-            // (w Fakturowaniu wyzwala UC-FIR-01 — prośbę o zadatek).
-            this.eventPublisher.publish(new VehicleIsNotOnStockEvent(
-                    UUID.randomUUID(), id.value(), Instant.now()));
-            return;
+        Optional<InventoryVehicle> free = this.vehicleRepository.findAll().stream()
+                .filter(v -> v.getState() == VehicleState.ON_STOCK && v.getOrder() == null)
+                .filter(v -> matchesSpecification(v, specificationId.orElse(null)))
+                .findFirst();
+
+        if (free.isPresent()) {
+            InventoryVehicle vehicle = free.get();
+            vehicle.lockForOrder(order);                    // ON_STOCK -> RESERVED (reguła w agregacie)
+            this.vehicleRepository.save(vehicle);
+            this.eventPublisher.publish(
+                    new VehicleReservedFromStockEvent(orderId, vehicle.getVin().value()));
+        } else {
+            // A1: brak wolnego auta na placu -> ścieżka zamówienia produkcji / zadatku.
+            this.eventPublisher.publish(new VehicleIsNotOnStockEvent(orderId));
         }
-        InventoryVehicle vehicle = found.get();
-        vehicle.lockForOrder(id);
-        this.inventoryRepository.save(vehicle);
-        publishEventsOf(vehicle); // VehicleReservedFromStockEvent (w Fakturowaniu: UC-FIR-02)
     }
 
-    /**
-     * UC-INW-02: zlecenie produkcji pojazdu w fabryce. Trigger: AdvancePaymentRegistered.
-     * Kody wyposażenia (silnik, opcje, kolor) czytane z lokalnego read modelu specyfikacji;
-     * FactoryIntegrationAclPort (ACL) komunikuje się z API producenta — to jedyna
-     * synchroniczna integracja tego przypadku użycia (system zewnętrzny, zgodnie z PDF).
-     */
     @Override
     public void orderVehicleFromFactory(String orderId) {
-        OrderId id = requireOrderId(orderId);
-
-        // Idempotencja: jeśli dla zamówienia istnieje już pojazd (zarezerwowany/w produkcji), nie zlecamy.
-        if (this.inventoryRepository.findByOrderId(id).isPresent()) {
-            System.out.println("[InventoryManagementService] Order " + orderId
-                    + " already has a vehicle — factory order skipped.");
-            return;
-        }
-
-        List<String> specCodes = requireSpecCodes(id);
+        String specificationId = this.catalogIntegration.findSpecificationByOrder(orderId).orElse(null);
+        List<String> optionCodes = specificationId == null
+                ? List.of()
+                : this.catalogIntegration.findOptionCodes(specificationId);
         try {
-            VinNumber vin = this.factoryAcl.placeFactoryOrder(id, specCodes);
-            // Wirtualna instancja auta (IN_PRODUCTION) przypisana do zamówienia klienta.
-            InventoryVehicle vehicle = this.vehicleFactory.createOrderedFromFactory(vin, id);
-            this.inventoryRepository.save(vehicle);
-            this.eventPublisher.publish(new FactoryOrderPlacedEvent(
-                    UUID.randomUUID(), id.value(), vin.value(), Instant.now()));
-        } catch (FactoryOrderRejectedException e) {
-            // A1: fabryka odrzuca zlecenie (np. problem z połączeniem).
-            this.eventPublisher.publish(new FactoryOrderFailedEvent(
-                    UUID.randomUUID(), id.value(), e.getMessage(), Instant.now()));
+            String vin = this.importerAcl.placeFactoryOrder(orderId, optionCodes);
+            InventoryVehicle vehicle = this.vehicleFactory.createForFactoryOrder(
+                    new VinNumber(vin),
+                    new OrderId(orderId),
+                    specificationId == null ? null : new SpecificationId(specificationId));
+            this.vehicleRepository.save(vehicle);
+            this.eventPublisher.publish(new FactoryOrderPlacedEvent(orderId, vin));
+        } catch (FactoryOrderFailedException e) {
+            this.eventPublisher.publish(new FactoryOrderFailedEvent(orderId, e.getMessage()));
         }
     }
 
-    /**
-     * UC-INW-03: przyjęcie pojazdu na stan magazynowy (Pracownik Placu skanuje VIN).
-     * Tożsamość pojazdu weryfikuje warstwa ACL importera. Auto z kartoteką "W produkcji"
-     * zostaje sparowane z oczekującym zamówieniem (VehicleDeliveredToStock); auto bez
-     * zamówienia (A1) dostaje status "Wolny" — bez zdarzenia końcowego.
-     */
+    // ===== ReceiveVehicle: UC-INW-03 (przyjęcie pojazdu na stan magazynowy) =====
+
     @Override
     public void receiveVehicle(String vin) {
-        if (vin == null || vin.isBlank()) {
-            throw new IllegalArgumentException("vin must not be blank.");
-        }
         VinNumber vinNumber = new VinNumber(vin);
-        ImporterData data = this.factoryAcl.fetchVehicleData(vinNumber);
+        Optional<InventoryVehicle> existing = this.vehicleRepository.findByVin(vinNumber);
 
-        InventoryVehicle vehicle = this.inventoryRepository.findByVin(vinNumber)
-                .orElseGet(() -> this.vehicleFactory.createUnassigned(vinNumber)); // A1: nowa kartoteka
-
-        vehicle.receiveOnYard(data);
-        this.inventoryRepository.save(vehicle);
-        publishEventsOf(vehicle); // VehicleDeliveredToStockEvent (tylko gdy sparowano z zamówieniem)
-    }
-
-    /**
-     * UC-INW-04: zwolnienie blokady pojazdu. Trigger: PaymentDeadlineExpired.
-     * Operacja idempotentna — A1: pojazd nie istnieje w rezerwacjach -> brak akcji.
-     */
-    @Override
-    public void releaseReservationForOrder(String orderId) {
-        OrderId id = requireOrderId(orderId);
-        Optional<InventoryVehicle> found = this.inventoryRepository.findByOrderId(id);
-        if (found.isEmpty()) {
-            System.out.println("[InventoryManagementService] No reserved vehicle for order "
-                    + orderId + " — release skipped (idempotent).");
-            return;
+        if (existing.isPresent()) {
+            InventoryVehicle vehicle = existing.get();
+            ImporterData data = new ImporterData(vinNumber, vehicle.getSpecification(), List.of());
+            vehicle.receiveOnYard(data);                    // IN_PRODUCTION -> RESERVED
+            this.vehicleRepository.save(vehicle);
+            OrderId order = vehicle.getOrder();
+            this.eventPublisher.publish(new VehicleDeliveredToStockEvent(
+                    order == null ? null : order.value(), vin));
+        } else {
+            // A1: auto "na stock" bez zamówienia -> rejestracja jako wolne, bez zdarzenia.
+            ImporterData data = new ImporterData(vinNumber, null, List.of());
+            this.vehicleRepository.save(this.vehicleFactory.createStockArrival(data));
         }
-        InventoryVehicle vehicle = found.get();
-        vehicle.releaseReservation();
-        this.inventoryRepository.save(vehicle);
-        publishEventsOf(vehicle); // VehicleReservationCancelledEvent
     }
 
-    /**
-     * UC-INW-05: przygotowanie pojazdu do wydania po rozliczeniu. Trigger: SettlementCompleted.
-     */
-    @Override
-    public void prepareVehicleForHandover(String orderId) {
-        OrderId id = requireOrderId(orderId);
-        InventoryVehicle vehicle = this.inventoryRepository.findByOrderId(id)
-                .orElseThrow(() -> new IllegalStateException(
-                        "No reserved vehicle for order " + orderId));
-        vehicle.markReadyForHandover();
-        this.inventoryRepository.save(vehicle);
-        publishEventsOf(vehicle); // VehicleReadyForHandoverEvent (w CRM: UC-CRM-04)
-    }
+    // ===== ReleaseVehicle: UC-INW-06 (wydanie) + UC-INW-04 (zwolnienie blokady) =====
 
-    /**
-     * UC-INW-06: zdjęcie pojazdu ze stanu magazynowego. Trigger: komenda ReleaseVehicle z CRM.
-     * A1: niewłaściwy status pojazdu -> komenda odrzucona, emitowane VehicleInventoryReleasedError.
-     */
     @Override
     public void releaseVehicle(String orderId) {
-        OrderId id = requireOrderId(orderId);
-        Optional<InventoryVehicle> found = this.inventoryRepository.findByOrderId(id);
-        if (found.isEmpty()) {
-            this.eventPublisher.publish(new VehicleInventoryReleasedError(
-                    UUID.randomUUID(), id.value(), "No vehicle assigned to this order.",
-                    Instant.now()));
-            return;
-        }
-        InventoryVehicle vehicle = found.get();
+        InventoryVehicle vehicle = this.vehicleRepository.findByOrderId(new OrderId(orderId))
+                .orElseThrow(() -> new VehicleNotFoundException(
+                        "Brak pojazdu do wydania dla zamówienia " + orderId));
         try {
-            vehicle.handOver();
-        } catch (InvalidVehicleStateException e) {
-            this.eventPublisher.publish(new VehicleInventoryReleasedError(
-                    UUID.randomUUID(), id.value(), e.getMessage(), Instant.now()));
+            vehicle.handOver();                              // READY_FOR_HANDOVER -> HANDED_OVER
+            this.vehicleRepository.save(vehicle);
+            this.eventPublisher.publish(
+                    new VehicleInventoryReleasedEvent(orderId, vehicle.getVin().value()));
+        } catch (IllegalVehicleStateException e) {
+            // A1: niewłaściwy status pojazdu -> zdarzenie kompensacyjne dla Sprzedaży.
+            this.eventPublisher.publish(new VehicleInventoryReleasedErrorEvent(orderId, e.getMessage()));
+        }
+    }
+
+    @Override
+    public void releaseReservation(String orderId) {
+        Optional<InventoryVehicle> reserved = this.vehicleRepository.findByOrderId(new OrderId(orderId));
+        if (reserved.isEmpty()) {
+            // A1: pojazd nie istnieje w rezerwacjach (wcześniej usunięty/wydany) — nic do zrobienia.
             return;
         }
-        this.inventoryRepository.save(vehicle);
-        publishEventsOf(vehicle); // VehicleInventoryReleasedEvent
+        InventoryVehicle vehicle = reserved.get();
+        vehicle.releaseReservation();                        // RESERVED -> ON_STOCK
+        this.vehicleRepository.save(vehicle);
+        this.eventPublisher.publish(
+                new VehicleReservationCancelledEvent(orderId, vehicle.getVin().value()));
     }
 
-    // --- pomocnicze ---
+    // ===== PrepareForHandover: UC-INW-05 (przygotowanie do wydania po rozliczeniu) =====
 
-    private OrderId requireOrderId(String orderId) {
-        if (orderId == null || orderId.isBlank()) {
-            throw new IllegalArgumentException("orderId must not be blank.");
+    @Override
+    public void prepareVehicleForHandover(String orderId) {
+        InventoryVehicle vehicle = this.vehicleRepository.findByOrderId(new OrderId(orderId))
+                .orElseThrow(() -> new VehicleNotFoundException(
+                        "Brak zarezerwowanego pojazdu dla zamówienia " + orderId));
+        vehicle.prepareForHandover();                        // RESERVED -> READY_FOR_HANDOVER
+        this.vehicleRepository.save(vehicle);
+        this.eventPublisher.publish(
+                new VehicleReadyForHandoverEvent(orderId, vehicle.getVin().value()));
+    }
+
+    private boolean matchesSpecification(InventoryVehicle vehicle, String specificationId) {
+        if (specificationId == null || vehicle.getSpecification() == null) {
+            return false;
         }
-        return new OrderId(orderId);
-    }
-
-    /**
-     * Kody wyposażenia z lokalnego read modelu. Brak danych = naruszenie spójności
-     * ostatecznej (zdarzenia SpecificationCompleted/OrderPlaced jeszcze nie dotarły
-     * albo zostały zgubione) — zgłaszamy jawnie, zamiast rezerwować w ciemno.
-     */
-    private List<String> requireSpecCodes(OrderId orderId) {
-        return this.specificationReadModel.findCodesForOrder(orderId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "No specification known for order " + orderId.value()
-                        + " — SpecificationCompleted/OrderPlaced events not received yet."));
-    }
-
-    private void publishEventsOf(InventoryVehicle vehicle) {
-        for (DomainEvent event : vehicle.pullDomainEvents()) {
-            this.eventPublisher.publish(event);
-        }
+        return specificationId.equals(vehicle.getSpecification().value());
     }
 }

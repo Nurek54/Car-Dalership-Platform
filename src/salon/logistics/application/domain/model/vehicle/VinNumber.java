@@ -1,14 +1,20 @@
 package salon.logistics.application.domain.model.vehicle;
 
 /**
- * Value Object: numer VIN — globalny identyfikator fizycznego egzemplarza (UC-INW-01).
- * ZALOZENIE: walidujemy tylko "nie pusty" (testy często używają skróconych, sztucznych VIN-ów).
+ * Obiekt wartości: numer VIN — naturalny, niezmienny identyfikator fizycznego pojazdu.
+ * Zgodnie z założeniem kanwy skan VIN jest bezbłędny i pokrywa się z danymi cyfrowymi
+ * zamówienia produkcyjnego.
  */
 public record VinNumber(String value) {
 
     public VinNumber {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("VinNumber must not be blank.");
+            throw new IllegalArgumentException("VIN must not be blank.");
         }
+    }
+
+    @Override
+    public String toString() {
+        return value;
     }
 }

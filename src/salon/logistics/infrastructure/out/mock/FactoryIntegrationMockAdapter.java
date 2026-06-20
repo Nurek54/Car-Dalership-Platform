@@ -1,39 +1,23 @@
 package salon.logistics.infrastructure.out.mock;
 
-import salon.logistics.application.port.out.FactoryIntegrationAclPort;
-import salon.logistics.application.domain.model.vehicle.ImporterData;
-import salon.logistics.application.domain.model.vehicle.VinNumber;
-import salon.common.model.OrderId;
+import salon.logistics.application.port.out.ImporterACL;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.UUID;
 
 /**
- * Adapter wyjściowy (mock, ACL) portu FactoryIntegrationAclPort — symuluje API
- * producenta/importera. W środowisku docelowym zastępuje go klient HTTP pełniący
- * rolę warstwy zapobiegającej uszkodzeniom (Anti-Corruption Layer).
+ * ADAPTER WYJŚCIOWY (ACL, Rysunek 37: ImporterACL) – atrapa integracji z systemem fabryki.
+ *
+ * Symuluje synchroniczne złożenie zlecenia produkcji: zwraca nadany przez fabrykę numer VIN.
+ * Wariant zgłaszający {@code FactoryOrderFailedException} reprezentowałby scenariusz UC-INW-02 / A1.
  */
-public class FactoryIntegrationMockAdapter implements FactoryIntegrationAclPort {
-
-    private final AtomicLong sequence = new AtomicLong(1);
+public class FactoryIntegrationMockAdapter implements ImporterACL {
 
     @Override
-    public VinNumber placeFactoryOrder(OrderId orderId, List<String> specCodes) {
-        if (orderId == null) {
-            throw new IllegalArgumentException("orderId must not be null.");
-        }
-        String vin = String.format("WVWZZZ1JZ%08d", this.sequence.getAndIncrement());
-        System.out.println("[FactoryIntegrationMock] PlaceFactoryOrder(" + orderId.value()
-                + ", " + specCodes + ") -> acknowledged, VIN=" + vin);
-        return new VinNumber(vin);
-    }
-
-    @Override
-    public ImporterData fetchVehicleData(VinNumber vin) {
-        if (vin == null) {
-            throw new IllegalArgumentException("vin must not be null.");
-        }
-        System.out.println("[FactoryIntegrationMock] fetchVehicleData(" + vin.value() + ")");
-        return new ImporterData(vin.value());
+    public String placeFactoryOrder(String orderId, List<String> optionCodes) {
+        String vin = "VIN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        System.out.println("[FactoryIntegrationMockAdapter] Zlecenie produkcji dla " + orderId
+                + " przyjęte przez fabrykę, nadany VIN=" + vin + ".");
+        return vin;
     }
 }

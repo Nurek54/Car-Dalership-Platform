@@ -27,7 +27,7 @@ class OfferTest {
         offer.publishOffer();
 
         // Stan zmienia się na PUBLISHED
-        assertThat(offer.getState()).isEqualTo(OfferState.PUBLISHED);
+        assertThat(offer.state()).isEqualTo(OfferState.PUBLISHED);
     }
 
     @Test
@@ -45,7 +45,7 @@ class OfferTest {
                 .hasMessageContaining("Only PUBLISHED offers can be accepted");
 
         // Stan pozostaje niezmieniony
-        assertThat(offer.getState()).isEqualTo(OfferState.DRAFT);
+        assertThat(offer.state()).isEqualTo(OfferState.DRAFT);
     }
 
     @Test
@@ -62,7 +62,7 @@ class OfferTest {
         offer.reject();
 
         // Stan zmienia się na REJECTED
-        assertThat(offer.getState()).isEqualTo(OfferState.REJECTED);
+        assertThat(offer.state()).isEqualTo(OfferState.REJECTED);
     }
 
     @Test

@@ -51,13 +51,13 @@ public class SalesQueryService implements SalesQueryFacade {
         Order order = this.orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalStateException(
                         "No order in CRM for id " + orderId.value()));
-        Offer offer = this.offerRepository.findById(order.getOfferId())
+        Offer offer = this.offerRepository.findById(order.offerId())
                 .orElseThrow(() -> new IllegalStateException(
                         "No source offer in CRM for order " + orderId.value()));
-        Customer customer = this.customerRepository.findById(offer.getCustomerId())
+        Customer customer = this.customerRepository.findById(offer.customerId())
                 .orElseThrow(() -> new IllegalStateException(
-                        "No customer in CRM for id " + offer.getCustomerId().value()));
-        return new CustomerSnapshotDto(customer.getFullName(), customer.getNip());
+                        "No customer in CRM for id " + offer.customerId().value()));
+        return new CustomerSnapshotDto(customer.fullName(), customer.nip());
     }
 
     @Override
@@ -68,13 +68,13 @@ public class SalesQueryService implements SalesQueryFacade {
         Order order = this.orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalStateException(
                         "No order in CRM for id " + orderId.value()));
-        Offer offer = this.offerRepository.findById(order.getOfferId())
+        Offer offer = this.offerRepository.findById(order.offerId())
                 .orElseThrow(() -> new IllegalStateException(
                         "No source offer in CRM for order " + orderId.value()));
-        if (offer.getFinalPrice() == null) {
+        if (offer.finalPrice() == null) {
             throw new IllegalStateException(
-                    "Offer " + offer.getId().value() + " has no final price yet.");
+                    "Offer " + offer.id().value() + " has no final price yet.");
         }
-        return new OfferSnapshotDto(offer.getId().value(), offer.getFinalPrice());
+        return new OfferSnapshotDto(offer.id().value(), offer.finalPrice());
     }
 }

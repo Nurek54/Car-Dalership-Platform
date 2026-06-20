@@ -54,22 +54,22 @@ public class OfferDatabaseAdapter implements OfferDatabaseRepository {
 
     private OfferJpaEntity toEntity(Offer offer) {
         OfferJpaEntity entity = new OfferJpaEntity();
-        entity.id = offer.getId().value();
-        entity.customerId = offer.getCustomerId().value();
-        entity.specificationId = offer.getSpecificationId().value();
-        if (offer.getBasePrice() != null) {
-            entity.basePriceAmount = offer.getBasePrice().amount().toPlainString();
-            entity.basePriceCurrency = offer.getBasePrice().currency();
+        entity.id = offer.id().value();
+        entity.customerId = offer.customerId().value();
+        entity.specificationId = offer.specificationId().value();
+        if (offer.basePrice() != null) {
+            entity.basePriceAmount = offer.basePrice().amount().toPlainString();
+            entity.basePriceCurrency = offer.basePrice().currency();
         }
-        if (offer.getAppliedDiscount() != null) {
-            entity.discountPercentage = offer.getAppliedDiscount().percentage();
+        if (offer.appliedDiscount() != null) {
+            entity.discountPercentage = offer.appliedDiscount().percentage();
         }
-        if (offer.getFinalPrice() != null) {
-            entity.finalPriceAmount = offer.getFinalPrice().amount().toPlainString();
-            entity.finalPriceCurrency = offer.getFinalPrice().currency();
+        if (offer.finalPrice() != null) {
+            entity.finalPriceAmount = offer.finalPrice().amount().toPlainString();
+            entity.finalPriceCurrency = offer.finalPrice().currency();
         }
-        entity.validityDate = offer.getValidityDate();
-        entity.state = offer.getState().name();
+        entity.validityDate = offer.validityDate();
+        entity.state = offer.state().name();
         entity.version = (Long) DomainReflection.get(offer, "version");
         return entity;
     }

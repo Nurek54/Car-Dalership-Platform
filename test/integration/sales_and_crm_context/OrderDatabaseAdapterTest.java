@@ -34,8 +34,8 @@ class OrderDatabaseAdapterTest {
 
         // Agregat zostaje poprawnie odczytany z bazy
         assertThat(loadedOrder).isPresent();
-        assertThat(loadedOrder.get().getId()).isEqualTo(orderId);
-        assertThat(loadedOrder.get().getRequiredDeposit()).isEqualTo(Money.of(100000, "PLN"));
+        assertThat(loadedOrder.get().id()).isEqualTo(orderId);
+        assertThat(loadedOrder.get().requiredDeposit()).isEqualTo(Money.of(100000, "PLN"));
     }
 
     @Test

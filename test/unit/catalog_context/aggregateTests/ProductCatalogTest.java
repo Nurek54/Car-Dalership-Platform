@@ -19,7 +19,7 @@ class ProductCatalogTest {
         ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
 
         // Cennik startuje jako ACTIVE w wersji 1
-        assertThat(catalog.getState()).isEqualTo(CatalogState.ACTIVE);
+        assertThat(catalog.state()).isEqualTo(CatalogState.ACTIVE);
         assertThat(catalog.getVersion()).isEqualTo(1);
         assertThat(catalog.getModelYear()).isEqualTo(new ModelYear("MY_2026"));
 
@@ -57,7 +57,7 @@ class ProductCatalogTest {
         ProductCatalog catalog = ProductCatalog.createActive("MY_2025");
         catalog.archive();
 
-        assertThat(catalog.getState()).isEqualTo(CatalogState.ARCHIVED);
+        assertThat(catalog.state()).isEqualTo(CatalogState.ARCHIVED);
 
         // Zarchiwizowany cennik jest "zamrożony" — nie przyjmuje nowych opcji ani reguł
         assertThatThrownBy(() -> catalog.addOption(ledLights()))

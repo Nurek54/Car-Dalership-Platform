@@ -47,9 +47,9 @@ class ReleaseVehicleAppServiceTest {
         salesAppService.confirmHandover(orderId);
 
         // Zlecamy portowi Inwentarza zdjęcie fizycznego auta z magazynu/placu
-        verify(inventoryPort).releasePhysicalVehicle(order.getVehicleId());
+        verify(inventoryPort).releasePhysicalVehicle(order.vehicleId());
         // Zapisujemy zamówienie jako Zrealizowane
-        assertThat(order.getState()).isEqualTo(OrderState.COMPLETED);
+        assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
         verify(orderRepository).save(order);
         verify(eventPublisher).publishAll(anyList());
     }
@@ -74,7 +74,7 @@ class ReleaseVehicleAppServiceTest {
                 .isInstanceOf(InventoryLockedException.class);
 
         // System nie może zapisać tego zamówienia jako zrealizowane!
-        verify(orderRepository, never()).save(argThat(savedOrder -> savedOrder.getState() == OrderState.COMPLETED));
+        verify(orderRepository, never()).save(argThat(savedOrder -> savedOrder.state() == OrderState.COMPLETED));
 
         verify(eventPublisher, never()).publishAll(anyList());
     }

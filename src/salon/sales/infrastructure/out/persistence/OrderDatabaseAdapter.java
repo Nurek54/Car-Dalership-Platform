@@ -47,24 +47,24 @@ public class OrderDatabaseAdapter implements OrderDatabaseRepository {
 
     private OrderJpaEntity toEntity(Order order) {
         OrderJpaEntity entity = new OrderJpaEntity();
-        entity.id = order.getId().value();
-        entity.sourceOfferId = order.getOfferId().value();
-        entity.specificationId = order.getSpecificationId() == null
+        entity.id = order.id().value();
+        entity.sourceOfferId = order.offerId().value();
+        entity.specificationId = order.specificationId() == null
                 ? null
-                : order.getSpecificationId().value();
-        if (order.getRequiredDeposit() != null) {
-            entity.requiredDepositAmount = order.getRequiredDeposit().amount().toPlainString();
-            entity.requiredDepositCurrency = order.getRequiredDeposit().currency();
+                : order.specificationId().value();
+        if (order.requiredDeposit() != null) {
+            entity.requiredDepositAmount = order.requiredDeposit().amount().toPlainString();
+            entity.requiredDepositCurrency = order.requiredDeposit().currency();
         }
-        entity.paymentMethod = order.getPaymentMethod() == null
+        entity.paymentMethod = order.paymentMethod() == null
                 ? null
-                : order.getPaymentMethod().name();
-        entity.paymentStatus = order.getPaymentStatus() == null
+                : order.paymentMethod().name();
+        entity.paymentStatus = order.paymentStatus() == null
                 ? null
-                : order.getPaymentStatus().name();
-        entity.handoverDate = order.getHandoverDate();
-        entity.vehicleId = order.getVehicleId();
-        entity.state = order.getState().name();
+                : order.paymentStatus().name();
+        entity.handoverDate = order.handoverDate();
+        entity.vehicleId = order.vehicleId();
+        entity.state = order.state().name();
         entity.version = (Long) DomainReflection.get(order, "version");
         return entity;
     }

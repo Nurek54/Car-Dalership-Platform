@@ -34,7 +34,7 @@ class VehicleSpecificationTest {
         VehicleSpecification specification = createSpecification(catalog);
 
         // Nowa konfiguracja startuje jako DRAFT bez wyceny
-        assertThat(specification.getState()).isEqualTo(SpecificationState.DRAFT);
+        assertThat(specification.state()).isEqualTo(SpecificationState.DRAFT);
         assertThat(specification.getTotalPrice()).isNull();
 
         // Klient dobiera dwie opcje z cennika
@@ -42,7 +42,7 @@ class VehicleSpecificationTest {
         specification.addOption(new OptionCode("PANORAMIC_ROOF"), catalog);
 
         // Konfiguracja przechodzi w IN_PROGRESS, a cena sumuje się z cen bazowych
-        assertThat(specification.getState()).isEqualTo(SpecificationState.IN_PROGRESS);
+        assertThat(specification.state()).isEqualTo(SpecificationState.IN_PROGRESS);
         assertThat(specification.getTotalPrice()).isEqualTo(Money.of(12500, "PLN"));
         assertThat(specification.getSelectedOptions())
                 .containsExactly(new OptionCode("LED_LIGHTS"), new OptionCode("PANORAMIC_ROOF"));
@@ -95,13 +95,13 @@ class VehicleSpecificationTest {
         VehicleSpecification specification = createSpecification(catalog);
 
         specification.addOption(new OptionCode("LED_LIGHTS"), catalog);
-        assertThat(specification.getState()).isEqualTo(SpecificationState.IN_PROGRESS);
+        assertThat(specification.state()).isEqualTo(SpecificationState.IN_PROGRESS);
 
         // Klient rezygnuje z jedynej wybranej opcji
         specification.removeOption(new OptionCode("LED_LIGHTS"));
 
         // Pusta konfiguracja wraca do DRAFT
-        assertThat(specification.getState()).isEqualTo(SpecificationState.DRAFT);
+        assertThat(specification.state()).isEqualTo(SpecificationState.DRAFT);
         assertThat(specification.getSelectedOptions()).isEmpty();
     }
 
@@ -115,7 +115,7 @@ class VehicleSpecificationTest {
         specification.finalizeSpecification();
 
         // Stan FINAL + zdarzenie SpecyfikacjaSkompletowana odłożone w agregacie
-        assertThat(specification.getState()).isEqualTo(SpecificationState.FINAL);
+        assertThat(specification.state()).isEqualTo(SpecificationState.FINAL);
         assertThat(specification.getDomainEvents())
                 .hasSize(1)
                 .first()

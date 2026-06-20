@@ -10,7 +10,7 @@ public class OfferNotFoundException extends RuntimeException {
         this.offerId = offerId;
     }
 
-    public String getOfferId() {
+    public String offerId() {
         return this.offerId;
     }
 }

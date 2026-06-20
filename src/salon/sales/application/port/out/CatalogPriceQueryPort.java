@@ -16,5 +16,5 @@ import salon.common.model.Money;
  */
 public interface CatalogPriceQueryPort {
 
-    Money getSpecificationPrice(String specificationId);
+    Money specificationPrice(String specificationId);
 }

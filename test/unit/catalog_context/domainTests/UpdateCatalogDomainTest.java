@@ -15,7 +15,7 @@ class UpdateCatalogDomainTest {
         // Publikacja nowej wersji cennika rozsyła w świat zdarzenie CatalogUpdated
         ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
 
-        assertThat(catalog.getState()).isEqualTo(CatalogState.ACTIVE);
+        assertThat(catalog.state()).isEqualTo(CatalogState.ACTIVE);
         assertThat(catalog.getDomainEvents())
                 .hasSize(1)
                 .first()

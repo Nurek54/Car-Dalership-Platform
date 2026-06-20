@@ -107,7 +107,7 @@ public class MessagingDemo {
             // Dajemy konsumentowi chwilę na odebranie wiadomości z kolejki.
             Thread.sleep(1500);
             System.out.println(">> Stan zamówienia po przejściu zdarzenia przez kolejkę: "
-                    + orderRepo.findById(new OrderId(orderId)).get().getState());
+                    + orderRepo.findById(new OrderId(orderId)).get().state());
         }
     }
 }

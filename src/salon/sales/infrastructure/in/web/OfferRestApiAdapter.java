@@ -51,7 +51,7 @@ public class OfferRestApiAdapter {
     @ExceptionHandler(OfferNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleNotFound(OfferNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("message", "Offer " + ex.getOfferId() + " not found in the system"));
+                .body(Map.of("message", "Offer " + ex.offerId() + " not found in the system"));
     }
 
     // Akceptacja wygasłej oferty -> 409 Conflict (konflikt ze stanem zasobu).

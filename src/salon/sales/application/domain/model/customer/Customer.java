@@ -71,23 +71,23 @@ public class Customer {
         this.taxIdVerified = true;
     }
 
-    public CustomerId getId() {
+    public CustomerId id() {
         return this.id;
     }
 
-    public String getFullName() {
+    public String fullName() {
         return this.fullName;
     }
 
-    public String getNip() {
+    public String nip() {
         return this.nip;
     }
 
-    public Address getAddress() {
+    public Address address() {
         return this.address;
     }
 
-    public ContactData getContact() {
+    public ContactData contact() {
         return this.contact;
     }
 

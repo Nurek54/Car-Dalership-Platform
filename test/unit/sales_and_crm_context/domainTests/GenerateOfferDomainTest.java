@@ -22,7 +22,7 @@ class GenerateOfferDomainTest {
         offer.publishOffer();
 
         // Stan maszyny stanów poprawnie zmienia się na PUBLISHED
-        assertThat(offer.getState()).isEqualTo(OfferState.PUBLISHED);
+        assertThat(offer.state()).isEqualTo(OfferState.PUBLISHED);
     }
 
     @Test

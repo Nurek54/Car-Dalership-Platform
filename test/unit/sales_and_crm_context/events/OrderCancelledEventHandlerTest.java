@@ -32,6 +32,6 @@ class OrderCancelledEventHandlerTest {
 
         eventHandler.handle(event);
 
-        verify(billingPort).processCancelledOrderBilling("ORD-300", event.getReason());
+        verify(billingPort).processCancelledOrderBilling("ORD-300", event.reason());
     }
 }

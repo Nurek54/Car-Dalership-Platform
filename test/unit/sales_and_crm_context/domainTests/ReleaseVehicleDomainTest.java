@@ -34,7 +34,7 @@ class ReleaseVehicleDomainTest {
         order.confirmHandover();
 
         // Agregat przechodzi do końcowego, niemutowalnego stanu COMPLETED
-        assertThat(order.getState()).isEqualTo(OrderState.COMPLETED);
+        assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
         // Generuje się zdarzenie zamykające
         assertThat(order.getDomainEvents()).hasAtLeastOneElementOfType(OrderCompletedEvent.class);
     }
@@ -49,8 +49,8 @@ class ReleaseVehicleDomainTest {
         // Moduł CRM odbiera z modułu Inwentarza zdarzenie błędu (VehicleInventoryReleasedError),
         order.revertToReadyForHandover();
 
-        assertThat(order.getState()).isEqualTo(OrderState.READY_FOR_HANDOVER);
+        assertThat(order.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);
 
-        assertThat(order.getHandoverDate()).isNull();
+        assertThat(order.handoverDate()).isNull();
     }
 }

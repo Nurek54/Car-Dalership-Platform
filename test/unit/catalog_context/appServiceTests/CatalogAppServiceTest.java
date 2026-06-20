@@ -50,7 +50,7 @@ class CatalogAppServiceTest {
         verify(catalogRepository).save(captor.capture());
         ProductCatalog saved = captor.getValue();
         assertThat(saved.getCatalogId()).isEqualTo(newCatalogId);
-        assertThat(saved.getState()).isEqualTo(CatalogState.ACTIVE);
+        assertThat(saved.state()).isEqualTo(CatalogState.ACTIVE);
         assertThat(saved.getOptions()).hasSize(2);
 
         // Propagacja zmian: zdarzenie CatalogUpdated wychodzi w świat
@@ -67,7 +67,7 @@ class CatalogAppServiceTest {
         catalogAppService.publishNewCatalogVersion("MY_2026", previous.getCatalogId().value());
 
         // Stara wersja zostaje zarchiwizowana (niemutowalność starych wersji) i zapisana
-        assertThat(previous.getState()).isEqualTo(CatalogState.ARCHIVED);
+        assertThat(previous.state()).isEqualTo(CatalogState.ARCHIVED);
         verify(catalogRepository, times(2)).save(any(ProductCatalog.class)); // stary + nowy
     }
 

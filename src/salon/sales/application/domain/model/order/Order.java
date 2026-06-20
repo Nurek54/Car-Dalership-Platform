@@ -124,7 +124,7 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /** Aktualizacja statusu opłacenia (sygnał z Kontekstu Rozliczeń). */
-    public void setPaymentStatus(PaymentStatus paymentStatus) {
+    public void changePaymentStatus(PaymentStatus paymentStatus) {
         if (paymentStatus == null) {
             throw new IllegalArgumentException("paymentStatus must not be null.");
         }
@@ -223,41 +223,41 @@ public class Order extends AbstractAggregateRoot {
                 UUID.randomUUID(), this.id.value(), reason, Instant.now()));
     }
 
-    public OrderId getId() {
+    public OrderId id() {
         return this.id;
     }
 
     /** Identyfikator oferty źródłowej (audytowalność: zamówienie oparte o zatwierdzone warunki). */
-    public OfferId getOfferId() {
+    public OfferId offerId() {
         return this.sourceOfferId;
     }
 
     /** Specyfikacja pojazdu z oferty źródłowej (może być null dla zamówień legacy). */
-    public SpecificationId getSpecificationId() {
+    public SpecificationId specificationId() {
         return this.specificationId;
     }
 
-    public Money getRequiredDeposit() {
+    public Money requiredDeposit() {
         return this.requiredDeposit;
     }
 
-    public PaymentMethod getPaymentMethod() {
+    public PaymentMethod paymentMethod() {
         return this.paymentMethod;
     }
 
-    public PaymentStatus getPaymentStatus() {
+    public PaymentStatus paymentStatus() {
         return this.paymentStatus;
     }
 
-    public LocalDate getHandoverDate() {
+    public LocalDate handoverDate() {
         return this.handoverDate;
     }
 
-    public String getVehicleId() {
+    public String vehicleId() {
         return this.vehicleId;
     }
 
-    public OrderState getState() {
+    public OrderState state() {
         return this.state;
     }
 }

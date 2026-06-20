@@ -34,7 +34,7 @@ class ScheduleHandoverDomainTest {
         order.markAsReadyForHandover();
 
         // Stan zamówienia pozwala na wydanie (READY_FOR_HANDOVER)
-        assertThat(order.getState()).isEqualTo(OrderState.READY_FOR_HANDOVER);
+        assertThat(order.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);
 
         // Wygenerowano wewnętrzne zdarzenie o gotowości
         assertThat(order.getDomainEvents()).hasAtLeastOneElementOfType(OrderReadyForHandoverEvent.class);
@@ -58,7 +58,7 @@ class ScheduleHandoverDomainTest {
         Order order = prepareInProgressOrder();
         order.markAsReadyForHandover();
         order.scheduleHandover(LocalDate.now());
-        order.setPaymentStatus(PaymentStatus.PAID);
+        order.changePaymentStatus(PaymentStatus.PAID);
         order.confirmHandover(); // Stan: COMPLETED
 
         // Próba ponownego oznaczenia go jako "gotowe do wydania"

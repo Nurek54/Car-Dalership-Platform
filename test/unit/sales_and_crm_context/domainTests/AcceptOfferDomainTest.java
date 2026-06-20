@@ -24,14 +24,14 @@ class AcceptOfferDomainTest {
 
         // Klient akceptuje ofertę, a my generujemy na jej podstawie zamówienie
         offer.accept();
-        Order order = new Order(new OrderId("ORD-1"), offer.getId(), Money.of(150000, "PLN"));
+        Order order = new Order(new OrderId("ORD-1"), offer.id(), Money.of(150000, "PLN"));
 
         // Oferta przechodzi w stan ACCEPTED
-        assertThat(offer.getState()).isEqualTo(OfferState.ACCEPTED);
+        assertThat(offer.state()).isEqualTo(OfferState.ACCEPTED);
 
         // Zamówienie inicjuje się poprawnie w początkowym stanie DRAFT_CREATED
-        assertThat(order.getOfferId()).isEqualTo(new OfferId("O-1"));
-        assertThat(order.getState()).isEqualTo(OrderState.DRAFT_CREATED);
+        assertThat(order.offerId()).isEqualTo(new OfferId("O-1"));
+        assertThat(order.state()).isEqualTo(OrderState.DRAFT_CREATED);
     }
 
     @Test

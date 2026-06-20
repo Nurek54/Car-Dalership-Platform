@@ -112,24 +112,24 @@ public class InventoryVehicle {
         this.role = VehicleRole.DEMO;
     }
 
-    public VinNumber getVin() {
+    public VinNumber vin() {
         return vin;
     }
 
-    public SpecificationId getSpecification() {
+    public SpecificationId specification() {
         return specification;
     }
 
-    public VehicleRole getRole() {
+    public VehicleRole role() {
         return role;
     }
 
-    public VehicleState getState() {
+    public VehicleState state() {
         return state;
     }
 
     /** Może zwrócić null, gdy pojazd nie jest przypisany do żadnego zamówienia (model rozłączny). */
-    public OrderId getOrder() {
+    public OrderId order() {
         return order;
     }
 }

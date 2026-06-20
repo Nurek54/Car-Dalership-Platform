@@ -52,11 +52,11 @@ public class InventoryCommandAdapter implements InventoryIntegration {
         }
         Optional<InventoryVehicle> vehicle =
                 this.inventoryRepository.findByVin(new VinNumber(vehicleId));
-        if (vehicle.isEmpty() || vehicle.get().getOrder() == null) {
+        if (vehicle.isEmpty() || vehicle.get().order() == null) {
             System.out.println("[InventoryCommandAdapter] Brak rezerwacji dla VIN "
                     + vehicleId + " — komenda ReleaseVehicle pominięta.");
             return;
         }
-        this.releaseInventory.releaseVehicle(vehicle.get().getOrder().value());
+        this.releaseInventory.releaseVehicle(vehicle.get().order().value());
     }
 }

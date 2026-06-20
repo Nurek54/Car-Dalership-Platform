@@ -50,7 +50,7 @@ class BuildSpecificationDomainTest {
         ruleValidation.validateAndAddOption(specification, new OptionCode("DIESEL_ENGINE"));
         ruleValidation.validateAndAddOption(specification, new OptionCode("AUTO_GEARBOX"));
 
-        assertThat(specification.getState()).isEqualTo(SpecificationState.IN_PROGRESS);
+        assertThat(specification.state()).isEqualTo(SpecificationState.IN_PROGRESS);
         assertThat(specification.getTotalPrice()).isEqualTo(Money.of(21000, "PLN"));
     }
 
@@ -88,7 +88,7 @@ class BuildSpecificationDomainTest {
         ruleValidation.assertComplete(specification);
         specification.finalizeSpecification();
 
-        assertThat(specification.getState()).isEqualTo(SpecificationState.FINAL);
+        assertThat(specification.state()).isEqualTo(SpecificationState.FINAL);
         assertThat(specification.getDomainEvents())
                 .hasSize(1)
                 .first()

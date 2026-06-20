@@ -28,7 +28,7 @@ class CatalogExternalApiAdapterTest {
                         .withBody("{\"amount\": 150000, \"currency\": \"PLN\"}")));
 
         // Adapter uderza przez HTTP
-        Money price = catalogAdapter.getSpecificationPrice("SPEC-OK");
+        Money price = catalogAdapter.specificationPrice("SPEC-OK");
 
         // JSON z zewnątrz zamienia się w hermetyczny Value Object
         assertThat(price.amount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(150000));
@@ -42,7 +42,7 @@ class CatalogExternalApiAdapterTest {
                 .willReturn(aResponse().withStatus(404)));
 
         // Zamiast brzydkiego błędu HTTP, wyrzucamy kontrolowany błąd biznesowy
-        assertThatThrownBy(() -> catalogAdapter.getSpecificationPrice("SPEC-MISSING"))
+        assertThatThrownBy(() -> catalogAdapter.specificationPrice("SPEC-MISSING"))
                 .isInstanceOf(SpecificationNotFoundException.class)
                 .hasMessageContaining("Specification SPEC-MISSING not found in Catalog");
     }
@@ -54,7 +54,7 @@ class CatalogExternalApiAdapterTest {
                 .willReturn(aResponse().withStatus(500)));
 
         // Aplikacja musi zasygnalizować brak dostępu do zewnętrznej usługi
-        assertThatThrownBy(() -> catalogAdapter.getSpecificationPrice("SPEC-TIMEOUT"))
+        assertThatThrownBy(() -> catalogAdapter.specificationPrice("SPEC-TIMEOUT"))
                 .isInstanceOf(ExternalServiceUnavailableException.class)
                 .hasMessageContaining("Catalog service is currently unavailable");
     }

@@ -24,9 +24,9 @@ class OfferFactoryTest {
         Offer offer = offerFactory.createOffer(customerId, specId, basePrice);
 
         assertThat(offer).isNotNull();
-        assertThat(offer.getId()).isNotNull(); // Fabryka sama generuje ID
-        assertThat(offer.getState()).isEqualTo(OfferState.DRAFT);
-        assertThat(offer.getFinalPrice()).isEqualTo(basePrice);
+        assertThat(offer.id()).isNotNull(); // Fabryka sama generuje ID
+        assertThat(offer.state()).isEqualTo(OfferState.DRAFT);
+        assertThat(offer.finalPrice()).isEqualTo(basePrice);
     }
 
     @Test

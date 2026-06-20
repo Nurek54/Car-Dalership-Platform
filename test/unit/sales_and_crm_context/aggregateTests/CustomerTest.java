@@ -61,8 +61,8 @@ class CustomerTest {
         customer.updateContactDetails(newContact);
 
         // Dane kontaktowe są zaktualizowane, ale tożsamość (ID) pozostaje nienaruszona
-        assertThat(customer.getContact().getEmail()).isEqualTo("nowa.anna@example.com");
-        assertThat(customer.getContact().getPhoneNumber()).isEqualTo("999888777");
-        assertThat(customer.getId()).isEqualTo(id);
+        assertThat(customer.contact().email()).isEqualTo("nowa.anna@example.com");
+        assertThat(customer.contact().phoneNumber()).isEqualTo("999888777");
+        assertThat(customer.id()).isEqualTo(id);
     }
 }

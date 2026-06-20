@@ -14,7 +14,7 @@ public record OrderCancelledEvent(UUID eventId,
                                   String reason,
                                   Instant occurredOn) implements DomainEvent {
 
-    public String getReason() {
+    public String reason() {
         return this.reason;
     }
 }

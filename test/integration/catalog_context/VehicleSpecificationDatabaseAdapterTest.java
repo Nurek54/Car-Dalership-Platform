@@ -45,7 +45,7 @@ class VehicleSpecificationDatabaseAdapterTest {
 
         // Agregat wraca z bazy w stanie początkowym
         assertThat(loaded).isPresent();
-        assertThat(loaded.get().getState()).isEqualTo(SpecificationState.DRAFT);
+        assertThat(loaded.get().state()).isEqualTo(SpecificationState.DRAFT);
         assertThat(loaded.get().getCatalogId()).isEqualTo(new CatalogId("CAT-1"));
         assertThat(loaded.get().getSelectedOptions()).isEmpty();
         assertThat(loaded.get().getTotalPrice()).isNull();
@@ -64,7 +64,7 @@ class VehicleSpecificationDatabaseAdapterTest {
         VehicleSpecification reloaded = databaseAdapter.findById(id).orElseThrow();
 
         // Wybrane opcje, stan i suma wyceny wracają z bazy bez zmian
-        assertThat(reloaded.getState()).isEqualTo(SpecificationState.IN_PROGRESS);
+        assertThat(reloaded.state()).isEqualTo(SpecificationState.IN_PROGRESS);
         // (bez @OrderColumn baza nie gwarantuje kolejności elementów kolekcji)
         assertThat(reloaded.getSelectedOptions())
                 .containsExactlyInAnyOrder(new OptionCode("LED_LIGHTS"), new OptionCode("PANORAMIC_ROOF"));
@@ -85,7 +85,7 @@ class VehicleSpecificationDatabaseAdapterTest {
         VehicleSpecification reloaded = databaseAdapter.findById(id).orElseThrow();
 
         // Stan FINAL przetrwał rundę przez bazę...
-        assertThat(reloaded.getState()).isEqualTo(SpecificationState.FINAL);
+        assertThat(reloaded.state()).isEqualTo(SpecificationState.FINAL);
 
         // ...i odtworzony agregat nadal blokuje modyfikacje
         assertThatThrownBy(() -> reloaded.addOption(new OptionCode("PANORAMIC_ROOF"), catalog))

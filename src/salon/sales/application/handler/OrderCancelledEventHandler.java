@@ -19,6 +19,6 @@ public class OrderCancelledEventHandler {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
-        this.billingPort.processCancelledOrderBilling(event.orderId(), event.getReason());
+        this.billingPort.processCancelledOrderBilling(event.orderId(), event.reason());
     }
 }

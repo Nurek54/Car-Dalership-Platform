@@ -28,9 +28,9 @@ class OrderFactoryTest {
         Order order = orderFactory.createFromOffer(offerId, validSnapshot);
 
         assertThat(order).isNotNull();
-        assertThat(order.getId()).isNotNull();
-        assertThat(order.getOfferId()).isEqualTo(offerId);
-        assertThat(order.getRequiredDeposit()).isEqualTo(Money.of(200000, "PLN"));
+        assertThat(order.id()).isNotNull();
+        assertThat(order.offerId()).isEqualTo(offerId);
+        assertThat(order.requiredDeposit()).isEqualTo(Money.of(200000, "PLN"));
     }
 
     @Test

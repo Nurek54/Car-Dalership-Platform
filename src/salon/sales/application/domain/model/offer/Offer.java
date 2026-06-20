@@ -81,7 +81,7 @@ public class Offer {
     }
 
     // Cenę bazową można ustawić na etapie roboczym (np. po wycenie ze specyfikacji).
-    public void setBasePrice(Money basePrice) {
+    public void changeBasePrice(Money basePrice) {
         if (basePrice == null) {
             throw new IllegalArgumentException("basePrice must not be null.");
         }
@@ -181,35 +181,35 @@ public class Offer {
         return new OfferSnapshot(this.id, this.customerId, this.specificationId, this.finalPrice);
     }
 
-    public OfferId getId() {
+    public OfferId id() {
         return this.id;
     }
 
-    public CustomerId getCustomerId() {
+    public CustomerId customerId() {
         return this.customerId;
     }
 
-    public SpecificationId getSpecificationId() {
+    public SpecificationId specificationId() {
         return this.specificationId;
     }
 
-    public Money getBasePrice() {
+    public Money basePrice() {
         return this.basePrice;
     }
 
-    public Discount getAppliedDiscount() {
+    public Discount appliedDiscount() {
         return this.appliedDiscount;
     }
 
-    public Money getFinalPrice() {
+    public Money finalPrice() {
         return this.finalPrice;
     }
 
-    public LocalDate getValidityDate() {
+    public LocalDate validityDate() {
         return this.validityDate;
     }
 
-    public OfferState getState() {
+    public OfferState state() {
         return this.state;
     }
 }

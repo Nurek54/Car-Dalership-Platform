@@ -100,11 +100,11 @@ class SalesContextAcceptanceTest {
 
         // Stan oferty w bazie danych musi się zmienić na ACCEPTED
         Offer savedOffer = offerRepository.findById(offerId).orElseThrow();
-        assertThat(savedOffer.getState()).isEqualTo(OfferState.ACCEPTED);
+        assertThat(savedOffer.state()).isEqualTo(OfferState.ACCEPTED);
 
         // Nowe zamówienie musiało powstać w bazie danych!
         Order newlyCreatedOrder = orderRepository.findByOfferId(offerId).orElseThrow();
-        assertThat(newlyCreatedOrder.getState()).isEqualTo(OrderState.DRAFT);
+        assertThat(newlyCreatedOrder.state()).isEqualTo(OrderState.DRAFT);
 
         // Domena wysłała Event o złożeniu zamówienia na RabbitMQ
         verify(rabbitTemplate).convertAndSend(
@@ -132,7 +132,7 @@ class SalesContextAcceptanceTest {
 
         // Agregat w bazie ma status CANCELLED
         Order cancelledOrder = orderRepository.findById(orderId).orElseThrow();
-        assertThat(cancelledOrder.getState()).isEqualTo(OrderState.CANCELLED);
+        assertThat(cancelledOrder.state()).isEqualTo(OrderState.CANCELLED);
 
         // Powiadomiliśmy systemy zewnętrzne o anulowaniu z odpowiednim powodem
         verify(rabbitTemplate).convertAndSend(
@@ -168,7 +168,7 @@ class SalesContextAcceptanceTest {
 
         // Stan zamówienia w Agregacie zmienił się na READY_FOR_HANDOVER
         Order readyOrder = orderRepository.findById(orderId).orElseThrow();
-        assertThat(readyOrder.getState()).isEqualTo(OrderState.READY_FOR_HANDOVER);
+        assertThat(readyOrder.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);
 
         // Moduł sprzedaży wypuszcza z kolei swój Event
         verify(rabbitTemplate).convertAndSend(
@@ -199,7 +199,7 @@ class SalesContextAcceptanceTest {
 
         // Stan zamówienia staje się COMPLETED
         Order completedOrder = orderRepository.findById(orderId).orElseThrow();
-        assertThat(completedOrder.getState()).isEqualTo(OrderState.COMPLETED);
+        assertThat(completedOrder.state()).isEqualTo(OrderState.COMPLETED);
 
         // Żądanie sieciowe PUT do działu Księgowości
         WireMock.verify(1, putRequestedFor(urlEqualTo("/api/billing/accounts/ORD-999/close")));

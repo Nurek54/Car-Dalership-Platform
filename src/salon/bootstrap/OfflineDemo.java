@@ -88,8 +88,8 @@ public class OfflineDemo {
                 SpecificationId.generate(), Money.of(new BigDecimal("100000"), "PLN"));
         offer.applyDiscount(new Discount(new BigDecimal("5.00")));
         offer.publishOffer();
-        System.out.println("[OK] Oferta po publikacji: " + offer.getState()
-                + ", cena końcowa: " + offer.getFinalPrice().amount() + " PLN");
+        System.out.println("[OK] Oferta po publikacji: " + offer.state()
+                + ", cena końcowa: " + offer.finalPrice().amount() + " PLN");
 
         // Rabat ponad politykę salonu -> agregat odrzuca (hermetyzacja decyzji cenowych).
         Offer greedy = new Offer(OfferId.generate(), new CustomerId("CUST-2"),
@@ -102,14 +102,14 @@ public class OfflineDemo {
 
         // Konwersja: zamówienie może powstać wyłącznie z oferty ACCEPTED (reguła w agregacie).
         offer.accept();
-        Order order = new OrderFactory().createFromOffer(offer.getId(), offer.toSnapshot());
+        Order order = new OrderFactory().createFromOffer(offer.id(), offer.toSnapshot());
         order.declarePaymentMethod(PaymentMethod.BANK_TRANSFER);
-        System.out.println("[OK] Zamówienie " + order.getId().value() + " w stanie "
-                + order.getState() + " (płatność: " + order.getPaymentMethod() + ")");
+        System.out.println("[OK] Zamówienie " + order.id().value() + " w stanie "
+                + order.state() + " (płatność: " + order.paymentMethod() + ")");
         // Migawkę (toSnapshot) można zbudować WYŁĄCZNIE z oferty ACCEPTED — reguła w agregacie.
         try {
             greedy.publishOffer();
-            new OrderFactory().createFromOffer(greedy.getId(), greedy.toSnapshot());
+            new OrderFactory().createFromOffer(greedy.id(), greedy.toSnapshot());
         } catch (InvalidOfferStateException e) {
             System.out.println("[OK] Migawka tylko z ACCEPTED — " + e.getMessage());
         }
@@ -136,16 +136,16 @@ public class OfflineDemo {
                 new NotificationMockAdapter(), bus);
 
         SettlementEventListener listener = new SettlementEventListener(settlements);
-        listener.on(new OrderReadyForSettlementEvent(UUID.randomUUID(), order.getId().value(),
+        listener.on(new OrderReadyForSettlementEvent(UUID.randomUUID(), order.id().value(),
                 new BigDecimal("100000"), "PLN", Instant.now()));
 
         // Wpłata częściowa -> PARTIAL_PAYMENT.
         settlements.processPayment(new ProcessPaymentCommand(
-                order.getId().value(), "TX-1", new BigDecimal("20000"), "PLN"));
+                order.id().value(), "TX-1", new BigDecimal("20000"), "PLN"));
         // Dopłata do pełnej kwoty -> SETTLED + SettlementCompletedEvent.
         settlements.processPayment(new ProcessPaymentCommand(
-                order.getId().value(), "TX-2", new BigDecimal("80000"), "PLN"));
-        System.out.println("[OK] Saldo " + order.getId().value() + " rozliczone (status SETTLED).");
+                order.id().value(), "TX-2", new BigDecimal("80000"), "PLN"));
+        System.out.println("[OK] Saldo " + order.id().value() + " rozliczone (status SETTLED).");
 
         // --- UC-FIR-02: faktura końcowa (dane nabywcy dociągnięte z kontekstu Sprzedaży) ---
         DocumentGenerationService docs = new DocumentGenerationService(
@@ -156,7 +156,7 @@ public class OfflineDemo {
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
         String invoiceId = docs.generateInvoice(new GenerateInvoiceCommand(
-                order.getId().value(), "Faktura koncowa " + order.getId().value(), "ksiegowy@salon.pl"));
+                order.id().value(), "Faktura koncowa " + order.id().value(), "ksiegowy@salon.pl"));
         System.out.println("[OK] Faktura wystawiona, id=" + invoiceId);
 
         // Reguła ważności w agregacie: oferta po terminie nie przejdzie accept().

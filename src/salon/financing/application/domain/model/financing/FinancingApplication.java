@@ -76,27 +76,27 @@ public class FinancingApplication {
         this.state = ApplicationState.REJECTED;
     }
 
-    public ApplicationId getApplicationId() {
+    public ApplicationId applicationId() {
         return applicationId;
     }
 
-    public OrderId getOrderId() {
+    public OrderId orderId() {
         return orderId;
     }
 
-    public CustomerId getCustomerId() {
+    public CustomerId customerId() {
         return customerId;
     }
 
-    public BuyerDetails getBuyerDetails() {
+    public BuyerDetails buyerDetails() {
         return buyerDetails;
     }
 
-    public Money getMoneyForFunding() {
+    public Money moneyForFunding() {
         return moneyForFunding;
     }
 
-    public ApplicationState getState() {
+    public ApplicationState state() {
         return state;
     }
 }

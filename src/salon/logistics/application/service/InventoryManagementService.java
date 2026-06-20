@@ -92,7 +92,7 @@ public class InventoryManagementService implements
         Optional<String> specificationId = this.catalogIntegration.findSpecificationByOrder(orderId);
 
         Optional<InventoryVehicle> free = this.vehicleRepository.findAll().stream()
-                .filter(v -> v.getState() == VehicleState.ON_STOCK && v.getOrder() == null)
+                .filter(v -> v.state() == VehicleState.ON_STOCK && v.order() == null)
                 .filter(v -> matchesSpecification(v, specificationId.orElse(null)))
                 .findFirst();
 
@@ -101,7 +101,7 @@ public class InventoryManagementService implements
             vehicle.lockForOrder(order);                    // ON_STOCK -> RESERVED (reguła w agregacie)
             this.vehicleRepository.save(vehicle);
             this.eventPublisher.publish(
-                    new VehicleReservedFromStockEvent(orderId, vehicle.getVin().value()));
+                    new VehicleReservedFromStockEvent(orderId, vehicle.vin().value()));
         } else {
             // A1: brak wolnego auta na placu -> ścieżka zamówienia produkcji / zadatku.
             this.eventPublisher.publish(new VehicleIsNotOnStockEvent(orderId));
@@ -136,10 +136,10 @@ public class InventoryManagementService implements
 
         if (existing.isPresent()) {
             InventoryVehicle vehicle = existing.get();
-            ImporterData data = new ImporterData(vinNumber, vehicle.getSpecification(), List.of());
+            ImporterData data = new ImporterData(vinNumber, vehicle.specification(), List.of());
             vehicle.receiveOnYard(data);                    // IN_PRODUCTION -> RESERVED
             this.vehicleRepository.save(vehicle);
-            OrderId order = vehicle.getOrder();
+            OrderId order = vehicle.order();
             this.eventPublisher.publish(new VehicleDeliveredToStockEvent(
                     order == null ? null : order.value(), vin));
         } else {
@@ -160,7 +160,7 @@ public class InventoryManagementService implements
             vehicle.handOver();                              // READY_FOR_HANDOVER -> HANDED_OVER
             this.vehicleRepository.save(vehicle);
             this.eventPublisher.publish(
-                    new VehicleInventoryReleasedEvent(orderId, vehicle.getVin().value()));
+                    new VehicleInventoryReleasedEvent(orderId, vehicle.vin().value()));
         } catch (IllegalVehicleStateException e) {
             // A1: niewłaściwy status pojazdu -> zdarzenie kompensacyjne dla Sprzedaży.
             this.eventPublisher.publish(new VehicleInventoryReleasedErrorEvent(orderId, e.getMessage()));
@@ -178,7 +178,7 @@ public class InventoryManagementService implements
         vehicle.releaseReservation();                        // RESERVED -> ON_STOCK
         this.vehicleRepository.save(vehicle);
         this.eventPublisher.publish(
-                new VehicleReservationCancelledEvent(orderId, vehicle.getVin().value()));
+                new VehicleReservationCancelledEvent(orderId, vehicle.vin().value()));
     }
 
     // ===== PrepareForHandover: UC-INW-05 (przygotowanie do wydania po rozliczeniu) =====
@@ -191,13 +191,13 @@ public class InventoryManagementService implements
         vehicle.prepareForHandover();                        // RESERVED -> READY_FOR_HANDOVER
         this.vehicleRepository.save(vehicle);
         this.eventPublisher.publish(
-                new VehicleReadyForHandoverEvent(orderId, vehicle.getVin().value()));
+                new VehicleReadyForHandoverEvent(orderId, vehicle.vin().value()));
     }
 
     private boolean matchesSpecification(InventoryVehicle vehicle, String specificationId) {
-        if (specificationId == null || vehicle.getSpecification() == null) {
+        if (specificationId == null || vehicle.specification() == null) {
             return false;
         }
-        return specificationId.equals(vehicle.getSpecification().value());
+        return specificationId.equals(vehicle.specification().value());
     }
 }

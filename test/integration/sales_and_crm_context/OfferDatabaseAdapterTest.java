@@ -34,8 +34,8 @@ class OfferDatabaseAdapterTest {
 
         // Zapisane dane są te same przy odczycie
         assertThat(loadedOffer).isPresent();
-        assertThat(loadedOffer.get().getState()).isEqualTo(OfferState.DRAFT);
-        assertThat(loadedOffer.get().getFinalPrice()).isEqualTo(Money.of(150000, "PLN"));
+        assertThat(loadedOffer.get().state()).isEqualTo(OfferState.DRAFT);
+        assertThat(loadedOffer.get().finalPrice()).isEqualTo(Money.of(150000, "PLN"));
     }
 
     @Test
@@ -51,7 +51,7 @@ class OfferDatabaseAdapterTest {
         databaseAdapter.save(savedOffer);
 
         Optional<Offer> updatedOffer = databaseAdapter.findById(offerId);
-        assertThat(updatedOffer.get().getState()).isEqualTo(OfferState.PUBLISHED);
+        assertThat(updatedOffer.get().state()).isEqualTo(OfferState.PUBLISHED);
     }
 
     @Test

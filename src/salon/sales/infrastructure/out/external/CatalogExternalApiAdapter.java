@@ -44,7 +44,7 @@ public class CatalogExternalApiAdapter implements CatalogPriceQueryPort {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Money getSpecificationPrice(String specificationId) {
+    public Money specificationPrice(String specificationId) {
         try {
             Map<String, Object> body = this.restTemplate.getForObject(
                     this.baseUrl + "/api/catalog/specifications/" + specificationId + "/price",

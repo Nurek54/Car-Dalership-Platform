@@ -28,14 +28,14 @@ class OrderTest {
         order.declarePaymentMethod(PaymentMethod.FINANCING);
 
         // Metoda płatności jest przypisana, a zdarzenie jest odłożone w agregacie
-        assertThat(order.getPaymentMethod()).isEqualTo(PaymentMethod.FINANCING);
+        assertThat(order.paymentMethod()).isEqualTo(PaymentMethod.FINANCING);
         assertThat(order.getDomainEvents())
                 .hasSize(1)
                 .first()
                 .isInstanceOf(FinancingRequestedEvent.class)
                 .satisfies(event -> {
                     FinancingRequestedEvent e = (FinancingRequestedEvent) event;
-                    assertThat(e.getOrderId()).isEqualTo(new OrderId("ORD-001"));
+                    assertThat(e.orderId()).isEqualTo(new OrderId("ORD-001"));
                 });
     }
 
@@ -49,18 +49,18 @@ class OrderTest {
 
         order.markAsReadyForHandover(); // Stan: READY_FOR_HANDOVER
         order.scheduleHandover(LocalDate.now().plusDays(2)); // Stan: HANDOVER_SCHEDULED
-        order.setPaymentStatus(PaymentStatus.PAID);
+        order.changePaymentStatus(PaymentStatus.PAID);
         order.confirmHandover(); // Stan: COMPLETED
 
-        assertThat(order.getState()).isEqualTo(OrderState.COMPLETED);
+        assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
 
         // Występuje błąd w systemie inwentarza
         // System wywołuje metodę kompensacyjną
         order.revertToReadyForHandover();
 
         // Zamówienie wraca do poprzedniego, bezpiecznego stanu
-        assertThat(order.getState()).isEqualTo(OrderState.READY_FOR_HANDOVER);
-        assertThat(order.getHandoverDate()).isNull(); // Data wydania jest czyszczona
+        assertThat(order.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);
+        assertThat(order.handoverDate()).isNull(); // Data wydania jest czyszczona
     }
 
     @Test
@@ -70,12 +70,12 @@ class OrderTest {
 
         order.activate(); // Aktywacja (DRAFT -> IN_PROGRESS)
         order.markAsReadyForHandover(); // Stan: READY_FOR_HANDOVER
-        order.setPaymentStatus(PaymentStatus.PAID); // Musi być opłacone
+        order.changePaymentStatus(PaymentStatus.PAID); // Musi być opłacone
 
         // Klient odbiera auto natychmiast na miejscu
         order.confirmHandover();
 
         // Zamówienie zamyka się poprawnie omijając HANDOVER_SCHEDULED
-        assertThat(order.getState()).isEqualTo(OrderState.COMPLETED);
+        assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
     }
 }

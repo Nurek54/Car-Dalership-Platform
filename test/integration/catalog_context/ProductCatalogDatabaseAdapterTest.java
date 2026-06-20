@@ -37,7 +37,7 @@ class ProductCatalogDatabaseAdapterTest {
         ProductCatalog reloaded = loaded.get();
         assertThat(reloaded.getModelYear()).isEqualTo(new ModelYear("MY_2026"));
         assertThat(reloaded.getVersion()).isEqualTo(1);
-        assertThat(reloaded.getState()).isEqualTo(CatalogState.ACTIVE);
+        assertThat(reloaded.state()).isEqualTo(CatalogState.ACTIVE);
         assertThat(reloaded.getOptions()).hasSize(2);
         assertThat(reloaded.getRules())
                 .singleElement()
@@ -66,7 +66,7 @@ class ProductCatalogDatabaseAdapterTest {
 
         // Po odczycie z bazy stan ARCHIVED jest zachowany...
         ProductCatalog reloaded = databaseAdapter.findById(catalog.getCatalogId()).orElseThrow();
-        assertThat(reloaded.getState()).isEqualTo(CatalogState.ARCHIVED);
+        assertThat(reloaded.state()).isEqualTo(CatalogState.ARCHIVED);
 
         // ...a odtworzony agregat nadal egzekwuje "zamrożenie" starej wersji
         assertThatThrownBy(() -> reloaded.addOption(

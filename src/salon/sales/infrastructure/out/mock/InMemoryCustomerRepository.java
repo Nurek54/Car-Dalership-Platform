@@ -20,7 +20,7 @@ public class InMemoryCustomerRepository implements CustomerDatabaseRepository {
 
     @Override
     public void save(Customer customer) {
-        this.store.put(customer.getId(), customer);
+        this.store.put(customer.id(), customer);
     }
 
     @Override

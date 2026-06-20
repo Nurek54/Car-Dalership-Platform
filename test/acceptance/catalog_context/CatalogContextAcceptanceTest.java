@@ -129,7 +129,7 @@ class CatalogContextAcceptanceTest {
 
         // Warunek końcowy: zatwierdzona specyfikacja w lokalnej bazie konfiguratora
         VehicleSpecification saved = specificationRepository.findById(specId).orElseThrow();
-        assertThat(saved.getState()).isEqualTo(SpecificationState.FINAL);
+        assertThat(saved.state()).isEqualTo(SpecificationState.FINAL);
         assertThat(saved.getSelectedOptions()).hasSize(4);
         assertThat(saved.getTotalPrice().amount()).isEqualByComparingTo("46000"); // 15000+20000+8000+3000
 
@@ -156,7 +156,7 @@ class CatalogContextAcceptanceTest {
 
         // System prosi o zmianę silnika/skrzyni/pakietu — wadliwa opcja nie weszła do bazy
         VehicleSpecification saved = specificationRepository.findById(specId).orElseThrow();
-        assertThat(saved.getState()).isEqualTo(SpecificationState.IN_PROGRESS);
+        assertThat(saved.state()).isEqualTo(SpecificationState.IN_PROGRESS);
         assertThat(saved.getSelectedOptions()).containsExactly(new OptionCode("SKRZYNIA_C1"));
 
         // Kontekst nie emituje zdarzenia końcowego
@@ -184,7 +184,7 @@ class CatalogContextAcceptanceTest {
 
         // Specyfikacja pozostaje niezatwierdzona, bez zdarzenia końcowego
         VehicleSpecification saved = specificationRepository.findById(specId).orElseThrow();
-        assertThat(saved.getState()).isEqualTo(SpecificationState.IN_PROGRESS);
+        assertThat(saved.state()).isEqualTo(SpecificationState.IN_PROGRESS);
         verify(rabbitTemplate, never()).convertAndSend(
                 anyString(), eq("specification.completed"), any(SpecificationCompletedEvent.class));
     }
@@ -201,7 +201,7 @@ class CatalogContextAcceptanceTest {
 
         // System zapisał konfigurację jako wersję roboczą (DRAFT) w lokalnej bazie
         VehicleSpecification draft = specificationRepository.findById(specId).orElseThrow();
-        assertThat(draft.getState()).isEqualTo(SpecificationState.DRAFT);
+        assertThat(draft.state()).isEqualTo(SpecificationState.DRAFT);
         assertThat(draft.getSelectedOptions()).isEmpty();
     }
 
@@ -225,10 +225,10 @@ class CatalogContextAcceptanceTest {
 
         // Krok 4: nowy katalog zapisany w lokalnej bazie, poprzedni oznaczony jako archiwalny
         ProductCatalog newCatalog = catalogRepository.findById(newCatalogId).orElseThrow();
-        assertThat(newCatalog.getState()).isEqualTo(CatalogState.ACTIVE);
+        assertThat(newCatalog.state()).isEqualTo(CatalogState.ACTIVE);
         assertThat(newCatalog.getOptions()).hasSize(2);
         ProductCatalog archived = catalogRepository.findById(previous.getCatalogId()).orElseThrow();
-        assertThat(archived.getState()).isEqualTo(CatalogState.ARCHIVED);
+        assertThat(archived.state()).isEqualTo(CatalogState.ARCHIVED);
 
         // Krok 5: kontekst emituje na szynę danych zdarzenie CatalogUpdated
         verify(rabbitTemplate).convertAndSend(

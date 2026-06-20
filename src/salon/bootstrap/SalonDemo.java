@@ -121,21 +121,21 @@ public class SalonDemo {
         System.out.println("\n=== UC-CRM-02: oferta proforma (wycena z Katalogu: 100 000 PLN) ===");
         OfferId offerId = sales.generateOffer("CUST-1", "SPEC-1");
         System.out.println("Oferta " + offerId.value() + ": "
-                + offerRepo.findById(offerId).get().getState());
+                + offerRepo.findById(offerId).get().state());
 
         System.out.println("\n=== UC-CRM-03: akceptacja oferty i utworzenie zamówienia ===");
         String orderId = sales.acceptOfferAndCreateOrder(offerId);
         System.out.println("Zamówienie " + orderId + ": "
-                + orderRepo.findById(new OrderId(orderId)).get().getState());
+                + orderRepo.findById(new OrderId(orderId)).get().state());
 
         System.out.println("\n=== UC-FIR-03: wpłata zadatku (10% = 10 000 PLN) ===");
         settlements.processPayment(new ProcessPaymentCommand(
                 orderId, "TX-1", new BigDecimal("10000.00"), "PLN"));
         System.out.println("Zamówienie po zadatku: "
-                + orderRepo.findById(new OrderId(orderId)).get().getState());
+                + orderRepo.findById(new OrderId(orderId)).get().state());
 
         System.out.println("\n=== UC-INW-03: dostawa pojazdu z fabryki na plac ===");
-        String vin = inventoryRepo.findByOrderId(new OrderId(orderId)).get().getVin().value();
+        String vin = inventoryRepo.findByOrderId(new OrderId(orderId)).get().vin().value();
         inventory.receiveVehicle(vin);
 
         System.out.println("\n=== UC-FIR-03: dopłata pozostałego salda ===");
@@ -144,13 +144,13 @@ public class SalonDemo {
 
         System.out.println("\n=== UC-CRM-04: umówienie odbioru ===");
         sales.scheduleHandover(new ScheduleHandoverCommand(orderId, LocalDate.now().plusDays(3)));
-        System.out.println("Zamówienie: " + orderRepo.findById(new OrderId(orderId)).get().getState());
+        System.out.println("Zamówienie: " + orderRepo.findById(new OrderId(orderId)).get().state());
 
         System.out.println("\n=== UC-CRM-05: rejestracja fizycznego wydania pojazdu ===");
         sales.confirmHandover(new OrderId(orderId));
-        System.out.println("Zamówienie: " + orderRepo.findById(new OrderId(orderId)).get().getState());
+        System.out.println("Zamówienie: " + orderRepo.findById(new OrderId(orderId)).get().state());
         System.out.println("Pojazd:     " + inventoryRepo.findByVin(
-                inventoryRepo.findAll().get(0).getVin()).get().getState());
+                inventoryRepo.findAll().get(0).vin()).get().state());
 
         System.out.println("\n[OK] Pełny cykl PDF (Long Track) zakończony.");
     }
@@ -197,7 +197,7 @@ public class SalonDemo {
             // Sprzedaż -> Rozliczenia: nowe zamówienie -> inicjalizacja salda (wartość kontraktu).
             if (event instanceof OrderPlacedEvent e && settlements != null && orderRepo != null) {
                 orderRepo.findById(new OrderId(e.orderId())).ifPresent(order ->
-                        settlements.initializeSettlement(order.getId(), order.getRequiredDeposit()));
+                        settlements.initializeSettlement(order.id(), order.requiredDeposit()));
             }
             // Inwentarz -> Rozliczenia: brak auta -> prośba o zadatek (UC-FIR-01).
             if (event instanceof VehicleIsNotOnStockEvent e && documents != null) {

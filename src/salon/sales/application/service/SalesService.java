@@ -150,7 +150,7 @@ public class SalesService
                 new CustomerId(customerId), new SpecificationId(specificationId), basePrice);
         offer.publishOffer();
         offerRepository.save(offer);
-        return offer.getId();
+        return offer.id();
     }
 
     /**
@@ -186,16 +186,16 @@ public class SalesService
                 .orElseThrow(() -> new OfferNotFoundException(offerId.value()));
 
         offer.accept();
-        Order order = orderFactory.createFromOffer(offer.getId(), offer.toSnapshot());
+        Order order = orderFactory.createFromOffer(offer.id(), offer.toSnapshot());
 
         offerRepository.save(offer);
         orderRepository.save(order);
         eventPublisher.publishAll(order.pullDomainEvents());
 
         if (inventoryPort != null) {
-            inventoryPort.allocateVehicleOrProductionSlot(order.getId().value());
+            inventoryPort.allocateVehicleOrProductionSlot(order.id().value());
         }
-        return order.getId().value();
+        return order.id().value();
     }
 
     // UC-CRM-03, scenariusz A1: klient odrzuca ofertę — nic nie jest emitowane.
@@ -222,9 +222,9 @@ public class SalesService
             return;
         }
         Order order = found.get();
-        if (order.getState() != OrderState.DRAFT_CREATED && order.getState() != OrderState.DRAFT) {
+        if (order.state() != OrderState.DRAFT_CREATED && order.state() != OrderState.DRAFT) {
             System.out.println("[SalesService] Order " + orderId
-                    + " already active (" + order.getState() + ") — deposit event ignored.");
+                    + " already active (" + order.state() + ") — deposit event ignored.");
             return;
         }
         order.activate();
@@ -275,10 +275,10 @@ public class SalesService
         order.confirmHandover();
 
         if (inventoryPort != null) {
-            inventoryPort.releasePhysicalVehicle(order.getVehicleId());
+            inventoryPort.releasePhysicalVehicle(order.vehicleId());
         }
         if (billingPort != null) {
-            billingPort.closeOrderBalance(order.getId().value());
+            billingPort.closeOrderBalance(order.id().value());
         }
 
         orderRepository.save(order);
@@ -317,8 +317,8 @@ public class SalesService
         List<Offer> offers = offerRepository.findAll();
         for (int i = 0; i < offers.size(); i++) {
             Offer offer = offers.get(i);
-            if (offer.getState() == OfferState.PUBLISHED
-                    && offer.getValidityDate().isBefore(today)) {
+            if (offer.state() == OfferState.PUBLISHED
+                    && offer.validityDate().isBefore(today)) {
                 offer.reject();
                 offerRepository.save(offer);
             }

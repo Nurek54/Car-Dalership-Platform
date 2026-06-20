@@ -15,7 +15,7 @@ public record FinancingRequestedEvent(UUID eventId,
                                       OrderId orderId,
                                       Instant occurredOn) implements DomainEvent {
 
-    public OrderId getOrderId() {
+    public OrderId orderId() {
         return this.orderId;
     }
 }

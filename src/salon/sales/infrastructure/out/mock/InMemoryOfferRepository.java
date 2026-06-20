@@ -16,7 +16,7 @@ public class InMemoryOfferRepository implements OfferDatabaseRepository {
 
     @Override
     public void save(Offer offer) {
-        this.store.put(offer.getId(), offer);
+        this.store.put(offer.id(), offer);
     }
 
     @Override

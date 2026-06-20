@@ -12,11 +12,11 @@ public record ContactData(String email, String phone) {
         }
     }
 
-    public String getEmail() {
+    public String email() {
         return this.email;
     }
 
-    public String getPhoneNumber() {
+    public String phoneNumber() {
         return this.phone;
     }
 }

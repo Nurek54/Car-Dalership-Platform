@@ -15,8 +15,8 @@ import salon.common.model.OrderId;
 public interface SalesIntegration {
 
     /** Dane nabywcy dla zamówienia (do oceny zdolności po stronie banku). */
-    BuyerDetails getBuyerDetails(OrderId orderId);
+    BuyerDetails buyerDetails(OrderId orderId);
 
     /** Cena końcowa oferty źródłowej zamówienia — kwota wnioskowanego finansowania. */
-    Money getOfferFinalPrice(OrderId orderId);
+    Money offerFinalPrice(OrderId orderId);
 }

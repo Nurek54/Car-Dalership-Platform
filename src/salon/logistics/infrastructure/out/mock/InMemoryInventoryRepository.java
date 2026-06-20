@@ -21,7 +21,7 @@ public class InMemoryInventoryRepository implements VehicleDatabaseRepository {
 
     @Override
     public void save(InventoryVehicle vehicle) {
-        this.byVin.put(vehicle.getVin().value(), vehicle);
+        this.byVin.put(vehicle.vin().value(), vehicle);
     }
 
     @Override
@@ -32,7 +32,7 @@ public class InMemoryInventoryRepository implements VehicleDatabaseRepository {
     @Override
     public Optional<InventoryVehicle> findByOrderId(OrderId orderId) {
         return this.byVin.values().stream()
-                .filter(v -> v.getOrder() != null && v.getOrder().value().equals(orderId.value()))
+                .filter(v -> v.order() != null && v.order().value().equals(orderId.value()))
                 .findFirst();
     }
 

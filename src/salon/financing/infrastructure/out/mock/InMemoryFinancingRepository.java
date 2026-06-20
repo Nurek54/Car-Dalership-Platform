@@ -19,7 +19,7 @@ public class InMemoryFinancingRepository implements FinancingApplicationDatabase
 
     @Override
     public void save(FinancingApplication application) {
-        this.byOrderId.put(application.getOrderId().value(), application);
+        this.byOrderId.put(application.orderId().value(), application);
     }
 
     @Override

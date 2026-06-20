@@ -1,14 +1,19 @@
 package salon.logistics.application.domain.model.vehicle;
 
+import java.util.List;
+
 /**
- * Dane tożsamości pojazdu przetłumaczone przez ACL z systemu Importera (UC-INW-01, krok 2).
- * Czysty, niemutowalny obiekt domenowy — agregat nie zna formatu API Importera.
+ * Obiekt wartości (Rysunek 38) – dane pojazdu dostarczone przez system importera/fabryki
+ * w momencie zjazdu z lawety (UC-INW-03). Zgodnie z założeniem kanwy skan numeru VIN jest
+ * bezbłędny i pokrywa się z cyfrowymi danymi zamówienia produkcyjnego, dlatego to właśnie
+ * {@code ImporterData} jest źródłem prawdy przy przyjęciu pojazdu na plac.
  */
-public record ImporterData(String vin) {
+public record ImporterData(VinNumber vin, SpecificationId specificationId, List<String> optionCodes) {
 
     public ImporterData {
-        if (vin == null || vin.isBlank()) {
-            throw new IllegalArgumentException("ImporterData.vin must not be blank.");
+        if (vin == null) {
+            throw new IllegalArgumentException("vin must not be null.");
         }
+        optionCodes = optionCodes == null ? List.of() : List.copyOf(optionCodes);
     }
 }

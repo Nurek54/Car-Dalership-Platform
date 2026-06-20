@@ -2,6 +2,9 @@ package salon.financing.application.domain.model.financing;
 
 import java.util.UUID;
 
+/**
+ * Obiekt wartości: tożsamość agregatu Wniosku Finansowego (Rysunek 43).
+ */
 public record ApplicationId(String value) {
 
     public ApplicationId {
@@ -12,5 +15,10 @@ public record ApplicationId(String value) {
 
     public static ApplicationId generate() {
         return new ApplicationId("FIN-" + UUID.randomUUID());
+    }
+
+    @Override
+    public String toString() {
+        return value;
     }
 }

@@ -1,61 +1,50 @@
 package salon.logistics.infrastructure.in.messaging;
 
-import salon.logistics.application.port.in.ReserveVehicle;
-import salon.logistics.application.port.in.SynchronizeSpecificationUseCase;
-import salon.sales.application.domain.event.BankTransferDeclaredEvent;
-import salon.sales.application.domain.event.OrderPlacedEvent;
+import salon.logistics.application.port.in.ReleaseVehicle;
+import salon.logistics.application.port.out.CatalogIntegration;
 
 /**
- * Adapter sterujący (driving) — subskrybent zdarzeń Kontekstu Sprzedaży/CRM
- * w Kontekście Inwentarza i Logistyki.
+ * ADAPTER WEJŚCIOWY (Rysunek 37: EventListener) – subskrybent zdarzeń/komend Kontekstu Sprzedaży i CRM.
  *
- * OrderPlaced (zamówienie złożone) niesie specificationId — Inwentarz wiąże
- * zamówienie ze specyfikacją w lokalnym read modelu (event-carried state transfer).
- *
- * UC-INW-01: BankTransferDeclared (klient zadeklarował przelew) potwierdza gotowość
- * do realizacji zamówienia i uruchamia weryfikację dostępności oraz rezerwację pojazdu.
+ * Obsługuje dwie ścieżki:
+ *  - OrderPlaced -> powiązanie zamówienia z jego specyfikacją w lokalnej kopii danych Katalogu,
+ *  - ReleaseVehicle (komenda) -> UC-INW-06 (zdjęcie pojazdu ze stanu po wydaniu).
  */
 public class SalesEventSubscriberAdapter {
 
-    private final ReserveVehicle reserveVehicle;
-    private final SynchronizeSpecificationUseCase synchronizeSpecification;
+    private final CatalogIntegration catalogIntegration;
+    private final ReleaseVehicle releaseVehicle;
 
-    public SalesEventSubscriberAdapter(ReserveVehicle reserveVehicle,
-                                       SynchronizeSpecificationUseCase synchronizeSpecification) {
-        if (reserveVehicle == null) {
-            throw new IllegalArgumentException("reserveVehicle must not be null.");
+    public SalesEventSubscriberAdapter(CatalogIntegration catalogIntegration,
+                                       ReleaseVehicle releaseVehicle) {
+        if (catalogIntegration == null) {
+            throw new IllegalArgumentException("catalogIntegration must not be null.");
         }
-        if (synchronizeSpecification == null) {
-            throw new IllegalArgumentException("synchronizeSpecification must not be null.");
+        if (releaseVehicle == null) {
+            throw new IllegalArgumentException("releaseVehicle must not be null.");
         }
-        this.reserveVehicle = reserveVehicle;
-        this.synchronizeSpecification = synchronizeSpecification;
+        this.catalogIntegration = catalogIntegration;
+        this.releaseVehicle = releaseVehicle;
     }
 
-    /** Zamówienie złożone -> powiązanie orderId ze specificationId w read modelu Inwentarza. */
-    public void handleOrderPlaced(OrderPlacedEvent event) {
-        if (event == null) {
-            throw new IllegalArgumentException("event must not be null.");
+    public void handleOrderPlaced(OrderPlaced event) {
+        if (event == null || event.orderId() == null || event.specificationId() == null) {
+            throw new IllegalArgumentException("orderId and specificationId must not be null.");
         }
-        if (event.orderId() == null || event.orderId().isBlank()) {
-            throw new IllegalArgumentException("Identyfikator zamówienia (orderId) jest wymagany");
-        }
-        if (event.specificationId() == null || event.specificationId().isBlank()) {
-            System.out.println("[SalesEventSubscriberAdapter] OrderPlaced bez specificationId — "
-                    + "pomijam powiązanie dla zamówienia " + event.orderId());
-            return;
-        }
-        this.synchronizeSpecification.linkOrderToSpecification(
-                event.orderId(), event.specificationId());
+        this.catalogIntegration.linkOrderToSpecification(event.orderId(), event.specificationId());
     }
 
-    public void handleBankTransferDeclared(BankTransferDeclaredEvent event) {
-        if (event == null) {
-            throw new IllegalArgumentException("event must not be null.");
+    public void handleReleaseVehicle(ReleaseVehicleCommand command) {
+        if (command == null || command.orderId() == null || command.orderId().isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
         }
-        if (event.orderId() == null || event.orderId().isBlank()) {
-            throw new IllegalArgumentException("Identyfikator zamówienia (orderId) jest wymagany");
-        }
-        this.reserveVehicle.reserveVehicleForOrder(event.orderId());
+        this.releaseVehicle.releaseVehicle(command.orderId());
+    }
+
+    /** Lokalne (ACL) reprezentacje komunikatów z Kontekstu Sprzedaży i CRM. */
+    public record OrderPlaced(String orderId, String specificationId) {
+    }
+
+    public record ReleaseVehicleCommand(String orderId) {
     }
 }

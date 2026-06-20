@@ -5,9 +5,14 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-// "PojazdWydanyZInwentarza" (UC-INW-06) — pojazd przekazany klientowi (HANDED_OVER).
-public record VehicleInventoryReleasedEvent(UUID eventId,
-                                            String orderId,
-                                            String vin,
-                                            Instant occurredOn) implements DomainEvent {
+/**
+ * UC-INW-06: pojazd fizycznie wydany i wyksięgowany z aktywnego stanu magazynowego
+ * (status "Wydany").
+ */
+public record VehicleInventoryReleasedEvent(String orderId, String vin,
+                                            UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public VehicleInventoryReleasedEvent(String orderId, String vin) {
+        this(orderId, vin, UUID.randomUUID(), Instant.now());
+    }
 }

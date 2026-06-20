@@ -1,37 +1,28 @@
 package salon.financing.application.domain.model.financing;
 
-import salon.financing.application.domain.event.FinancingApprovedEvent;
-import salon.financing.application.domain.event.FinancingRejectedEvent;
-import salon.common.event.AbstractAggregateRoot;
 import salon.common.model.Money;
-import salon.common.model.OrderId;
-
-import java.time.Instant;
-import java.util.UUID;
+import salon.financing.application.domain.exception.IllegalApplicationStateException;
 
 /**
- * Aggregate Root: wniosek finansowy (UC-FIN-01), zgodny 1:1 z diagramem agregatu.
+ * KORZEŃ AGREGATU (Rysunek 43) – Wniosek o finansowanie.
  *
- *   pola:   applicationId, orderId, customerId, state
- *   metody: submitApplication (DRAFT -> PENDING), approve (PENDING -> APPROVED),
- *           reject (PENDING -> REJECTED)
- *
- * Decyzja banku przychodzi z warstwy aplikacji (przez ACL) i przekłada się na approve()/reject().
+ * Agregat strzeże maszyny stanów wniosku (DRAFT -> PENDING -> APPROVED/REJECTED). Salon nigdy
+ * nie podejmuje decyzji kredytowej samodzielnie — agregat jedynie odzwierciedla status nadany
+ * przez zewnętrzny system bankowy (jedyny decydent). Odwołania do zamówienia i klienta są
+ * rozłączne (przez identyfikatory).
  */
-public class FinancingApplication extends AbstractAggregateRoot {
+public class FinancingApplication {
 
     private final ApplicationId applicationId;
     private final OrderId orderId;
     private final CustomerId customerId;
     private final BuyerDetails buyerDetails;
-    private ApplicationState state;
     private final Money moneyForFunding;
+    private ApplicationState state;
 
-    public FinancingApplication(ApplicationId applicationId,
-                                OrderId orderId,
-                                CustomerId customerId,
-                                BuyerDetails buyerDetails,
-                                Money moneyForFunding) {
+    /** Konstruktor pakietowy — egzemplarze tworzy wyłącznie {@link FinancingApplicationFactory}. */
+    FinancingApplication(ApplicationId applicationId, OrderId orderId, CustomerId customerId,
+                         BuyerDetails buyerDetails, Money moneyForFunding, ApplicationState state) {
         if (applicationId == null) {
             throw new IllegalArgumentException("applicationId must not be null.");
         }
@@ -47,61 +38,65 @@ public class FinancingApplication extends AbstractAggregateRoot {
         if (moneyForFunding == null) {
             throw new IllegalArgumentException("moneyForFunding must not be null.");
         }
+        if (state == null) {
+            throw new IllegalArgumentException("state must not be null.");
+        }
         this.applicationId = applicationId;
         this.orderId = orderId;
         this.customerId = customerId;
         this.buyerDetails = buyerDetails;
         this.moneyForFunding = moneyForFunding;
-        this.state = ApplicationState.DRAFT;
+        this.state = state;
     }
 
-    // UC-FIN-01: wysłanie wniosku do banku.
+    /** UC-FIN-01: wysłanie wniosku do banku — przejście w stan „W trakcie weryfikacji bankowej". */
     public void submitApplication() {
         if (this.state != ApplicationState.DRAFT) {
-            throw new IllegalStateException("Only a DRAFT application can be submitted, was: " + this.state);
+            throw new IllegalApplicationStateException(
+                    "Wysłać można tylko wniosek w stanie DRAFT (aktualny: " + this.state + ").");
         }
         this.state = ApplicationState.PENDING;
     }
 
-    // UC-FIN-01: pozytywna decyzja banku (zweryfikowana przez ACL).
+    /** UC-FIN-02: zarejestrowanie pozytywnej decyzji banku. */
     public void approve() {
         if (this.state != ApplicationState.PENDING) {
-            throw new IllegalStateException("Only a PENDING application can be approved, was: " + this.state);
+            throw new IllegalApplicationStateException(
+                    "Zatwierdzić można tylko wniosek w stanie PENDING (aktualny: " + this.state + ").");
         }
         this.state = ApplicationState.APPROVED;
-        registerEvent(new FinancingApprovedEvent(UUID.randomUUID(), this.orderId.value(), Instant.now()));
     }
 
-    // UC-FIN-01 A2: negatywna decyzja banku.
+    /** UC-FIN-02 / A1: zarejestrowanie negatywnej decyzji banku. */
     public void reject() {
         if (this.state != ApplicationState.PENDING) {
-            throw new IllegalStateException("Only a PENDING application can be rejected, was: " + this.state);
+            throw new IllegalApplicationStateException(
+                    "Odrzucić można tylko wniosek w stanie PENDING (aktualny: " + this.state + ").");
         }
         this.state = ApplicationState.REJECTED;
-        registerEvent(new FinancingRejectedEvent(UUID.randomUUID(), this.orderId.value(), Instant.now()));
     }
 
-    public ApplicationId getId() {
-        return this.applicationId;
+    public ApplicationId getApplicationId() {
+        return applicationId;
     }
 
     public OrderId getOrderId() {
-        return this.orderId;
+        return orderId;
     }
 
     public CustomerId getCustomerId() {
-        return this.customerId;
-    }
-
-    public ApplicationState getState() {
-        return this.state;
+        return customerId;
     }
 
     public BuyerDetails getBuyerDetails() {
-        return this.buyerDetails;
+        return buyerDetails;
     }
 
     public Money getMoneyForFunding() {
-        return this.moneyForFunding;
+        return moneyForFunding;
+    }
+
+    public ApplicationState getState() {
+        return state;
     }
 }

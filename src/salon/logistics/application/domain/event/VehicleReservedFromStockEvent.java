@@ -5,10 +5,13 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-// "PojazdZarezerwowanyZeStocku" (UC-INW-03/07, Fast Track) — auto z placu zablokowane pod zamówienie.
-// Wyzwala w Fakturowaniu wystawienie faktury końcowej (UC-FIR-02).
-public record VehicleReservedFromStockEvent(UUID eventId,
-                                            String orderId,
-                                            String vin,
-                                            Instant occurredOn) implements DomainEvent {
+/**
+ * UC-INW-01: wolny pojazd z placu został twardo zarezerwowany (blokada na VIN) dla zamówienia.
+ */
+public record VehicleReservedFromStockEvent(String orderId, String vin,
+                                            UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public VehicleReservedFromStockEvent(String orderId, String vin) {
+        this(orderId, vin, UUID.randomUUID(), Instant.now());
+    }
 }

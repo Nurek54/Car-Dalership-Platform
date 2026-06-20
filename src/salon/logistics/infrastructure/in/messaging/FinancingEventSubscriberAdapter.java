@@ -1,14 +1,13 @@
 package salon.logistics.infrastructure.in.messaging;
 
-import salon.financing.application.domain.event.FinancingApprovedEvent;
 import salon.logistics.application.port.in.ReserveVehicle;
 
 /**
- * Adapter sterujący (driving) — subskrybent zdarzeń Kontekstu Finansowania
- * w Kontekście Inwentarza i Logistyki.
+ * ADAPTER WEJŚCIOWY (Rysunek 37: EventListener) – subskrybent zdarzeń Kontekstu Finansowania.
  *
- * UC-INW-01: FinancingApproved (bank przyznał finansowanie) potwierdza gotowość
- * do realizacji zamówienia i uruchamia weryfikację dostępności oraz rezerwację pojazdu.
+ * Po potwierdzeniu gotowości do realizacji zamówienia (FinancingApproved / BankTransferDeclared)
+ * uruchamia UC-INW-01 (rezerwacja pojazdu z placu). Warstwa zapobiegająca uszkodzeniu (ACL):
+ * komunikaty zewnętrzne reprezentujemy jako lokalne rekordy i tłumaczymy na wywołanie portu.
  */
 public class FinancingEventSubscriberAdapter {
 
@@ -21,13 +20,26 @@ public class FinancingEventSubscriberAdapter {
         this.reserveVehicle = reserveVehicle;
     }
 
-    public void handleFinancingApproved(FinancingApprovedEvent event) {
-        if (event == null) {
-            throw new IllegalArgumentException("event must not be null.");
-        }
-        if (event.orderId() == null || event.orderId().isBlank()) {
-            throw new IllegalArgumentException("Identyfikator zamówienia (orderId) jest wymagany");
-        }
+    public void handleFinancingApproved(FinancingApproved event) {
+        requireOrderId(event == null ? null : event.orderId());
         this.reserveVehicle.reserveVehicleForOrder(event.orderId());
+    }
+
+    public void handleBankTransferDeclared(BankTransferDeclared event) {
+        requireOrderId(event == null ? null : event.orderId());
+        this.reserveVehicle.reserveVehicleForOrder(event.orderId());
+    }
+
+    private static void requireOrderId(String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
+        }
+    }
+
+    /** Lokalne (ACL) reprezentacje zdarzeń przychodzących z Kontekstu Finansowania. */
+    public record FinancingApproved(String orderId) {
+    }
+
+    public record BankTransferDeclared(String orderId) {
     }
 }

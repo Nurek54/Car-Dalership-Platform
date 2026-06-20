@@ -1,7 +1,7 @@
 package salon.sales.application.handler;
 
 import salon.sales.application.port.out.NotificationIntegrationPort;
-import salon.sales.domain.event.OrderReadyForHandoverEvent;
+import salon.sales.application.domain.event.OrderReadyForHandoverEvent;
 
 /**
  * Handler zdarzenia OrderReadyForHandover (UC-CRM-04, krok 2): system generuje

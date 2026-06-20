@@ -12,16 +12,16 @@ import org.springframework.http.MediaType;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-import salon.sales.domain.model.customer.CustomerId;
-import salon.sales.domain.model.offer.Offer;
-import salon.sales.domain.model.offer.OfferId;
-import salon.sales.domain.model.offer.OfferState;
-import salon.sales.domain.model.order.Order;
-import salon.sales.domain.model.order.OrderState;
-import salon.sales.infrastructure.persistence.OfferDatabaseAdapter;
-import salon.sales.infrastructure.persistence.OrderDatabaseAdapter;
-import salon.sales.domain.event.*;
-import salon.shared.model.*;
+import salon.sales.application.domain.event.*;
+import salon.sales.application.domain.model.customer.CustomerId;
+import salon.sales.application.domain.model.offer.Offer;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.application.domain.model.offer.OfferState;
+import salon.sales.application.domain.model.order.Order;
+import salon.sales.application.domain.model.order.OrderState;
+import salon.sales.infrastructure.out.persistence.OfferDatabaseAdapter;
+import salon.sales.infrastructure.out.persistence.OrderDatabaseAdapter;
+import salon.common.model.*;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;

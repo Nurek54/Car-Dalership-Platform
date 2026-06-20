@@ -1,7 +1,7 @@
 package salon.sales.application.handler;
 
 import salon.sales.application.port.out.ManufacturingIntegrationPort;
-import salon.sales.domain.event.OrderActivatedEvent;
+import salon.sales.application.domain.event.OrderActivatedEvent;
 
 /**
  * Handler zdarzenia OrderActivated (UC-CRM-03 cz.2): zaksięgowana wpłata uruchamia

@@ -1,8 +1,8 @@
 package salon.sales.application.port.out;
 
-import salon.sales.domain.model.customer.CustomerId;
-import salon.shared.model.Money;
-import salon.shared.model.OrderId;
+import salon.sales.application.domain.model.customer.CustomerId;
+import salon.common.model.Money;
+import salon.common.model.OrderId;
 
 /**
  * Port wyjściowy (driven) do Kontekstu Finansowania —

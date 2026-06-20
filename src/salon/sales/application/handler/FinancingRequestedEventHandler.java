@@ -1,7 +1,7 @@
 package salon.sales.application.handler;
 
-import salon.financing.application.port.out.BankIntegrationAclPort;
-import salon.sales.domain.event.FinancingRequestedEvent;
+import salon.financing.application.port.out.BankIntegrationAcl;
+import salon.sales.application.domain.event.FinancingRequestedEvent;
 
 /**
  * Handler zdarzenia FinancingRequested (UC-CRM-03, krok 5 — finansowanie):
@@ -10,9 +10,9 @@ import salon.sales.domain.event.FinancingRequestedEvent;
  */
 public class FinancingRequestedEventHandler {
 
-    private final BankIntegrationAclPort financePort;
+    private final BankIntegrationAcl financePort;
 
-    public FinancingRequestedEventHandler(BankIntegrationAclPort financePort) {
+    public FinancingRequestedEventHandler(BankIntegrationAcl financePort) {
         this.financePort = financePort;
     }
 

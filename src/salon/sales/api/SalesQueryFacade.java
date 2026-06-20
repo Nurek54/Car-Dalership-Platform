@@ -1,6 +1,6 @@
 package salon.sales.api;
 
-import salon.shared.model.OrderId;
+import salon.common.model.OrderId;
 
 /**
  * Publiczne API (fasada) Kontekstu Sprzedaży i CRM dla zapytań synchronicznych

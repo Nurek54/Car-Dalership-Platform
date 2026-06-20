@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
-import salon.sales.infrastructure.adapter.out.external.InventoryExternalApiAdapter;
-import salon.sales.domain.exception.InventoryLockedException;
-import salon.sales.domain.exception.ExternalServiceUnavailableException;
+import salon.sales.infrastructure.out.external.InventoryExternalApiAdapter;
+import salon.sales.application.domain.exception.InventoryLockedException;
+import salon.sales.application.domain.exception.ExternalServiceUnavailableException;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

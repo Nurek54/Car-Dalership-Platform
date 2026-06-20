@@ -6,8 +6,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.handler.ConfiguratorSessionInitiatedEventHandler;
-import salon.sales.application.port.out.CatalogIntegrationPort;
-import salon.sales.domain.event.ConfiguratorSessionInitiatedEvent;
+import salon.sales.application.port.out.CatalogIntegration;
+import salon.sales.application.domain.event.ConfiguratorSessionInitiatedEvent;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ConfiguratorSessionInitiatedEventHandlerTest {
 
-    @Mock private CatalogIntegrationPort catalogPort;
+    @Mock private CatalogIntegration catalogPort;
     @InjectMocks private ConfiguratorSessionInitiatedEventHandler eventHandler;
 
     @Test

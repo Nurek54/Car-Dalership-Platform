@@ -6,8 +6,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.handler.OrderPlacedEventHandler;
-import salon.sales.application.port.out.InventoryIntegrationPort;
-import salon.sales.domain.event.OrderPlacedEvent;
+import salon.sales.application.port.out.InventoryIntegration;
+import salon.sales.application.domain.event.OrderPlacedEvent;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class OrderPlacedEventHandlerTest {
 
-    @Mock private InventoryIntegrationPort inventoryPort;
+    @Mock private InventoryIntegration inventoryPort;
     @InjectMocks private OrderPlacedEventHandler eventHandler;
 
     @Test
@@ -26,6 +26,7 @@ class OrderPlacedEventHandlerTest {
         OrderPlacedEvent event = new OrderPlacedEvent(
                 UUID.randomUUID(),
                 "ORD-100",
+                "SPEC-100",
                 Instant.now()
         );
 

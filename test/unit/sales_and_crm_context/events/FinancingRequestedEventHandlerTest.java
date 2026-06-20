@@ -6,8 +6,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.handler.FinancingRequestedEventHandler;
-import salon.financing.application.port.out.BankIntegrationAclPort;
-import salon.sales.domain.event.FinancingRequestedEvent;
+import salon.financing.application.port.out.BankIntegrationAcl;
+import salon.sales.application.domain.event.FinancingRequestedEvent;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class FinancingRequestedEventHandlerTest {
 
-    @Mock private BankIntegrationAclPort financePort;
+    @Mock private BankIntegrationAcl financePort;
     @InjectMocks private FinancingRequestedEventHandler eventHandler;
 
     @Test
@@ -26,6 +26,7 @@ class FinancingRequestedEventHandlerTest {
         FinancingRequestedEvent event = new FinancingRequestedEvent(
                 UUID.randomUUID(),
                 "ORD-600",
+                "CUST-600",
                 Instant.now()
         );
 

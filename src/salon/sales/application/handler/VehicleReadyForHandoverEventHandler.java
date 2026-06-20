@@ -1,8 +1,8 @@
 package salon.sales.application.handler;
 
-import salon.sales.application.service.SalesAppService;
-import salon.sales.domain.event.VehicleReadyForHandoverEvent;
-import salon.shared.model.OrderId;
+import salon.sales.application.service.SalesService;
+import salon.sales.application.domain.event.VehicleReadyForHandoverEvent;
+import salon.common.model.OrderId;
 
 /**
  * Handler zdarzenia VehicleReadyForHandover z Kontekstu Inwentarza (UC-CRM-04, krok 1):
@@ -10,9 +10,9 @@ import salon.shared.model.OrderId;
  */
 public class VehicleReadyForHandoverEventHandler {
 
-    private final SalesAppService salesAppService;
+    private final SalesService salesAppService;
 
-    public VehicleReadyForHandoverEventHandler(SalesAppService salesAppService) {
+    public VehicleReadyForHandoverEventHandler(SalesService salesAppService) {
         this.salesAppService = salesAppService;
     }
 

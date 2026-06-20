@@ -1,10 +1,12 @@
 package unit.sales_and_crm_context.factories;
 
 import org.junit.jupiter.api.Test;
-import salon.sales.domain.model.customer.CustomerId;
-import salon.sales.domain.model.order.*;
-import salon.sales.domain.model.offer.*;
-import salon.shared.model.*;
+import salon.sales.application.domain.model.customer.CustomerId;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.application.domain.model.offer.OfferSnapshot;
+import salon.sales.application.domain.model.order.Order;
+import salon.sales.application.domain.model.order.OrderFactory;
+import salon.common.model.*;
 
 import static org.assertj.core.api.Assertions.*;
 

@@ -6,10 +6,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import salon.sales.infrastructure.web.OfferRestApiAdapter;
-import salon.sales.application.service.SalesAppService;
-import salon.sales.domain.exception.OfferExpiredException;
-import salon.sales.domain.exception.OfferNotFoundException;
+import salon.sales.infrastructure.in.web.OfferRestApiAdapter;
+import salon.sales.application.service.SalesService;
+import salon.sales.application.domain.exception.OfferNotFoundException;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -21,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OfferRestAdapterTest {
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private SalesAppService salesAppService;
+    @MockBean private SalesService salesAppService;
 
     @Test
     void shouldAcceptOfferAndReturn200Ok() throws Exception {

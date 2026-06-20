@@ -2,8 +2,8 @@ package salon.billing.application.command;
 
 // Komenda dla UC-FIR-02.
 // Dane nabywcy (BuyerDetails) NIE są częścią komendy — zdarzenie wyzwalające
-// (VehicleReservedFromStock) niesie tylko orderId/VIN, więc DocumentAppService
-// dociąga dane klienta z modułu Sprzedaży/CRM przez CrmIntegrationPort.
+// (VehicleReservedFromStock) niesie tylko orderId/VIN, więc DocumentGenerationService
+// dociąga dane klienta z modułu Sprzedaży/CRM przez SalesIntegration.
 public record GenerateInvoiceCommand(String orderId,
                                      String invoiceTitle,
                                      String authorizedIssuer) {

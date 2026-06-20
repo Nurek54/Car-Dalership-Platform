@@ -1,8 +1,8 @@
 package salon.sales.application.handler;
 
 import salon.sales.application.port.out.AfterSalesIntegrationPort;
-import salon.sales.application.port.out.BillingIntegrationPort;
-import salon.sales.domain.event.VehicleHandedOverEvent;
+import salon.sales.application.port.out.BillingIntegration;
+import salon.sales.application.domain.event.VehicleHandedOverEvent;
 
 /**
  * Handler zdarzenia VehicleHandedOver (UC-CRM-05): po wydaniu pojazdu zleca domknięcie
@@ -10,10 +10,10 @@ import salon.sales.domain.event.VehicleHandedOverEvent;
  */
 public class VehicleHandedOverEventHandler {
 
-    private final BillingIntegrationPort billingPort;
+    private final BillingIntegration billingPort;
     private final AfterSalesIntegrationPort afterSalesPort;
 
-    public VehicleHandedOverEventHandler(BillingIntegrationPort billingPort,
+    public VehicleHandedOverEventHandler(BillingIntegration billingPort,
                                          AfterSalesIntegrationPort afterSalesPort) {
         this.billingPort = billingPort;
         this.afterSalesPort = afterSalesPort;

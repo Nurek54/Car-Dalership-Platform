@@ -1,7 +1,7 @@
 package salon.sales.application.handler;
 
-import salon.sales.application.port.out.BillingIntegrationPort;
-import salon.sales.domain.event.BankTransferDeclaredEvent;
+import salon.sales.application.port.out.BillingIntegration;
+import salon.sales.application.domain.event.BankTransferDeclaredEvent;
 
 /**
  * Handler zdarzenia BankTransferDeclared (UC-CRM-03, krok 5 — przelew):
@@ -9,9 +9,9 @@ import salon.sales.domain.event.BankTransferDeclaredEvent;
  */
 public class BankTransferDeclaredEventHandler {
 
-    private final BillingIntegrationPort billingPort;
+    private final BillingIntegration billingPort;
 
-    public BankTransferDeclaredEventHandler(BillingIntegrationPort billingPort) {
+    public BankTransferDeclaredEventHandler(BillingIntegration billingPort) {
         this.billingPort = billingPort;
     }
 

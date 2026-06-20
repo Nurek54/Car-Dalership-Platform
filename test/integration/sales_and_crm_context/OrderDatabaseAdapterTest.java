@@ -5,11 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import salon.sales.infrastructure.persistence.OrderDatabaseAdapter;
-import salon.sales.domain.model.order.Order;
-import salon.sales.domain.model.offer.OfferId;
-import salon.shared.model.OrderId;
-import salon.shared.model.Money;
+import salon.sales.infrastructure.out.persistence.OrderDatabaseAdapter;
+import salon.sales.application.domain.model.order.Order;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.common.model.OrderId;
+import salon.common.model.Money;
 
 import java.util.Optional;
 

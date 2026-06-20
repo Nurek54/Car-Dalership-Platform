@@ -6,9 +6,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.handler.VehicleReadyForHandoverEventHandler;
-import salon.sales.application.service.SalesAppService;
-import salon.sales.domain.event.VehicleReadyForHandoverEvent;
-import salon.shared.model.OrderId;
+import salon.sales.application.service.SalesService;
+import salon.sales.application.domain.event.VehicleReadyForHandoverEvent;
+import salon.common.model.OrderId;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -20,7 +20,7 @@ class VehicleReadyForHandoverEventHandlerTest {
 
     // Tutaj portem docelowym jest AppService,
     // ponieważ reagujemy na zdarzenie z zewnątrz, aktualizując stan Agregatu
-    @Mock private SalesAppService salesAppService;
+    @Mock private SalesService salesAppService;
     @InjectMocks private VehicleReadyForHandoverEventHandler eventHandler;
 
     @Test

@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.handler.OrderActivatedEventHandler;
 import salon.sales.application.port.out.ManufacturingIntegrationPort;
-import salon.sales.domain.event.OrderActivatedEvent;
+import salon.sales.application.domain.event.OrderActivatedEvent;
 
 import java.time.Instant;
 import java.util.UUID;

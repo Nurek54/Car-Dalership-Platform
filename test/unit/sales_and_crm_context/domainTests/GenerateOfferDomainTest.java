@@ -1,9 +1,12 @@
 package unit.sales_and_crm_context.domainTests;
 
 import org.junit.jupiter.api.Test;
-import salon.sales.domain.model.customer.CustomerId;
-import salon.sales.domain.model.offer.*;
-import salon.shared.model.*;
+import salon.sales.application.domain.model.customer.CustomerId;
+import salon.sales.application.domain.model.offer.InvalidOfferDataException;
+import salon.sales.application.domain.model.offer.Offer;
+import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.application.domain.model.offer.OfferState;
+import salon.common.model.*;
 
 import static org.assertj.core.api.Assertions.*;
 

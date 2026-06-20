@@ -6,9 +6,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.handler.BankTransferDeclaredEventHandler;
-import salon.sales.application.port.out.BillingIntegrationPort;
-import salon.sales.domain.event.BankTransferDeclaredEvent;
-import salon.shared.model.Money;
+import salon.sales.application.port.out.BillingIntegration;
+import salon.sales.application.domain.event.BankTransferDeclaredEvent;
+import salon.common.model.Money;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -18,7 +18,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class BankTransferDeclaredEventHandlerTest {
 
-    @Mock private BillingIntegrationPort billingPort;
+    @Mock private BillingIntegration billingPort;
     @InjectMocks private BankTransferDeclaredEventHandler eventHandler;
 
     @Test

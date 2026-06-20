@@ -7,10 +7,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import salon.sales.application.command.StartConfiguratorSessionCommand;
 import salon.sales.application.service.ConfiguratorAppService;
-import salon.sales.application.port.out.CustomerRepository;
-import salon.shared.application.EventPublisherPort;
-import salon.sales.domain.event.ConfiguratorSessionInitiatedEvent;
-import salon.sales.domain.exception.CustomerNotFoundException;
+import salon.sales.application.port.out.CustomerDatabaseRepository;
+import salon.common.application.EventPublisher;
+import salon.sales.application.domain.event.ConfiguratorSessionInitiatedEvent;
+import salon.sales.application.domain.exception.CustomerNotFoundException;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,8 +20,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ConfiguratorSessionAppServiceTest {
 
-    @Mock private CustomerRepository customerRepository;
-    @Mock private EventPublisherPort eventPublisher;
+    @Mock private CustomerDatabaseRepository customerRepository;
+    @Mock private EventPublisher eventPublisher;
     @InjectMocks private ConfiguratorAppService configuratorAppService;
 
     @Test

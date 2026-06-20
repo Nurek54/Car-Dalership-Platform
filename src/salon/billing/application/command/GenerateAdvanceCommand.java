@@ -1,8 +1,8 @@
 package salon.billing.application.command;
 
 // Komenda dla UC-FIR-01.
-// Dane nabywcy (BuyerDetails) NIE są częścią komendy — DocumentAppService dociąga je
-// z modułu Sprzedaży/CRM przez CrmIntegrationPort (po orderId).
+// Dane nabywcy (BuyerDetails) NIE są częścią komendy — DocumentGenerationService dociąga je
+// z modułu Sprzedaży/CRM przez SalesIntegration (po orderId).
 public record GenerateAdvanceCommand(String orderId,
                                      String authorizedIssuer) {
 

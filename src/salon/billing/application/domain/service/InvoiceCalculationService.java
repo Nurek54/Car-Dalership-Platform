@@ -6,30 +6,31 @@ import salon.common.model.Money;
 import java.math.BigDecimal;
 
 /**
- * Bezstanowy serwis domenowy chroniący warstwę aplikacji przed wyciekiem reguł księgowych.
+ * USLUGA DZIEDZINY (Rys. 48 — InvoiceCalculationService).
  *
- * W sposób kontrolowany sięga do stanu agregatu Settlement (uses state of) i wylicza kwoty:
- *  - faktury końcowej = wartość kontraktu - zaksięgowane wpłaty (saldo pozostałe),
- *  - zadatku = ustalony procent wartości kontraktu.
- * Zwraca czysty obiekt wartości Money - co drastycznie zwiększa testowalność matematyki.
+ * Bezstanowa, realizuje obliczenia biznesowe na podstawie agregatu Rozliczenia, ktorych nie wykonuje
+ * sam agregat: kwote zadatku (UC-FIR-01) i kwote pozostala do zaplaty na fakturze koncowej
+ * (UC-FIR-02). Zwraca obiekt wartosci Money, nie ujawniajac wnetrza agregatu klientom.
  */
 public class InvoiceCalculationService {
 
-    // Przykładowa reguła: zadatek = 10% wartości kontraktu.
+    /** Domyslna stawka zadatku = 10% wartosci kontraktu (UC-FIR-01). */
     private static final BigDecimal ADVANCE_RATE = new BigDecimal("0.10");
 
-    public Money calculateFinalInvoiceAmount(Settlement settlement) {
-        if (settlement == null) {
-            throw new IllegalArgumentException("settlement must not be null.");
-        }
-        return settlement.getOutstandingBalance();
-    }
-
+    /** UC-FIR-01, krok 2: kwota zadatku = 10% wartosci zamowienia. */
     public Money calculateAdvanceAmount(Settlement settlement) {
         if (settlement == null) {
             throw new IllegalArgumentException("settlement must not be null.");
         }
         Money total = settlement.getTotalAmount();
-        return new Money(total.amount().multiply(ADVANCE_RATE), total.currency());
+        return Money.of(total.getAmount().multiply(ADVANCE_RATE), total.currency());
+    }
+
+    /** UC-FIR-02, krok 2: kwota faktury koncowej = saldo pozostale (po uwzglednieniu zadatku). */
+    public Money calculateFinalInvoiceAmount(Settlement settlement) {
+        if (settlement == null) {
+            throw new IllegalArgumentException("settlement must not be null.");
+        }
+        return settlement.getOutstandingBalance();
     }
 }

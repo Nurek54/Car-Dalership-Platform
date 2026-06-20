@@ -1,32 +1,24 @@
 package salon.billing.infrastructure.out.mock;
 
-import salon.billing.application.port.out.PdfGeneration;
 import salon.billing.application.domain.model.document.AccountingDocument;
+import salon.billing.application.port.out.PdfGeneration;
 
-import java.nio.charset.StandardCharsets;
-
-// Udawany generator PDF: generuje reprezentację bajtową bezpośrednio w adapterze i loguje rozmiar.
+/**
+ * ADAPTER WYJSCIOWY (Rys. 48 — PdfGenerator) — atrapa portu {@link PdfGeneration}.
+ *
+ * Deleguje do reprezentacji PDF korzenia agregatu ({@link AccountingDocument#generatePdf()});
+ * realny adapter opakowalby tu bibliotekę renderujaca PDF, bez logiki biznesowej.
+ */
 public class PdfGeneratorMockAdapter implements PdfGeneration {
 
     @Override
     public byte[] generatePdf(AccountingDocument document) {
         if (document == null) {
-            throw new IllegalArgumentException("Document cannot be null");
+            throw new IllegalArgumentException("document must not be null.");
         }
-
-        // Logika generowania tymczasowej zawartości tekstowej przeniesiona z agregatu
-        String content = "INVOICE " + document.getId().value()
-                + " | title=" + document.getInvoiceTitle()
-                + " | buyer=" + document.getBuyer().name()
-                + " | seller=" + document.getSeller().name()
-                + " | amount=" + document.getTotalAmount().amount() + " " + document.getTotalAmount().currency()
-                + " | issued=" + document.getIssueDate() + " | due=" + document.getDueDate()
-                + " | issuer=" + document.getAuthorizedIssuer();
-
-        byte[] pdf = content.getBytes(StandardCharsets.UTF_8);
-
-        System.out.println("[PdfGeneratorMock] Generated PDF for " + document.getId().value()
-                + " (" + pdf.length + " bytes).");
+        byte[] pdf = document.generatePdf();
+        System.out.println("[PdfGeneratorMockAdapter] Wygenerowano PDF dla dokumentu "
+                + document.getId().value() + " (" + pdf.length + " B).");
         return pdf;
     }
 }

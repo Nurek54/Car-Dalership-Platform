@@ -1,29 +1,21 @@
 package salon.billing.application.domain.model.document;
 
-import salon.billing.application.domain.event.InvoiceCreatedEvent;
-import salon.common.event.AbstractAggregateRoot;
 import salon.common.model.Money;
 import salon.common.model.OrderId;
 
-import java.time.Instant;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.util.UUID;
 
 /**
- * Aggregate Root: dokument księgowy (faktura / dokument zadatku) — UC-FIR-02.
+ * KORZEŃ AGREGATU (Diagram klas — «AggregateRoot» AccountingDocument) — faktura / dokument księgowy.
  *
- * Oddzielony od agregatu Settlement, co pozwala na niezależne wersjonowanie dokumentów i unika
- * blokad bazy podczas jednoczesnej rejestracji wpłaty i wystawiania faktury.
- *
- * Niezmienniki:
- *  - dokument powstaje wyłącznie przez statyczną fabrykę {@link #createInvoice},
- *  - kwota (totalAmount) jest gotowym obiektem wartości wyliczonym poza agregatem
- *    (InvoiceCalculationService) — agregat jej nie przelicza,
- *  - termin płatności (dueDate) wynika z polityki firmy: 7 dni dla osób fizycznych,
- *    14 dni dla podmiotów gospodarczych (na podstawie BuyerDetails.isCorporate()),
- *  - dokument w stanie ISSUED jest "zamrożony".
+ * Tworzony metodą wytwórczą {@link #createInvoice} (statyczna, zgodnie z diagramem), która gwarantuje
+ * niezmienniki: kompletne dane stron, niepusty tytuł, termin płatności wyliczony z
+ * {@link BuyerDetails#isCorporate()}. Korzeń odpowiada za przejścia statusu (DRAFT -> ISSUED / ERROR)
+ * oraz wygenerowanie reprezentacji PDF ({@link #generatePdf()}). Odwołanie do zamówienia rozłączne
+ * (wyłącznie przez {@link OrderId}).
  */
-public class AccountingDocument extends AbstractAggregateRoot {
+public class AccountingDocument {
 
     private static final int DUE_DAYS_INDIVIDUAL = 7;
     private static final int DUE_DAYS_CORPORATE = 14;
@@ -39,15 +31,9 @@ public class AccountingDocument extends AbstractAggregateRoot {
     private final String authorizedIssuer;
     private DocumentStatus status;
 
-    private AccountingDocument(DocumentId id,
-                               OrderId orderId,
-                               String invoiceTitle,
-                               BuyerDetails buyer,
-                               SellerDetails seller,
-                               Money totalAmount,
-                               LocalDate issueDate,
-                               LocalDate dueDate,
-                               String authorizedIssuer) {
+    private AccountingDocument(DocumentId id, OrderId orderId, String invoiceTitle, BuyerDetails buyer,
+                              SellerDetails seller, Money totalAmount, LocalDate issueDate,
+                              LocalDate dueDate, String authorizedIssuer, DocumentStatus status) {
         this.id = id;
         this.orderId = orderId;
         this.invoiceTitle = invoiceTitle;
@@ -57,15 +43,17 @@ public class AccountingDocument extends AbstractAggregateRoot {
         this.issueDate = issueDate;
         this.dueDate = dueDate;
         this.authorizedIssuer = authorizedIssuer;
-        this.status = DocumentStatus.DRAFT;
+        this.status = status;
     }
 
-    public static AccountingDocument createInvoice(OrderId orderId,
-                                                   BuyerDetails buyer,
-                                                   SellerDetails seller,
-                                                   Money totalAmount,
-                                                   String invoiceTitle,
-                                                   String authorizedIssuer) {
+    /**
+     * METODA WYTWÓRCZA (Diagram klas — createInvoice$): tworzy fakturę w stanie DRAFT.
+     * Atomowa, waliduje wszystkie nieopcjonalne elementy, nigdy nie zwraca niepoprawnego obiektu.
+     * Termin płatności (dueDate) zależny od typu nabywcy (UC-FIR-01/02).
+     */
+    public static AccountingDocument createInvoice(OrderId orderId, BuyerDetails buyer,
+                                                   SellerDetails seller, Money totalAmount,
+                                                   String invoiceTitle, String authorizedIssuer) {
         if (orderId == null) {
             throw new IllegalArgumentException("orderId must not be null.");
         }
@@ -84,71 +72,85 @@ public class AccountingDocument extends AbstractAggregateRoot {
         if (authorizedIssuer == null || authorizedIssuer.isBlank()) {
             throw new IllegalArgumentException("authorizedIssuer must not be blank.");
         }
-
-        LocalDate issueDate = LocalDate.now();
-        LocalDate dueDate = issueDate.plusDays(
-                buyer.isCorporate() ? DUE_DAYS_CORPORATE : DUE_DAYS_INDIVIDUAL);
-
-        AccountingDocument document = new AccountingDocument(
-                DocumentId.generate(), orderId, invoiceTitle, buyer, seller,
-                totalAmount, issueDate, dueDate, authorizedIssuer);
-
-        document.registerEvent(new InvoiceCreatedEvent(
-                UUID.randomUUID(), document.id.value(), orderId.value(), Instant.now()));
-        return document;
+        LocalDate issue = LocalDate.now();
+        LocalDate due = issue.plusDays(buyer.isCorporate() ? DUE_DAYS_CORPORATE : DUE_DAYS_INDIVIDUAL);
+        return new AccountingDocument(DocumentId.generate(), orderId, invoiceTitle, buyer, seller,
+                totalAmount, issue, due, authorizedIssuer, DocumentStatus.DRAFT);
     }
 
-    public void markAsIssued() {
-        if (this.status == DocumentStatus.ISSUED) {
-            throw new IllegalStateException("Document is already issued.");
-        }
+    /**
+     * Generuje reprezentację PDF dokumentu (Diagram klas — generatePdf(): byte[]).
+     * Tu: lekka, deterministyczna serializacja treści faktury; adapter PdfGeneration może
+     * delegować do tej metody lub opakować ją bibliotecznym rendererem.
+     */
+    public byte[] generatePdf() {
         if (this.status == DocumentStatus.ERROR) {
-            throw new IllegalStateException("Cannot issue a document in ERROR state.");
+            throw new IllegalStateException("Cannot render a document in ERROR state.");
+        }
+        String body = "FAKTURA\n"
+                + "Tytuł: " + this.invoiceTitle + "\n"
+                + "Nr dokumentu: " + this.id.value() + "\n"
+                + "Zamówienie: " + this.orderId.value() + "\n"
+                + "Sprzedawca: " + this.seller.name() + " (NIP " + this.seller.nip() + ")\n"
+                + "Nabywca: " + this.buyer.name() + " (NIP " + this.buyer.nip() + ")\n"
+                + "Kwota: " + this.totalAmount.getAmount().toPlainString() + " " + this.totalAmount.currency() + "\n"
+                + "Data wystawienia: " + this.issueDate + "\n"
+                + "Termin płatności: " + this.dueDate + "\n"
+                + "Wystawił: " + this.authorizedIssuer + "\n";
+        return body.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** UC-FIR-02, krok 4: dokument wystawiony (PDF przypisany do zamówienia). */
+    public void markAsIssued() {
+        if (this.status != DocumentStatus.DRAFT) {
+            throw new salon.billing.application.domain.exception.IllegalSettlementStateException(
+                    "Wystawić można tylko dokument w stanie DRAFT (aktualny: " + this.status + ").");
         }
         this.status = DocumentStatus.ISSUED;
     }
 
+    /** UC-FIR-02 / A1: oznaczenie błędu generowania dokumentu. */
     public void markAsError() {
         this.status = DocumentStatus.ERROR;
     }
 
     public DocumentId getId() {
-        return this.id;
+        return id;
     }
 
     public OrderId getOrderId() {
-        return this.orderId;
+        return orderId;
     }
 
     public String getInvoiceTitle() {
-        return this.invoiceTitle;
+        return invoiceTitle;
     }
 
     public BuyerDetails getBuyer() {
-        return this.buyer;
+        return buyer;
     }
 
     public SellerDetails getSeller() {
-        return this.seller;
+        return seller;
     }
 
     public Money getTotalAmount() {
-        return this.totalAmount;
+        return totalAmount;
     }
 
     public LocalDate getIssueDate() {
-        return this.issueDate;
+        return issueDate;
     }
 
     public LocalDate getDueDate() {
-        return this.dueDate;
+        return dueDate;
     }
 
     public String getAuthorizedIssuer() {
-        return this.authorizedIssuer;
+        return authorizedIssuer;
     }
 
     public DocumentStatus getStatus() {
-        return this.status;
+        return status;
     }
 }

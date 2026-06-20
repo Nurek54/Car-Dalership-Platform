@@ -1,10 +1,14 @@
 package salon.billing.application.domain.model.settlement;
 
 /**
- * Status rozliczenia. Agregat sam decyduje o przejściu na podstawie wyliczonego salda.
+ * Typ standardowy (Enumeration na diagramie klas) — stan salda zamówienia.
+ *
+ * OPEN            – saldo otwarte, brak (pełnych) wpłat;
+ * PARTIAL_PAYMENT – zaksięgowano wpłatę częściową (UC-FIR-03 / A1);
+ * SETTLED         – saldo = 0, zamówienie w pełni opłacone (UC-FIR-03).
  */
 public enum SettlementStatus {
-    OPEN,             // brak zaksięgowanych wpłat
-    PARTIAL_PAYMENT,  // zaksięgowano część należności
-    SETTLED           // należność pokryta w całości
+    OPEN,
+    PARTIAL_PAYMENT,
+    SETTLED
 }

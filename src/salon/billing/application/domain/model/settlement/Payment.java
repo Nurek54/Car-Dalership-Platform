@@ -5,42 +5,26 @@ import salon.common.model.Money;
 import java.time.LocalDateTime;
 
 /**
- * Encja LOKALNA wewnątrz agregatu {@link Settlement}.
+ * ENCJA LOKALNA agregatu Rozliczenia (Diagram klas — «Entity» Payment).
  *
- * Pojedyncza transakcja z wyciągu bankowego NIE posiada globalnej tożsamości ani własnego
- * repozytorium — jest enkapsulowana i zapisywana jako element kolekcji wewnątrz agregatu Settlement.
- * Gwarantuje to, że wpłata nie może istnieć w oderwaniu od przypisanego do niej zamówienia.
+ * Tożsamość lokalna = transactionId (identyfikator przelewu z wyciągu bankowego), unikatowa
+ * wyłącznie w granicy agregatu. Encja jest ukryta — dostęp tylko przez korzeń {@link Settlement}
+ * (prawo Demeter). Niemutowalna po utworzeniu: pojedyncza, zaksięgowana wpłata jest faktem.
  */
-public class Payment {
+public record Payment(String transactionId, Money amount, LocalDateTime paymentDate) {
 
-    private final String transactionId;
-    private final Money amount;
-    private final LocalDateTime paymentDate;
-
-    public Payment(String transactionId, Money amount, LocalDateTime paymentDate) {
+    public Payment {
         if (transactionId == null || transactionId.isBlank()) {
             throw new IllegalArgumentException("transactionId must not be blank.");
         }
         if (amount == null) {
             throw new IllegalArgumentException("amount must not be null.");
         }
+        if (amount.isNegative()) {
+            throw new IllegalArgumentException("payment amount must not be negative.");
+        }
         if (paymentDate == null) {
             throw new IllegalArgumentException("paymentDate must not be null.");
         }
-        this.transactionId = transactionId;
-        this.amount = amount;
-        this.paymentDate = paymentDate;
-    }
-
-    public String getTransactionId() {
-        return this.transactionId;
-    }
-
-    public Money getAmount() {
-        return this.amount;
-    }
-
-    public LocalDateTime getPaymentDate() {
-        return this.paymentDate;
     }
 }

@@ -2,19 +2,18 @@ package salon.billing.application.domain.event;
 
 import salon.common.event.DomainEvent;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "WplataZaksiegowana" (UC-FIR-03, krok 4) — przelew sparowany z zamówieniem i dopisany
- * do agregatu Settlement. Nasłuchuje m.in. Sprzedaż/CRM (aktywacja zamówienia po
- * pierwszej wpłacie — UC-CRM-03 cz.2).
+ * UC-FIR-03: zaksięgowano wpłatę bankową dla zamówienia. Płynie do Sprzedaży i CRM (aktywacja zamówienia — UC-CRM-03 cz.2).
+ *
+ * Zapis faktu (czas przeszły dokonany), zgodny z językiem wszechobecnym Kontekstu Fakturowania.
+ * Niesie minimalny zbiór informacji (orderId) — dane wrażliwe dociągają subskrybenci przez ACL.
  */
-public record PaymentRegisteredEvent(UUID eventId,
-                                     String settlementId,
-                                     String orderId,
-                                     BigDecimal amount,
-                                     String currency,
-                                     Instant occurredOn) implements DomainEvent {
+public record PaymentRegisteredEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public PaymentRegisteredEvent(String orderId) {
+        this(orderId, UUID.randomUUID(), Instant.now());
+    }
 }

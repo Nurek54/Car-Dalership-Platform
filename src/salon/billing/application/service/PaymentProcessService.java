@@ -1,40 +1,24 @@
 package salon.billing.application.service;
 
 import salon.billing.application.command.ProcessPaymentCommand;
+import salon.billing.application.domain.exception.SettlementNotFoundException;
+import salon.billing.application.domain.model.settlement.Settlement;
+import salon.billing.application.domain.model.settlement.SettlementFactory;
+import salon.billing.application.domain.model.settlement.SettlementStatus;
 import salon.billing.application.port.in.ProcessPayment;
 import salon.billing.application.port.out.DocumentDatabaseRepository;
 import salon.billing.application.port.out.NotificationGeneration;
 import salon.billing.application.port.out.SettlementDatabaseRepository;
-import salon.billing.application.domain.event.PaymentDeadlineExpiredEvent;
-import salon.billing.application.domain.exception.SettlementNotFoundException;
-import salon.billing.application.domain.model.document.AccountingDocument;
-import salon.billing.application.domain.model.document.DocumentStatus;
-import salon.billing.application.domain.model.settlement.Settlement;
-import salon.billing.application.domain.model.settlement.SettlementFactory;
-import salon.billing.application.domain.model.settlement.SettlementStatus;
 import salon.common.application.EventPublisher;
-import salon.common.event.DomainEvent;
 import salon.common.model.Money;
 import salon.common.model.OrderId;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
 /**
- * Realizuje UC-FIR-03 oraz WF-FIR-03 (warstwa aplikacji — orkiestracja).
+ * USLUGA APLIKACJI (Rys. 48 — PaymentProcessService) — orkiestracja salda zamowienia (UC-FIR-03).
  *
- * Cienka usługa: pobiera/zapisuje agregat Settlement, woła na nim mutacje stanu i publikuje
- * zdarzenia WYGENEROWANE PRZEZ AGREGAT (PaymentRegistered, AdvancePaymentRegistered,
- * SettlementCompleted). Cała matematyka salda i decyzja o statusie/zdarzeniu siedzą
- * w agregacie — serwis nie zagląda do jego wewnętrznego stanu.
- *
- * WF-FIR-03 (monitorowanie i egzekwowanie terminów płatności): cron wyzwala
- * processPaymentReminders() — przypomnienia do klienta idą przez NotificationGeneration
- * (e-mail z danymi do przelewu i saldem), a przekroczone terminy (dueDate dokumentu)
- * kończą się emisją PaymentDeadlineExpired, na którą reaguje Inwentarz (UC-INW-04).
+ * Typu fasada: rozpoczyna i domyka logiczna transakcje przypadku uzycia, koordynuje agregat
+ * Rozliczenia oraz porty wyjsciowe i publikuje zdarzenia po sukcesie. Sama nie zawiera regul
+ * biznesowych — te sa w agregacie {@link Settlement}. Realizuje port {@link ProcessPayment}.
  */
 public class PaymentProcessService implements ProcessPayment {
 
@@ -45,10 +29,10 @@ public class PaymentProcessService implements ProcessPayment {
     private final EventPublisher eventPublisher;
 
     public PaymentProcessService(SettlementDatabaseRepository settlementRepository,
-                                SettlementFactory settlementFactory,
-                                DocumentDatabaseRepository documentRepository,
-                                NotificationGeneration notification,
-                                EventPublisher eventPublisher) {
+                                 SettlementFactory settlementFactory,
+                                 DocumentDatabaseRepository documentRepository,
+                                 NotificationGeneration notification,
+                                 EventPublisher eventPublisher) {
         if (settlementRepository == null) {
             throw new IllegalArgumentException("settlementRepository must not be null.");
         }
@@ -71,86 +55,39 @@ public class PaymentProcessService implements ProcessPayment {
         this.eventPublisher = eventPublisher;
     }
 
-    /**
-     * Inicjalizacja: złożenie nowego zamówienia (OrderPlacedEvent ze Sprzedaży) wyzwala
-     * port wejściowy, a usługa deleguje budowę agregatu salda do SettlementFactory
-     * "na podstawie zamówienia uzyskanego w zdarzeniu" (PDF rozdz. 3.7.3).
-     */
-    public void initializeSettlement(OrderId orderId, Money contractValue) {
-        Settlement settlement = this.settlementFactory.createForOrder(orderId, contractValue);
+    /** Inicjalizacja salda (status OPEN) dla nowego zamowienia — fabryka tworzy agregat. */
+    @Override
+    public void initializeSettlement(OrderId orderId, Money totalAmount) {
+        Settlement settlement = this.settlementFactory.createNew(orderId, totalAmount);
         this.settlementRepository.save(settlement);
-        publishEvents(settlement);
     }
 
+    /**
+     * UC-FIR-03: zaksiegowanie sparowanego przelewu. Agregat rejestruje zdarzenia (collect &amp; pull),
+     * usluga sciaga je po zapisie i publikuje (PaymentRegistered, ew. AdvancePaymentRegistered/SettlementCompleted).
+     */
     @Override
-    // @Transactional w projekcie ze Springiem — wpłata + przeliczenie + zdarzenie w jednej transakcji.
     public void processPayment(ProcessPaymentCommand command) {
-        if (command == null) {
-            throw new IllegalArgumentException("command must not be null.");
-        }
-
         OrderId orderId = new OrderId(command.orderId());
         Settlement settlement = this.settlementRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new SettlementNotFoundException(
-                        "No settlement for order " + command.orderId()));
+                        "Brak otwartego salda dla zamowienia " + command.orderId()));
 
-        Money amount = new Money(command.amount(), command.currency());
-        settlement.registerPayment(command.transactionId(), amount);
-
+        settlement.registerPayment(command.transactionId(),
+                Money.of(command.amount(), command.currency()));
         this.settlementRepository.save(settlement);
-        publishEvents(settlement);
+
+        this.eventPublisher.publishAll(settlement.pullDomainEvents());
     }
 
-    /**
-     * Cron (PaymentReminderCronJobAdapter), WF-FIR-03:
-     * 1) rozliczenia z niepokrytym saldem -> przypomnienie e-mail przez NotificationGeneration
-     *    (dane do przelewu z wystawionego dokumentu + brakująca kwota),
-     * 2) dokumenty po terminie płatności (dueDate < dziś) -> PaymentDeadlineExpired
-     *    (Inwentarz zwalnia blokadę pojazdu — UC-INW-04; operacja po jego stronie idempotentna).
-     */
-    public void processPaymentReminders() {
-        LocalDate today = LocalDate.now();
-        List<Settlement> all = this.settlementRepository.findAll();
-        for (int i = 0; i < all.size(); i++) {
-            Settlement settlement = all.get(i);
-            if (settlement.getStatus() == SettlementStatus.SETTLED) {
-                continue;
-            }
-            Optional<AccountingDocument> document =
-                    findLatestIssuedDocument(settlement.getOrderId());
-            if (document.isEmpty()) {
-                continue; // nie wystawiono jeszcze żadnego wezwania do zapłaty
-            }
-            AccountingDocument issued = document.get();
-            if (issued.getDueDate() != null && issued.getDueDate().isBefore(today)) {
-                this.eventPublisher.publish(new PaymentDeadlineExpiredEvent(
-                        UUID.randomUUID(), settlement.getOrderId().value(), Instant.now()));
-            } else {
+    /** Zadanie cykliczne: przypomnienie o kazdym nierozliczonym saldzie (status != SETTLED). */
+    @Override
+    public void sendPaymentReminders() {
+        for (Settlement settlement : this.settlementRepository.findAll()) {
+            if (settlement.getStatus() != SettlementStatus.SETTLED) {
                 this.notification.notifyPaymentReminder(
-                        issued, settlement.getOutstandingBalance());
+                        settlement.getOrderId(), settlement.getOutstandingBalance());
             }
-        }
-    }
-
-    private Optional<AccountingDocument> findLatestIssuedDocument(OrderId orderId) {
-        List<AccountingDocument> documents = this.documentRepository.findByOrderId(orderId);
-        AccountingDocument latest = null;
-        for (int i = 0; i < documents.size(); i++) {
-            AccountingDocument candidate = documents.get(i);
-            if (candidate.getStatus() != DocumentStatus.ISSUED) {
-                continue;
-            }
-            if (latest == null || (candidate.getIssueDate() != null && latest.getIssueDate() != null
-                    && candidate.getIssueDate().isAfter(latest.getIssueDate()))) {
-                latest = candidate;
-            }
-        }
-        return Optional.ofNullable(latest);
-    }
-
-    private void publishEvents(Settlement settlement) {
-        for (DomainEvent event : settlement.pullDomainEvents()) {
-            this.eventPublisher.publish(event);
         }
     }
 }

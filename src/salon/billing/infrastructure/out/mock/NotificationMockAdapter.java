@@ -1,23 +1,23 @@
 package salon.billing.infrastructure.out.mock;
 
-import salon.billing.application.port.out.NotificationGeneration;
 import salon.billing.application.domain.model.document.AccountingDocument;
+import salon.billing.application.port.out.NotificationGeneration;
 import salon.common.model.Money;
+import salon.common.model.OrderId;
 
-// Udawana notyfikacja (zamiast SMTP): tylko log na konsolę.
+/**
+ * ADAPTER WYJSCIOWY (Rys. 48 — NotificationGenerator) — atrapa portu {@link NotificationGeneration}
+ * uzywana w demach i testach. Cicha (bez I/O), umozliwia testowanie wnetrza niezaleznie od poczty.
+ */
 public class NotificationMockAdapter implements NotificationGeneration {
 
     @Override
     public void notifyInvoiceIssued(AccountingDocument document, byte[] pdf) {
-        System.out.println("[NotificationMock] Invoice " + document.getId().value()
-                + " sent to " + document.getBuyer().name() + ".");
+        // no-op (atrapa do testow)
     }
 
     @Override
-    public void notifyPaymentReminder(AccountingDocument document, Money outstandingBalance) {
-        System.out.println("[NotificationMock] Payment reminder for order "
-                + document.getOrderId().value() + " (" + document.getInvoiceTitle() + "): "
-                + outstandingBalance.amount() + " " + outstandingBalance.currency()
-                + " outstanding, due " + document.getDueDate() + ".");
+    public void notifyPaymentReminder(OrderId orderId, Money outstanding) {
+        // no-op (atrapa do testow)
     }
 }

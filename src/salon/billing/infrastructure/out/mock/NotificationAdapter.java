@@ -1,55 +1,26 @@
 package salon.billing.infrastructure.out.mock;
 
-import salon.billing.application.port.out.NotificationGeneration;
 import salon.billing.application.domain.model.document.AccountingDocument;
+import salon.billing.application.port.out.NotificationGeneration;
 import salon.common.model.Money;
-
-import java.util.logging.Logger;
+import salon.common.model.OrderId;
 
 /**
- * Adapter wyjściowy portu NotificationGeneration — symuluje wysyłkę e-maili (zamiast SMTP loguje).
- * W środowisku docelowym zastępuje go adapter SMTP wstrzykiwany w pierścieniu infrastruktury.
+ * ADAPTER WYJSCIOWY (Rys. 48 — NotificationGenerator) — atrapa portu {@link NotificationGeneration}
+ * uzywana w uruchomieniu produkcyjnym (Composition Root). Symuluje wysylke e-mail do klienta.
  */
 public class NotificationAdapter implements NotificationGeneration {
 
-    private static final Logger LOGGER = Logger.getLogger(NotificationAdapter.class.getName());
-
     @Override
     public void notifyInvoiceIssued(AccountingDocument document, byte[] pdf) {
-        if (document == null) {
-            throw new IllegalArgumentException("Document cannot be null");
-        }
-        if (pdf == null || pdf.length == 0) {
-            throw new IllegalArgumentException("PDF content cannot be empty");
-        }
-
-        String recipientName = document.getBuyer().name();
-        String documentId = document.getId().value();
-
-        LOGGER.info(String.format(
-                "Sending invoice email. To: %s, Document ID: %s, PDF attachment size: %d bytes",
-                recipientName,
-                documentId,
-                pdf.length
-        ));
+        System.out.println("[NotificationAdapter] E-mail do nabywcy zamowienia "
+                + document.getOrderId().value() + ": dokument " + document.getId().value()
+                + " (termin platnosci " + document.getDueDate() + ").");
     }
 
     @Override
-    public void notifyPaymentReminder(AccountingDocument document, Money outstandingBalance) {
-        if (document == null) {
-            throw new IllegalArgumentException("Document cannot be null");
-        }
-        if (outstandingBalance == null) {
-            throw new IllegalArgumentException("Outstanding balance cannot be null");
-        }
-
-        LOGGER.info(String.format(
-                "Sending payment reminder email. To: %s, Transfer title: %s, Outstanding: %s %s, Due: %s",
-                document.getBuyer().name(),
-                document.getInvoiceTitle(),
-                outstandingBalance.amount(),
-                outstandingBalance.currency(),
-                document.getDueDate()
-        ));
+    public void notifyPaymentReminder(OrderId orderId, Money outstanding) {
+        System.out.println("[NotificationAdapter] Przypomnienie dla zamowienia " + orderId.value()
+                + ": do zaplaty " + outstanding.getAmount().toPlainString() + " " + outstanding.currency() + ".");
     }
 }

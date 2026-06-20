@@ -2,20 +2,19 @@ package salon.billing.application.port.out;
 
 import salon.billing.application.domain.model.document.AccountingDocument;
 import salon.common.model.Money;
+import salon.common.model.OrderId;
 
 /**
- * Port wyjściowy: powiadomienia (np. e-mail/SMTP) do klienta — PDF rozdz. 3.7.3
- * ("NotificationGeneration i PdfGeneration"). Konkretny adapter (SMTP) wstrzykiwany
- * w zewnętrznym pierścieniu infrastruktury.
+ * PORT WYJSCIOWY (Rys. 48 — NotificationGeneration) — powiadomienia do klienta.
  *
- * Używany przez DocumentGenerationService (UC-FIR-01/02 — wysyłka dokumentu z danymi do
- * przelewu) oraz PaymentProcessService (WF-FIR-03 — przypomnienia o niepełnych wpłatach).
+ * UC-FIR-01/02: e-mail z danymi do przelewu i wystawiona faktura; dodatkowo cykliczne
+ * przypomnienia o niezaplaconym saldzie (UC-FIR-03).
  */
 public interface NotificationGeneration {
 
-    /** UC-FIR-01/02: wysyłka wystawionego dokumentu (e-mail z PDF i danymi do przelewu). */
+    /** Wyslanie do klienta wystawionego dokumentu (faktura/proforma) z danymi do przelewu. */
     void notifyInvoiceIssued(AccountingDocument document, byte[] pdf);
 
-    /** WF-FIR-03: przypomnienie o brakującej wpłacie (dane do przelewu + saldo pozostałe). */
-    void notifyPaymentReminder(AccountingDocument document, Money outstandingBalance);
+    /** Przypomnienie o niezaplaconym saldzie zamowienia. */
+    void notifyPaymentReminder(OrderId orderId, Money outstanding);
 }

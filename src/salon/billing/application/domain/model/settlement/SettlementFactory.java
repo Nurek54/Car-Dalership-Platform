@@ -4,20 +4,15 @@ import salon.common.model.Money;
 import salon.common.model.OrderId;
 
 /**
- * Fabryka agregatu Settlement (UC-FIR-03, inicjalizacja).
- *
- * Powołuje do życia agregat salda na podstawie zamówienia uzyskanego ze zdarzenia.
- * Trzyma logikę poprawnej konstrukcji z dala od usługi aplikacyjnej.
+ * FABRYKA (Rys. 48 — SettlementFactory): powołuje poprawny agregat {@link Settlement}
+ * w stanie OPEN, nadając mu nową, globalną tożsamość ({@link SettlementId}). Tworzenie nie jest
+ * odpowiedzialnością klienta — fabryka gwarantuje niezmienniki (kompletne, niepuste pola) i
+ * nigdy nie zwraca obiektu w niespójnym stanie.
  */
 public class SettlementFactory {
 
-    public Settlement createForOrder(OrderId orderId, Money contractValue) {
-        if (orderId == null) {
-            throw new IllegalArgumentException("orderId must not be null.");
-        }
-        if (contractValue == null) {
-            throw new IllegalArgumentException("contractValue must not be null.");
-        }
-        return new Settlement(SettlementId.generate(), orderId, contractValue);
+    /** Inicjalizacja salda dla zamówienia o znanej wartości kontraktu (UC-CRM-03 -> Rozliczenia). */
+    public Settlement createNew(OrderId orderId, Money totalAmount) {
+        return new Settlement(SettlementId.generate(), orderId, totalAmount, SettlementStatus.OPEN);
     }
 }

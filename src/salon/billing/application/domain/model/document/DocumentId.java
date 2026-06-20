@@ -2,7 +2,9 @@ package salon.billing.application.domain.model.document;
 
 import java.util.UUID;
 
-// Value Object: tożsamość/numer dokumentu. Teraz String (test: new DocumentId("DOC-100")).
+/**
+ * Obiekt wartości (Diagram klas — AccountingDocument): tożsamość agregatu Dokumentu Księgowego.
+ */
 public record DocumentId(String value) {
 
     public DocumentId {
@@ -13,5 +15,10 @@ public record DocumentId(String value) {
 
     public static DocumentId generate() {
         return new DocumentId("DOC-" + UUID.randomUUID());
+    }
+
+    @Override
+    public String toString() {
+        return value;
     }
 }

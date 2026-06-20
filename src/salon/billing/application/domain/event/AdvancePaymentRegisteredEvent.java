@@ -6,12 +6,14 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "ZadatekZaksiegowany" — pierwsza wpłata po prośbie o zadatek (UC-FIR-01) została
- * zaksięgowana. Nasłuchuje Kontekst Inwentarza i Logistyki: zdarzenie wyzwala UC-INW-02
- * (zlecenie produkcji pojazdu w fabryce).
+ * UC-FIR-03: pierwsza wpłata (zadatek) po prośbie o zadatek została zaksięgowana. Płynie do Inwentarza (zlecenie produkcji — UC-INW-02).
+ *
+ * Zapis faktu (czas przeszły dokonany), zgodny z językiem wszechobecnym Kontekstu Fakturowania.
+ * Niesie minimalny zbiór informacji (orderId) — dane wrażliwe dociągają subskrybenci przez ACL.
  */
-public record AdvancePaymentRegisteredEvent(UUID eventId,
-                                            String settlementId,
-                                            String orderId,
-                                            Instant occurredOn) implements DomainEvent {
+public record AdvancePaymentRegisteredEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public AdvancePaymentRegisteredEvent(String orderId) {
+        this(orderId, UUID.randomUUID(), Instant.now());
+    }
 }

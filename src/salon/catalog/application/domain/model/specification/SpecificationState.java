@@ -1,7 +1,13 @@
 package salon.catalog.application.domain.model.specification;
 
+/**
+ * Typ standardowy (enumeracja) – stan procesu konfiguracji pojazdu.
+ *  - DRAFT       – wersja robocza (np. po przerwaniu sesji – UC-KON-01 / A2),
+ *  - IN_PROGRESS – trwa dobieranie opcji,
+ *  - FINAL        – specyfikacja zatwierdzona (po finalizeSpecification()).
+ */
 public enum SpecificationState {
-    DRAFT,         // utworzona, brak wybranych opcji
-    IN_PROGRESS,   // w trakcie konfiguracji (wybrano co najmniej jedną opcję)
-    FINAL          // skompletowana, gotowa do oferty
+    DRAFT,
+    IN_PROGRESS,
+    FINAL
 }

@@ -1,150 +1,152 @@
 package salon.catalog.application.domain.model.specification;
 
 import salon.catalog.application.domain.model.catalog.CatalogId;
-import salon.catalog.application.domain.model.catalog.CatalogOption;
-import salon.catalog.application.domain.model.catalog.CatalogRule;
-import salon.catalog.application.domain.model.catalog.OptionCode;
 import salon.catalog.application.domain.model.catalog.ProductCatalog;
-import salon.catalog.application.domain.model.catalog.RuleType;
-import salon.catalog.application.domain.event.SpecificationCompletedEvent;
-import salon.common.event.AbstractAggregateRoot;
-import salon.common.model.Money;
-import salon.common.model.SpecificationId;
+import salon.catalog.application.domain.model.shared.Money;
+import salon.catalog.application.domain.model.shared.OptionCode;
 
-import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.Objects;
+import java.util.Set;
 
 /**
- * Aggregate Root: konfiguracja pojazdu budowana przez klienta/Handlowca (UC-KON-01).
+ * KORZEŃ AGREGATU – koszyk konfiguracyjny użytkownika (specyfikacja pojazdu).
  *
- * Reguła kluczowa (Walidacja Technologiczna, Fail-fast): przy KAŻDYM dodaniu opcji sprawdzamy
- * reguły cennika. Jeśli nowa opcja wyklucza się z już wybraną -> RuleViolationException od ręki.
+ * Odwołuje się do agregatu ProductCatalog WYŁĄCZNIE przez {@link CatalogId}
+ * (Reguła 3 – odwołania przez identyfikator, nie przez referencję). ProductCatalog
+ * jest przekazywany jako argument poleceń tylko po to, by odczytać ceny i sprawdzić
+ * niezmienniki w jednej transakcji – nie jest trzymany jako pole.
  *
- * Cennik przekazujemy jako argument (addOption(code, catalog)) — agregat sam nie sięga do bazy
- * (to robi warstwa aplikacji/serwis dziedzinowy), dzięki czemu domena pozostaje czysta.
- *
- * Cykl życia: DRAFT -> IN_PROGRESS (po pierwszej opcji) -> FINAL (po skompletowaniu).
+ * Niezmienniki:
+ *  - można dobierać tylko opcje istniejące w katalogu,
+ *  - cena całkowita = suma cen bazowych wybranych opcji,
+ *  - po zatwierdzeniu (FINAL) specyfikacja jest niezmienna.
  */
-public class VehicleSpecification extends AbstractAggregateRoot {
+public class VehicleSpecification {
 
     private final SpecificationId id;
     private final CatalogId catalogId;
-    private final List<OptionCode> optionsPicked;
-    private Money totalPrice;            // null, dopóki nie wybierzemy pierwszej płatnej opcji
+    private Money totalPrice;
     private SpecificationState state;
+    private final Set<OptionCode> optionsPicked;
 
-    public VehicleSpecification(SpecificationId id, CatalogId catalogId) {
-        if (id == null) {
-            throw new IllegalArgumentException("id must not be null.");
-        }
-        if (catalogId == null) {
-            throw new IllegalArgumentException("catalogId must not be null.");
-        }
-        this.id = id;
-        this.catalogId = catalogId;
-        this.optionsPicked = new ArrayList<>();
-        this.totalPrice = null;
-        this.state = SpecificationState.DRAFT;
+    /** Konstruktor pakietowy – wywoływany przez {@code VehicleSpecificationFactory}. */
+    VehicleSpecification(SpecificationId id,
+                         CatalogId catalogId,
+                         Money totalPrice,
+                         SpecificationState state,
+                         Set<OptionCode> optionsPicked) {
+        this.id = Objects.requireNonNull(id, "id");
+        this.catalogId = Objects.requireNonNull(catalogId, "catalogId");
+        this.totalPrice = Objects.requireNonNull(totalPrice, "totalPrice");
+        this.state = Objects.requireNonNull(state, "state");
+        this.optionsPicked = new LinkedHashSet<>(Objects.requireNonNull(optionsPicked, "optionsPicked"));
     }
 
-    public void addOption(OptionCode newOption, ProductCatalog catalog) {
-        if (newOption == null) {
-            throw new IllegalArgumentException("newOption must not be null.");
-        }
-        if (catalog == null) {
-            throw new IllegalArgumentException("catalog must not be null.");
-        }
-        if (this.state == SpecificationState.FINAL) {
-            throw new IllegalStateException("Cannot modify a finalized specification.");
-        }
-
-        // Opcja musi istnieć w cenniku.
-        Optional<CatalogOption> catalogOption = catalog.findOption(newOption);
-        if (catalogOption.isEmpty()) {
+    /**
+     * Polecenie stanowe: dobiera opcję do specyfikacji (UC-KON-01, kroki 2–3).
+     * Sprawdza niezmiennik „opcja musi pochodzić z katalogu” i przelicza cenę całkowitą.
+     * Reguły wykluczające/wymagające (EXCLUDES/REQUIRES) waliduje RuleValidationService
+     * przed wywołaniem tego polecenia – walidacja całego stanu nie jest odpowiedzialnością encji.
+     */
+    public void addOption(OptionCode code, ProductCatalog catalog) {
+        ensureNotFinal();
+        requireSameCatalog(catalog);
+        if (!catalog.containsOption(code)) {
             throw new IllegalArgumentException(
-                    "Option " + newOption.value() + " is not available in the catalog.");
+                    "Opcja " + code + " nie należy do katalogu " + catalogId);
         }
-
-        // Fail-fast: sprawdzamy reguły wykluczeń względem już wybranych opcji.
-        checkExclusions(newOption, catalog);
-
-        this.optionsPicked.add(newOption);
-        this.state = SpecificationState.IN_PROGRESS;
-        Money price = catalogOption.get().basePrice();
-        if (this.totalPrice == null) {
-            this.totalPrice = price;
-        } else {
-            this.totalPrice = this.totalPrice.add(price);
-        }
+        optionsPicked.add(code);
+        recalculateTotalPrice(catalog);
+        markInProgress();
     }
 
-    private void checkExclusions(OptionCode newOption, ProductCatalog catalog) {
-        List<CatalogRule> rules = catalog.getRules();
-        for (int i = 0; i < rules.size(); i++) {
-            CatalogRule rule = rules.get(i);
-            if (rule.type() != RuleType.EXCLUDES) {
-                continue;
-            }
-            // Reguła: newOption wyklucza coś, co już mamy wybrane.
-            if (rule.sourceCode().equals(newOption) && this.optionsPicked.contains(rule.targetCode())) {
-                throw new RuleViolationException("Option " + newOption.value()
-                        + " is mutually exclusive with " + rule.targetCode().value());
-            }
-            // Reguła odwrotna: już wybrana opcja wyklucza newOption.
-            if (rule.targetCode().equals(newOption) && this.optionsPicked.contains(rule.sourceCode())) {
-                throw new RuleViolationException("Option " + newOption.value()
-                        + " is mutually exclusive with " + rule.sourceCode().value());
-            }
-        }
+    /** Polecenie stanowe: usuwa wcześniej dobraną opcję i przelicza cenę. */
+    public void removeOption(OptionCode code, ProductCatalog catalog) {
+        ensureNotFinal();
+        requireSameCatalog(catalog);
+        optionsPicked.remove(code);
+        recalculateTotalPrice(catalog);
+        markInProgress();
     }
 
-    public void removeOption(OptionCode option) {
-        if (option == null) {
-            throw new IllegalArgumentException("option must not be null.");
-        }
-        if (this.state == SpecificationState.FINAL) {
-            throw new IllegalStateException("Cannot modify a finalized specification.");
-        }
-        this.optionsPicked.remove(option);
-        if (this.optionsPicked.isEmpty()) {
-            this.state = SpecificationState.DRAFT;
-        }
-    }
-
-    // UC-KON-01: zamknięcie konfiguracji. Wymagamy co najmniej jednej wybranej opcji.
-    // Po skompletowaniu agregat ogłasza światu, że specyfikacja jest gotowa do sprzedaży
-    // (zdarzenie, na które czeka Kontekst Sprzedaży).
+    /**
+     * Polecenie stanowe: zatwierdza specyfikację (UC-KON-01, krok 6–7).
+     * Weryfikuje ostateczną kompletność (co najmniej jedna opcja) i przełącza stan na FINAL.
+     * Spójność reguł powinna zostać potwierdzona przez RuleValidationService przed finalizacją.
+     */
     public void finalizeSpecification() {
-        if (this.optionsPicked.isEmpty()) {
-            throw new IllegalStateException("Specification must have at least one option to be finalized.");
+        ensureNotFinal();
+        if (optionsPicked.isEmpty()) {
+            throw new IllegalStateException("Nie można zatwierdzić pustej specyfikacji " + id);
         }
         this.state = SpecificationState.FINAL;
-        registerEvent(new SpecificationCompletedEvent(
-                UUID.randomUUID(), this.id.value(), this.catalogId.value(),
-                this.totalPrice,
-                this.optionsPicked.stream().map(OptionCode::value).toList(), Instant.now()));
     }
 
-    public List<OptionCode> getSelectedOptions() {
-        return new ArrayList<>(this.optionsPicked); // kopia obronna
+    private void recalculateTotalPrice(ProductCatalog catalog) {
+        Money sum = Money.zero(totalPrice.currency().getCurrencyCode());
+        for (OptionCode code : optionsPicked) {
+            sum = sum.add(catalog.priceOf(code));
+        }
+        this.totalPrice = sum;
     }
 
-    public SpecificationId getId() {
-        return this.id;
+    private void ensureNotFinal() {
+        if (state == SpecificationState.FINAL) {
+            throw new IllegalStateException("Specyfikacja " + id + " jest już zatwierdzona (FINAL)");
+        }
     }
 
-    public CatalogId getCatalogId() {
-        return this.catalogId;
+    private void markInProgress() {
+        if (state == SpecificationState.DRAFT) {
+            state = SpecificationState.IN_PROGRESS;
+        }
     }
 
-    public Money getTotalPrice() {
-        return this.totalPrice;
+    private void requireSameCatalog(ProductCatalog catalog) {
+        if (!catalog.id().equals(catalogId)) {
+            throw new IllegalArgumentException(
+                    "Katalog " + catalog.id() + " nie odpowiada specyfikacji opartej o " + catalogId);
+        }
     }
 
-    public SpecificationState getState() {
-        return this.state;
+    public SpecificationId id() {
+        return id;
+    }
+
+    public CatalogId catalogId() {
+        return catalogId;
+    }
+
+    public Money totalPrice() {
+        return totalPrice;
+    }
+
+    public SpecificationState state() {
+        return state;
+    }
+
+    public List<OptionCode> optionsPicked() {
+        return Collections.unmodifiableList(new ArrayList<>(optionsPicked));
+    }
+
+    /** Zwraca kopię zbioru wybranych opcji (dla RuleValidationService / specyfikacji). */
+    public Set<OptionCode> pickedAsSet() {
+        return new LinkedHashSet<>(optionsPicked);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof VehicleSpecification that)) return false;
+        return id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

@@ -1,17 +1,22 @@
 package salon.sales.infrastructure.in.messaging;
 
-import salon.catalog.application.domain.event.CatalogUpdatedEvent;
-import salon.catalog.application.domain.event.SpecificationCompletedEvent;
+import salon.catalog.application.domain.model.event.CatalogUpdated;
+import salon.catalog.application.domain.model.event.SpecificationCompleted;
+import salon.common.model.Money;
 import salon.sales.application.port.in.SynchronizeSpecificationPriceUseCase;
 
 /**
  * Adapter sterujący (driving) — subskrybent zdarzeń Kontekstu Katalogu i Konfiguratora
  * w Kontekście Sprzedaży (komunikacja wg kanwy: SpecificationCompleted, CatalogUpdated).
  *
+ * Warstwa zapobiegająca uszkodzeniu (ACL): adapter odbiera zdarzenia w języku Katalogu
+ * (SpecificationId/Money/CatalogId Katalogu) i TŁUMACZY je na model Sprzedaży
+ * (String + salon.common.model.Money) przed wywołaniem portu wejściowego. Dzięki temu
+ * dziedzina Sprzedaży nie zależy od modelu Katalogu.
+ *
  * UC-CRM-02, warunek wstępny / krok 1: po odebraniu SpecificationCompleted adapter zapisuje
  * wyliczoną cenę katalogową do lokalnego read modelu (event-carried state transfer) i powiadamia
- * Handlowca o nowej specyfikacji oczekującej na ofertowanie — samą ofertę (z danymi klienta)
- * Handlowiec generuje przez port ReceiveSpecificationUseCase.
+ * Handlowca o nowej specyfikacji oczekującej na ofertowanie.
  */
 public class CatalogEventSubscriberAdapter {
 
@@ -25,31 +30,28 @@ public class CatalogEventSubscriberAdapter {
     }
 
     /** UC-CRM-02, krok 1: nowa kompletna specyfikacja -> zapis wyceny + powiadomienie Handlowca. */
-    public void handleSpecificationCompleted(SpecificationCompletedEvent event) {
+    public void handleSpecificationCompleted(SpecificationCompleted event) {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
-        if (event.specificationId() == null || event.specificationId().isBlank()) {
-            throw new IllegalArgumentException("Identyfikator specyfikacji jest wymagany");
-        }
-        if (event.price() == null) {
-            throw new IllegalArgumentException("Wyliczona cena specyfikacji jest wymagana");
-        }
-        this.synchronizeSpecificationPrice.registerSpecificationPrice(
-                event.specificationId(), event.price());
-        System.out.println("[CatalogEventSubscriberAdapter] Specyfikacja " + event.specificationId()
-                + " gotowa do ofertowania (cena " + event.price() + ") — powiadamiam Handlowca.");
+        // Tłumaczenie z języka Katalogu na język Sprzedaży (ACL).
+        String specificationId = event.specificationId().toString();
+        Money price = Money.of(
+                event.totalPrice().amount(),
+                event.totalPrice().currency().getCurrencyCode());
+
+        this.synchronizeSpecificationPrice.registerSpecificationPrice(specificationId, price);
+        System.out.println("[CatalogEventSubscriberAdapter] Specyfikacja " + specificationId
+                + " gotowa do ofertowania (cena " + price + ") — powiadamiam Handlowca.");
     }
 
     /** UC-KON-02: opublikowano nową wersję cennika — informacja dla zespołu sprzedaży. */
-    public void handleCatalogUpdated(CatalogUpdatedEvent event) {
+    public void handleCatalogUpdated(CatalogUpdated event) {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
-        if (event.catalogId() == null || event.catalogId().isBlank()) {
-            throw new IllegalArgumentException("Identyfikator katalogu (catalogId) jest wymagany");
-        }
-        System.out.println("[CatalogEventSubscriberAdapter] Nowa wersja cennika " + event.catalogId()
+        String catalogId = event.catalogId().toString();
+        System.out.println("[CatalogEventSubscriberAdapter] Nowa wersja cennika " + catalogId
                 + " — nowe oferty będą budowane na zaktualizowanym katalogu.");
     }
 }

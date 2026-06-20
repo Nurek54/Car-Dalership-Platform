@@ -28,16 +28,10 @@ import salon.financing.infrastructure.out.mock.BankIntegrationMockAdapter;
 import salon.financing.infrastructure.out.mock.InMemoryFinancingRepository;
 import salon.financing.infrastructure.in.messaging.FinancingEventListener;
 
-import salon.catalog.application.service.BuildSpecificationService;
-import salon.catalog.application.service.UpdateCatalogService;
-import salon.catalog.application.service.ArchiveCatalogService;
-import salon.catalog.application.domain.model.catalog.ProductCatalogFactory;
-import salon.catalog.application.domain.service.RuleValidationService;
-import salon.catalog.infrastructure.out.mock.InMemorySpecificationRepository;
-import salon.catalog.infrastructure.out.mock.InMemoryCatalogRepository;
-import salon.catalog.infrastructure.out.mock.ImporterApiMockAdapter;
-import salon.catalog.infrastructure.in.scheduling.CatalogUpdateJobAdapter;
-import salon.catalog.infrastructure.in.messaging.CatalogVersionPublishedEventListener;
+// UWAGA: Kontekst Katalogu i Konfiguratora NIE jest już spinany w tym pliku.
+// Po przebudowie jest samodzielnie wstrzykiwany przez component-scan
+// (@Service/@Component/@Repository) oraz salon.catalog.infrastructure.config.DomainBeansConfiguration
+// (fabryki, RuleValidationService, Clock). Ręczne beany kolidowałyby z beanami skanowanymi.
 
 import salon.logistics.application.service.InventoryManagementService;
 import salon.logistics.application.port.out.FactoryIntegrationAclPort;
@@ -61,9 +55,10 @@ import salon.common.application.EventPublisher;
 /**
  * Korzeń kompozycji (Composition Root) dla uruchomienia produkcyjnego pod Springiem.
  *
- * Usługi i adaptery Kontekstu Sprzedaży są beanami komponentowymi (@Service/@Component) —
- * tu spinamy pozostałe konteksty (Rozliczenia, Logistykę, Finansowanie, Katalog), które
- * pozostają czystymi POJO, oraz adaptery międzykontekstowe (ACL do CRM, subskrybenty zdarzeń).
+ * Usługi i adaptery Kontekstów Sprzedaży oraz Katalogu są beanami komponentowymi
+ * (@Service/@Component/@Repository) i wstrzykują się przez component-scan — NIE spinamy ich tutaj.
+ * Tu spinamy konteksty pozostające czystymi POJO (Rozliczenia, Logistykę, Finansowanie)
+ * oraz adaptery międzykontekstowe (ACL do CRM, subskrybenty zdarzeń).
  */
 @Configuration
 public class SalonWiringConfiguration {
@@ -207,53 +202,10 @@ public class SalonWiringConfiguration {
     }
 
     // --- Katalog i Konfigurator (UC-KON-01/02) ---
-    // Usługi konstruowane jawnie z lokalnymi adapterami in-memory, aby nie kolidować
-    // z @Primary CatalogDatabaseRepository (ACL Sprzedaży) i nie wymagać źródła danych przy starcie.
-
-    @Bean
-    public BuildSpecificationService specificationAppService(EventPublisher eventPublisherPort) {
-        return new BuildSpecificationService(
-                new InMemorySpecificationRepository(),
-                new RuleValidationService(new InMemoryCatalogRepository()),
-                eventPublisherPort);
-    }
-
-    /**
-     * Repozytorium cennika współdzielone przez publikację NOWEJ wersji (UpdateCatalogService)
-     * i archiwizację POPRZEDNIEJ (ArchiveCatalogService) — obie usługi muszą operować na tym samym
-     * źródle, aby handler odnalazł poprzedni cennik. Lokalna implementacja in-memory, by nie kolidować
-     * z @Primary CatalogDatabaseRepository (ACL Sprzedaży) i nie wymagać źródła danych przy starcie.
-     */
-    private final InMemoryCatalogRepository catalogStateRepository = new InMemoryCatalogRepository();
-
-    @Bean
-    public UpdateCatalogService catalogAppService(EventPublisher eventPublisherPort) {
-        return new UpdateCatalogService(
-                catalogStateRepository, new ImporterApiMockAdapter(),
-                new ProductCatalogFactory(), eventPublisherPort);
-    }
-
-    /** UC-KON-02: archiwizacja poprzedniej wersji w osobnej transakcji (eventual consistency). */
-    @Bean
-    public ArchiveCatalogService archiveCatalogAppService() {
-        return new ArchiveCatalogService(catalogStateRepository);
-    }
-
-    /** UC-KON-02: cykliczna synchronizacja cennika (adapter cron). */
-    @Bean
-    public CatalogUpdateJobAdapter catalogUpdateJobAdapter(UpdateCatalogService catalogAppService) {
-        return new CatalogUpdateJobAdapter(catalogAppService);
-    }
-
-    /**
-     * Katalog <- Katalog: CatalogVersionPublished wyzwala archiwizację poprzedniej wersji cennika
-     * (osobna transakcja, jeden agregat na transakcję — złota zasada DDD).
-     */
-    @Bean
-    public CatalogVersionPublishedEventListener catalogVersionPublishedEventListener(
-            ArchiveCatalogService archiveCatalogAppService) {
-        return new CatalogVersionPublishedEventListener(archiveCatalogAppService);
-    }
+    // Brak ręcznego spinania: po przebudowie kontekst wstrzykuje się sam przez component-scan
+    // (BuildSpecificationService/UpdateCatalogService = @Service, adaptery = @Component/@Repository)
+    // oraz salon.catalog.infrastructure.config.DomainBeansConfiguration (ProductCatalogFactory,
+    // VehicleSpecificationFactory, RuleValidationService, Clock).
 
     // --- Adaptery sterujące (subskrybenty zdarzeń) jako beany ---
 

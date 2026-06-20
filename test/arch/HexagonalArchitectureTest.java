@@ -56,7 +56,7 @@ class HexagonalArchitectureTest {
 
     @ArchTest
     static final ArchRule allContextsShouldBeIndependent = slices()
-            .matching("salon.(*).domain..")
+            .matching("salon.(*).application.domain..")
             .should().notDependOnEachOther()
             .because("Contexts should be isolated. We using Domain Events!");
 

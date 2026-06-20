@@ -18,11 +18,15 @@ import salon.billing.infrastructure.out.mock.NotificationMockAdapter;
 import salon.billing.infrastructure.out.mock.PdfGeneratorMockAdapter;
 import salon.catalog.application.domain.model.catalog.CatalogOption;
 import salon.catalog.application.domain.model.catalog.CatalogRule;
-import salon.catalog.application.domain.model.catalog.OptionCode;
+import salon.catalog.application.domain.model.catalog.ModelYear;
 import salon.catalog.application.domain.model.catalog.ProductCatalog;
+import salon.catalog.application.domain.model.catalog.ProductCatalogFactory;
 import salon.catalog.application.domain.model.catalog.RuleType;
-import salon.catalog.application.domain.model.specification.RuleViolationException;
+import salon.catalog.application.domain.model.shared.OptionCode;
+import salon.catalog.application.domain.exception.CombinationNotAllowedException;
 import salon.catalog.application.domain.model.specification.VehicleSpecification;
+import salon.catalog.application.domain.model.specification.VehicleSpecificationFactory;
+import salon.catalog.application.domain.service.RuleValidationService;
 import salon.sales.application.service.SalesQueryService;
 import salon.sales.application.domain.exception.InvalidOfferStateException;
 import salon.sales.application.domain.exception.OfferExpiredException;
@@ -55,16 +59,27 @@ public class OfflineDemo {
 
     public static void main(String[] args) {
         System.out.println("=== KATALOG: konfiguracja pojazdu (Fail-fast) ===");
-        ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
-        catalog.addOption(new CatalogOption(new OptionCode("MANUAL_GEARBOX"), Money.of(0, "PLN")));
-        catalog.addOption(new CatalogOption(new OptionCode("ADAPTIVE_CRUISE"), Money.of(3000, "PLN")));
-        catalog.addRule(new CatalogRule(new OptionCode("ADAPTIVE_CRUISE"),
-                new OptionCode("MANUAL_GEARBOX"), RuleType.EXCLUDES));
-        VehicleSpecification spec = new VehicleSpecification(SpecificationId.generate(), catalog.getCatalogId());
-        spec.addOption(new OptionCode("MANUAL_GEARBOX"), catalog);
+        // Katalog jest niezmienny — budujemy go fabryką z kompletnego zbioru opcji i reguł.
+        ProductCatalog catalog = new ProductCatalogFactory().createNew(
+                ModelYear.of(2026),
+                java.util.List.of(
+                        new CatalogOption(OptionCode.of("MANUAL_GEARBOX"),
+                                salon.catalog.application.domain.model.shared.Money.zero("PLN")),
+                        new CatalogOption(OptionCode.of("ADAPTIVE_CRUISE"),
+                                salon.catalog.application.domain.model.shared.Money.of(new BigDecimal("3000"), "PLN"))),
+                java.util.List.of(
+                        new CatalogRule(OptionCode.of("ADAPTIVE_CRUISE"),
+                                OptionCode.of("MANUAL_GEARBOX"), RuleType.EXCLUDES)));
+
+        VehicleSpecification spec = new VehicleSpecificationFactory()
+                .createDraft(catalog.id(), catalog.currencyCode());
+        RuleValidationService ruleValidation = new RuleValidationService();
+        spec.addOption(OptionCode.of("MANUAL_GEARBOX"), catalog);
         try {
-            spec.addOption(new OptionCode("ADAPTIVE_CRUISE"), catalog);
-        } catch (RuleViolationException e) {
+            spec.addOption(OptionCode.of("ADAPTIVE_CRUISE"), catalog);
+            // Reguły wykluczające waliduje usługa dziedziny (a nie sam agregat).
+            ruleValidation.validateSelection(spec, catalog);
+        } catch (CombinationNotAllowedException e) {
             System.out.println("[OK] Reguła zadziałała: " + e.getMessage());
         }
 

@@ -1,35 +1,33 @@
 package salon.sales.infrastructure.out.external;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
-import salon.catalog.application.port.out.CatalogDatabaseRepository;
-import salon.catalog.application.domain.model.catalog.CatalogId;
-import salon.catalog.application.domain.model.catalog.ProductCatalog;
+import salon.sales.application.port.out.CatalogPriceQueryPort;
 import salon.sales.application.domain.exception.ExternalServiceUnavailableException;
 import salon.sales.application.domain.exception.SpecificationNotFoundException;
 import salon.common.model.Money;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Adapter wyjściowy (ExternalApiAdapter, ACL) — klient HTTP modułu Katalogu (UC-CRM-02).
- * Tłumaczy JSON z zewnętrznego API na hermetyczny obiekt wartości Money.
+ * Realizuje port Sprzedaży {@link CatalogPriceQueryPort}: tłumaczy JSON z zewnętrznego
+ * API na hermetyczny obiekt wartości Money (salon.common.model.Money).
+ *
+ * Zależność prowadzi do wewnątrz: adapter zależy od portu zdefiniowanego przez własny
+ * kontekst (Sprzedaż), a nie od portu repozytorium Katalogu.
  *
  * HTTP 404 -> SpecificationNotFoundException (kontrolowany błąd biznesowy),
  * HTTP 5xx/timeout -> ExternalServiceUnavailableException (błąd infrastruktury).
  */
 @Component
-@Primary
-public class CatalogExternalApiAdapter implements CatalogDatabaseRepository {
+public class CatalogExternalApiAdapter implements CatalogPriceQueryPort {
 
     private static final int TIMEOUT_MILLIS = 2000;
 
@@ -64,25 +62,5 @@ public class CatalogExternalApiAdapter implements CatalogDatabaseRepository {
             throw new ExternalServiceUnavailableException(
                     "Catalog service is currently unavailable", e);
         }
-    }
-
-    // --- Operacje magazynu katalogów nie są dostępne przez zdalne API sprzedażowe ---
-
-    @Override
-    public void save(ProductCatalog catalog) {
-        throw new UnsupportedOperationException(
-                "Remote catalog API is read-only for the Sales context.");
-    }
-
-    @Override
-    public Optional<ProductCatalog> findById(CatalogId id) {
-        throw new UnsupportedOperationException(
-                "Remote catalog API is read-only for the Sales context.");
-    }
-
-    @Override
-    public List<ProductCatalog> findAll() {
-        throw new UnsupportedOperationException(
-                "Remote catalog API is read-only for the Sales context.");
     }
 }

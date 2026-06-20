@@ -1,7 +1,10 @@
 package salon.logistics.infrastructure.in.messaging;
 
-import salon.catalog.application.domain.event.SpecificationCompletedEvent;
+import salon.catalog.application.domain.model.event.SpecificationCompleted;
+import salon.catalog.application.domain.model.shared.OptionCode;
 import salon.logistics.application.port.in.SynchronizeSpecificationUseCase;
+
+import java.util.List;
 
 /**
  * Adapter sterujący (driving) — subskrybent zdarzeń Kontekstu Katalogu
@@ -11,6 +14,9 @@ import salon.logistics.application.port.in.SynchronizeSpecificationUseCase;
  * Inwentarz buduje z nich lokalną kopię specyfikacji, dzięki czemu UC-INW-01
  * (rezerwacja z placu) i UC-INW-02 (zlecenie produkcji) nie wymagają
  * synchronicznego odpytywania Katalogu/Sprzedaży.
+ *
+ * Warstwa zapobiegajaca uszkodzeniu (ACL): adapter tlumaczy typy Katalogu
+ * (SpecificationId, OptionCode) na prosty model portu Logistyki (String, List<String>).
  */
 public class CatalogEventSubscriberAdapter {
 
@@ -23,14 +29,16 @@ public class CatalogEventSubscriberAdapter {
         this.synchronizeSpecification = synchronizeSpecification;
     }
 
-    public void handleSpecificationCompleted(SpecificationCompletedEvent event) {
+    public void handleSpecificationCompleted(SpecificationCompleted event) {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
-        if (event.specificationId() == null || event.specificationId().isBlank()) {
-            throw new IllegalArgumentException("Identyfikator specyfikacji jest wymagany");
-        }
-        this.synchronizeSpecification.registerSpecification(
-                event.specificationId(), event.optionCodes());
+        // Tlumaczenie z jezyka Katalogu na model Logistyki (ACL).
+        String specificationId = event.specificationId().toString();
+        List<String> optionCodes = event.optionsPicked().stream()
+                .map(OptionCode::value)
+                .toList();
+
+        this.synchronizeSpecification.registerSpecification(specificationId, optionCodes);
     }
 }

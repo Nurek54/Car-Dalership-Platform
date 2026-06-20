@@ -1,85 +1,79 @@
 package salon.catalog.application.domain.service;
 
-import salon.catalog.application.port.out.CatalogDatabaseRepository;
-import salon.catalog.application.domain.model.catalog.CatalogId;
+import salon.catalog.application.domain.exception.CatalogValidationException;
+import salon.catalog.application.domain.exception.CombinationNotAllowedException;
 import salon.catalog.application.domain.model.catalog.CatalogRule;
-import salon.catalog.application.domain.model.catalog.OptionCode;
 import salon.catalog.application.domain.model.catalog.ProductCatalog;
 import salon.catalog.application.domain.model.catalog.RuleType;
-import salon.catalog.application.domain.model.specification.RuleViolationException;
+import salon.catalog.application.domain.model.shared.OptionCode;
 import salon.catalog.application.domain.model.specification.VehicleSpecification;
+import salon.catalog.application.domain.policy.OptionCombinationSpecification;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
- * Serwis dziedzinowy (UC-KON-01): łączy specyfikację z cennikiem.
- * Zgodnie z diagramem architektury to ON czyta reguły z CatalogDatabaseRepository — sam pobiera
- * ProductCatalog (po identyfikatorze ze specyfikacji) i podaje go agregatowi, dzięki czemu
- * agregat nie zna bazy, a walidacja reguł (Fail-fast) dzieje się w domenie (addOption).
+ * USŁUGA DZIEDZINY (bezstanowa) – walidacja reguł wykluczających/wymagających.
  *
- * Bezstanowy: koordynuje dodawanie opcji (EXCLUDES, Fail-fast) oraz ocenia kompletność
- * konfiguracji przed finalizacją (REQUIRES).
+ * Walidacja nie jest odpowiedzialnością encji (PDF, rozdz. 3) – wymaga dostępu do
+ * całego stanu (wybrane opcje + reguły katalogu), więc realizuje ją osobna usługa
+ * dziedziny w oparciu o wzorzec Specyfikacja. Zgłasza wyjątek dopiero po sprawdzeniu
+ * wszystkiego.
+ *
+ * Klasa nie ma stanu, jedyna odpowiedzialność, nie używa repozytoriów.
  */
 public class RuleValidationService {
 
-    private final CatalogDatabaseRepository catalogRepository;
-
-    public RuleValidationService(CatalogDatabaseRepository catalogRepository) {
-        if (catalogRepository == null) {
-            throw new IllegalArgumentException("catalogRepository must not be null.");
+    /**
+     * Weryfikacja prostych reguł wykluczających „na bieżąco” (UC-KON-01, krok 4).
+     * Rzuca {@link CombinationNotAllowedException}, gdy kombinacja jest zablokowana (A1).
+     */
+    public void validateSelection(VehicleSpecification specification, ProductCatalog catalog) {
+        OptionCombinationSpecification spec = new OptionCombinationSpecification(catalog.rules());
+        List<String> violations = spec.violations(specification.pickedAsSet());
+        if (!violations.isEmpty()) {
+            throw new CombinationNotAllowedException(
+                    "Niedozwolona kombinacja opcji: " + String.join("; ", violations));
         }
-        this.catalogRepository = catalogRepository;
     }
 
     /**
-     * UC-KON-01: koordynacja dodania opcji bez podawania cennika z zewnątrz.
-     * Serwis sam pobiera właściwy cennik z repozytorium (po identyfikatorze ze specyfikacji),
-     * a następnie zleca agregatowi dodanie opcji (pełna walidacja: obecność + wykluczenia + cena).
+     * Weryfikacja ostatecznej kompletności i spójności przed zatwierdzeniem
+     * (UC-KON-01, krok 6). Sprawdza wszystkie reguły REQUIRES/EXCLUDES.
      */
-    public void validateAndAddOption(VehicleSpecification specification, OptionCode option) {
-        if (specification == null) {
-            throw new IllegalArgumentException("specification must not be null.");
+    public void validateComplete(VehicleSpecification specification, ProductCatalog catalog) {
+        if (specification.optionsPicked().isEmpty()) {
+            throw new CombinationNotAllowedException("Specyfikacja nie zawiera żadnej opcji");
         }
-        if (option == null) {
-            throw new IllegalArgumentException("option must not be null.");
-        }
-        specification.addOption(option, loadCatalog(specification));
+        validateSelection(specification, catalog);
     }
 
     /**
-     * UC-KON-01 (reguła finalizacji): ocena kompletności konfiguracji względem reguł cennika.
-     * Sprawdzamy reguły REQUIRES — jeśli wybrano opcję źródłową, musi też być obecna opcja wymagana.
-     * Złamanie kompletności blokuje finalizację (RuleViolationException).
-     *
-     * Uwaga: kompletność grup kardynalnych (silnik/skrzynia/kolor) wymaga kategoryzacji opcji,
-     * której bieżący model (CatalogOption = kod + cena) nie posiada — egzekwujemy tu zależności REQUIRES.
+     * Walidacja logiczna katalogu (UC-KON-02, krok 3): brak reguł sprzecznych –
+     * ta sama para opcji nie może być jednocześnie REQUIRES i EXCLUDES.
+     * Walidację strukturalną (unikalność kodów, istnienie opcji) wykonuje fabryka.
      */
-    public void assertComplete(VehicleSpecification specification) {
-        if (specification == null) {
-            throw new IllegalArgumentException("specification must not be null.");
-        }
-        ProductCatalog catalog = loadCatalog(specification);
-        List<OptionCode> picked = specification.getSelectedOptions();
-        List<CatalogRule> rules = catalog.getRules();
-        for (int i = 0; i < rules.size(); i++) {
-            CatalogRule rule = rules.get(i);
-            if (rule.type() != RuleType.REQUIRES) {
-                continue;
-            }
-            if (picked.contains(rule.sourceCode()) && !picked.contains(rule.targetCode())) {
-                throw new RuleViolationException("Option " + rule.sourceCode().value()
-                        + " requires " + rule.targetCode().value() + " to be selected.");
+    public void validateCatalogConsistency(ProductCatalog catalog) {
+        List<CatalogRule> rules = catalog.rules();
+        for (CatalogRule rule : rules) {
+            for (CatalogRule other : rules) {
+                if (rule == other) {
+                    continue;
+                }
+                boolean samePair = pairMatches(rule, other);
+                if (samePair && rule.type() != other.type()) {
+                    throw new CatalogValidationException(
+                            "Sprzeczne reguły dla pary " + rule.sourceCode() + "/" + rule.targetCode()
+                                    + ": " + RuleType.REQUIRES + " oraz " + RuleType.EXCLUDES);
+                }
             }
         }
     }
 
-    private ProductCatalog loadCatalog(VehicleSpecification specification) {
-        CatalogId catalogId = specification.getCatalogId();
-        Optional<ProductCatalog> found = catalogRepository.findById(catalogId);
-        if (found.isEmpty()) {
-            throw new IllegalStateException("Catalog not found: " + catalogId.value());
-        }
-        return found.get();
+    private boolean pairMatches(CatalogRule a, CatalogRule b) {
+        OptionCode as = a.sourceCode();
+        OptionCode at = a.targetCode();
+        OptionCode bs = b.sourceCode();
+        OptionCode bt = b.targetCode();
+        return (as.equals(bs) && at.equals(bt)) || (as.equals(bt) && at.equals(bs));
     }
 }

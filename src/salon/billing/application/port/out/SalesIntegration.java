@@ -12,5 +12,5 @@ import salon.billing.application.domain.model.document.BuyerDetails;
  */
 public interface SalesIntegration {
 
-    BuyerDetails getBuyerDetails(String orderId);
+    BuyerDetails buyerDetailsFor(String orderId);
 }

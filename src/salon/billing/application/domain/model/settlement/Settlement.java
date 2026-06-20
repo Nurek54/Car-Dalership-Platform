@@ -89,7 +89,7 @@ public class Settlement extends AbstractAggregateRoot {
      * (+ {@link SettlementCompletedEvent}); wpłata niepełna (A1) -> PARTIAL_PAYMENT.
      */
     private void recalculateBalance() {
-        boolean fullyPaid = getOutstandingBalance().getAmount().signum() <= 0;
+        boolean fullyPaid = outstandingBalance().getAmount().signum() <= 0;
         if (fullyPaid) {
             if (this.status != SettlementStatus.SETTLED) {
                 this.status = SettlementStatus.SETTLED;
@@ -101,7 +101,7 @@ public class Settlement extends AbstractAggregateRoot {
     }
 
     /** Saldo pozostałe do zapłaty = kwota kontraktu - suma zaksięgowanych wpłat (uwzględnia zadatek). */
-    public Money getOutstandingBalance() {
+    public Money outstandingBalance() {
         Money paid = Money.of(BigDecimal.ZERO, this.totalAmount.currency());
         for (Payment payment : this.payments) {
             paid = paid.add(payment.amount());
@@ -109,19 +109,19 @@ public class Settlement extends AbstractAggregateRoot {
         return this.totalAmount.subtract(paid);
     }
 
-    public SettlementId getId() {
+    public SettlementId id() {
         return id;
     }
 
-    public OrderId getOrderId() {
+    public OrderId orderId() {
         return orderId;
     }
 
-    public Money getTotalAmount() {
+    public Money totalAmount() {
         return totalAmount;
     }
 
-    public SettlementStatus getStatus() {
+    public SettlementStatus status() {
         return status;
     }
 
@@ -129,7 +129,7 @@ public class Settlement extends AbstractAggregateRoot {
         return advanceRequested;
     }
 
-    public List<Payment> getPayments() {
+    public List<Payment> payments() {
         return Collections.unmodifiableList(new ArrayList<>(this.payments));
     }
 }

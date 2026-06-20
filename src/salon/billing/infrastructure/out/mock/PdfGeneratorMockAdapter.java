@@ -18,7 +18,7 @@ public class PdfGeneratorMockAdapter implements PdfGeneration {
         }
         byte[] pdf = document.generatePdf();
         System.out.println("[PdfGeneratorMockAdapter] Wygenerowano PDF dla dokumentu "
-                + document.getId().value() + " (" + pdf.length + " B).");
+                + document.id().value() + " (" + pdf.length + " B).");
         return pdf;
     }
 }

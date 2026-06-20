@@ -26,7 +26,7 @@ public class InProcessEventPublisherAdapter implements EventPublisher {
         System.out.println("[InProcessEventPublisherAdapter] -> " + event.getClass().getSimpleName());
     }
 
-    public List<DomainEvent> getPublishedEvents() {
+    public List<DomainEvent> publishedEvents() {
         return Collections.unmodifiableList(new ArrayList<>(this.publishedEvents));
     }
 }

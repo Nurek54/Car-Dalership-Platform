@@ -20,7 +20,7 @@ public class InMemorySettlementRepository implements SettlementDatabaseRepositor
 
     @Override
     public void save(Settlement settlement) {
-        this.byOrderId.put(settlement.getOrderId().value(), settlement);
+        this.byOrderId.put(settlement.orderId().value(), settlement);
     }
 
     @Override

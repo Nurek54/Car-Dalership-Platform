@@ -21,7 +21,7 @@ public class InMemoryDocumentRepository implements DocumentDatabaseRepository {
 
     @Override
     public void save(AccountingDocument document) {
-        this.byId.put(document.getId().value(), document);
+        this.byId.put(document.id().value(), document);
     }
 
     @Override
@@ -33,7 +33,7 @@ public class InMemoryDocumentRepository implements DocumentDatabaseRepository {
     public List<AccountingDocument> findByOrderId(OrderId orderId) {
         List<AccountingDocument> result = new ArrayList<>();
         for (AccountingDocument document : this.byId.values()) {
-            if (document.getOrderId().value().equals(orderId.value())) {
+            if (document.orderId().value().equals(orderId.value())) {
                 result.add(document);
             }
         }

@@ -22,7 +22,7 @@ public class InvoiceCalculationService {
         if (settlement == null) {
             throw new IllegalArgumentException("settlement must not be null.");
         }
-        Money total = settlement.getTotalAmount();
+        Money total = settlement.totalAmount();
         return Money.of(total.getAmount().multiply(ADVANCE_RATE), total.currency());
     }
 
@@ -31,6 +31,6 @@ public class InvoiceCalculationService {
         if (settlement == null) {
             throw new IllegalArgumentException("settlement must not be null.");
         }
-        return settlement.getOutstandingBalance();
+        return settlement.outstandingBalance();
     }
 }

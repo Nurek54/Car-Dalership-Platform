@@ -14,8 +14,8 @@ public class NotificationAdapter implements NotificationGeneration {
     @Override
     public void notifyInvoiceIssued(AccountingDocument document, byte[] pdf) {
         System.out.println("[NotificationAdapter] E-mail do nabywcy zamowienia "
-                + document.getOrderId().value() + ": dokument " + document.getId().value()
-                + " (termin platnosci " + document.getDueDate() + ").");
+                + document.orderId().value() + ": dokument " + document.id().value()
+                + " (termin platnosci " + document.dueDate() + ").");
     }
 
     @Override

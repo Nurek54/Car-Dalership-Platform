@@ -47,9 +47,9 @@ class SettlementEventListenerTest {
 
         Optional<Settlement> saved = this.repository.findByOrderId(new OrderId("ORDER-1"));
         assertTrue(saved.isPresent());
-        assertEquals(0, new BigDecimal("100000").compareTo(saved.get().getTotalAmount().amount()));
-        assertEquals("PLN", saved.get().getTotalAmount().currency());
-        assertEquals(SettlementStatus.OPEN, saved.get().getStatus());
+        assertEquals(0, new BigDecimal("100000").compareTo(saved.get().totalAmount().amount()));
+        assertEquals("PLN", saved.get().totalAmount().currency());
+        assertEquals(SettlementStatus.OPEN, saved.get().status());
     }
 
     @Test

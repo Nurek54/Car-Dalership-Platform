@@ -84,9 +84,9 @@ public class PaymentProcessService implements ProcessPayment {
     @Override
     public void sendPaymentReminders() {
         for (Settlement settlement : this.settlementRepository.findAll()) {
-            if (settlement.getStatus() != SettlementStatus.SETTLED) {
+            if (settlement.status() != SettlementStatus.SETTLED) {
                 this.notification.notifyPaymentReminder(
-                        settlement.getOrderId(), settlement.getOutstandingBalance());
+                        settlement.orderId(), settlement.outstandingBalance());
             }
         }
     }

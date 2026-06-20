@@ -26,7 +26,7 @@ public class SalesCrmIntegrationAdapter implements SalesIntegration {
     }
 
     @Override
-    public BuyerDetails getBuyerDetails(String orderId) {
+    public BuyerDetails buyerDetailsFor(String orderId) {
         CustomerSnapshotDto buyer = this.salesQueryFacade.findBuyerForOrder(new OrderId(orderId));
         return new BuyerDetails(buyer.fullName(), buyer.nip());
     }

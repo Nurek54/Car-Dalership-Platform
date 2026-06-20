@@ -114,43 +114,43 @@ public class AccountingDocument {
         this.status = DocumentStatus.ERROR;
     }
 
-    public DocumentId getId() {
+    public DocumentId id() {
         return id;
     }
 
-    public OrderId getOrderId() {
+    public OrderId orderId() {
         return orderId;
     }
 
-    public String getInvoiceTitle() {
+    public String invoiceTitle() {
         return invoiceTitle;
     }
 
-    public BuyerDetails getBuyer() {
+    public BuyerDetails buyer() {
         return buyer;
     }
 
-    public SellerDetails getSeller() {
+    public SellerDetails seller() {
         return seller;
     }
 
-    public Money getTotalAmount() {
+    public Money totalAmount() {
         return totalAmount;
     }
 
-    public LocalDate getIssueDate() {
+    public LocalDate issueDate() {
         return issueDate;
     }
 
-    public LocalDate getDueDate() {
+    public LocalDate dueDate() {
         return dueDate;
     }
 
-    public String getAuthorizedIssuer() {
+    public String authorizedIssuer() {
         return authorizedIssuer;
     }
 
-    public DocumentStatus getStatus() {
+    public DocumentStatus status() {
         return status;
     }
 }

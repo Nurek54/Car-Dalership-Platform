@@ -101,10 +101,10 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
             Settlement settlement = loadSettlement(command.orderId());
 
             Money advance = this.invoiceCalculation.calculateAdvanceAmount(settlement);
-            BuyerDetails buyer = this.salesIntegration.getBuyerDetails(command.orderId());
+            BuyerDetails buyer = this.salesIntegration.buyerDetailsFor(command.orderId());
 
             AccountingDocument document = this.documentFactory.createInvoice(
-                    settlement.getOrderId(), buyer, this.seller, advance,
+                    settlement.orderId(), buyer, this.seller, advance,
                     "Prosba o zadatek " + command.orderId(), command.authorizedIssuer());
             String documentId = issueAndNotify(document);
 
@@ -131,10 +131,10 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
             Settlement settlement = loadSettlement(command.orderId());
 
             Money outstanding = this.invoiceCalculation.calculateFinalInvoiceAmount(settlement);
-            BuyerDetails buyer = this.salesIntegration.getBuyerDetails(command.orderId());
+            BuyerDetails buyer = this.salesIntegration.buyerDetailsFor(command.orderId());
 
             AccountingDocument document = this.documentFactory.createInvoice(
-                    settlement.getOrderId(), buyer, this.seller, outstanding,
+                    settlement.orderId(), buyer, this.seller, outstanding,
                     command.invoiceTitle(), command.authorizedIssuer());
             String documentId = issueAndNotify(document);
 
@@ -155,7 +155,7 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
         document.markAsIssued();
         this.documentRepository.save(document);
         this.notification.notifyInvoiceIssued(document, pdf);
-        return document.getId().value();
+        return document.id().value();
     }
 
     private Settlement loadSettlement(String orderId) {

@@ -65,8 +65,8 @@ public class ProcessFinancingService implements ProcessFinancing {
     public void requestFinancing(String orderId, String customerId) {
         try {
             // Krok 2: agregacja danych z Kontekstu Sprzedaży (dane nabywcy + kwota do sfinansowania).
-            BuyerDetails buyerDetails = this.salesIntegration.fetchBuyerDetails(orderId);
-            Money amountToFinance = this.salesIntegration.fetchAmountToFinance(orderId);
+            BuyerDetails buyerDetails = this.salesIntegration.buyerDetails(orderId);
+            Money amountToFinance = this.salesIntegration.offerFinalPrice(orderId);
 
             // Krok 3: zbudowanie lokalnego wniosku (DRAFT) — translacja na model dziedziny.
             FinancingApplication application = this.applicationFactory.createDraft(

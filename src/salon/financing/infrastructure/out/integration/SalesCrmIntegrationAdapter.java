@@ -8,11 +8,12 @@ import salon.sales.api.CustomerSnapshotDto;
 import salon.sales.api.SalesQueryFacade;
 
 /**
- * ADAPTER WYJŚCIOWY (ACL, Rysunek 42: SalesQueryService) – realizacja portu {@link SalesIntegration}.
+ * ADAPTER WYJSCIOWY (ACL, Rysunek 42: SalesQueryService) — realizacja portu {@link SalesIntegration}.
  *
- * Zależy wyłącznie od publicznej fasady Sprzedaży ({@link SalesQueryFacade}, Published Language)
- * i tłumaczy jej migawki na lokalny model Finansowania: CustomerSnapshotDto -> {@link BuyerDetails},
- * a cenę końcową oferty na kwotę do sfinansowania ({@link Money} ze Wspólnego Jądra).
+ * Warstwa Zapobiegajaca Uszkodzeniu: zalezy wylacznie od publicznej fasady Sprzedazy
+ * ({@link SalesQueryFacade}, Jezyk Opublikowany) i tlumaczy jej migawki na lokalny model Finansowania:
+ * CustomerSnapshotDto -> {@link BuyerDetails}, a cene koncowa oferty na kwote do sfinansowania
+ * ({@link Money} ze Wspolnego Jadra).
  */
 public class SalesCrmIntegrationAdapter implements SalesIntegration {
 
@@ -26,13 +27,13 @@ public class SalesCrmIntegrationAdapter implements SalesIntegration {
     }
 
     @Override
-    public BuyerDetails fetchBuyerDetails(String orderId) {
+    public BuyerDetails buyerDetails(String orderId) {
         CustomerSnapshotDto buyer = this.salesQueryFacade.findBuyerForOrder(new OrderId(orderId));
         return new BuyerDetails(buyer.fullName(), buyer.nip());
     }
 
     @Override
-    public Money fetchAmountToFinance(String orderId) {
+    public Money offerFinalPrice(String orderId) {
         return this.salesQueryFacade.findOfferForOrder(new OrderId(orderId)).finalPrice();
     }
 }

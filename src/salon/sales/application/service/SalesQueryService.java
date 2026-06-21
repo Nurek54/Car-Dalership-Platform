@@ -13,11 +13,11 @@ import salon.sales.application.domain.model.order.Order;
 import salon.common.model.OrderId;
 
 /**
- * Implementacja fasady zapytań {@link SalesQueryFacade} Kontekstu Sprzedaży i CRM.
+ * Implementation of the query facade {@link SalesQueryFacade} of the Sales and CRM Context.
  *
- * Nawigacja zamówienie -> oferta źródłowa -> tożsamość klienta -> agregat Klient
- * jest wiedzą domenową Sprzedaży i pozostaje w całości wewnątrz tego kontekstu;
- * na zewnątrz wychodzi wyłącznie {@link CustomerSnapshotDto} (Published Language).
+ * The navigation order -> source offer -> customer identity -> Customer aggregate
+ * is Sales domain knowledge and stays entirely within this context;
+ * only {@link CustomerSnapshotDto} (Published Language) goes outside.
  */
 @Service
 public class SalesQueryService implements SalesQueryFacade {

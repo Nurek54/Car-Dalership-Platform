@@ -1,17 +1,17 @@
 package salon.logistics.application.port.in;
 
 /**
- * PORT WEJŚCIOWY (Rysunek 37) – „ReleaseVehicle”.
+ * INBOUND PORT (Figure 37) – "ReleaseVehicle".
  *
- * Zwolnienie pojazdu: zdjęcie ze stanu po fizycznym wydaniu (UC-INW-06) oraz automatyczne
- * zdjęcie blokady po przekroczeniu terminu płatności (UC-INW-04). Obie operacje „uwalniają"
- * numer VIN — odpowiednio do stanu „Wydany" lub z powrotem na plac jako „Wolny".
+ * Releasing the vehicle: removal from stock after physical handover (UC-INW-06) and automatic
+ * removal of the lock after the payment deadline is exceeded (UC-INW-04). Both operations "free up"
+ * the VIN — respectively to the "Handed over" state or back to the yard as "Free".
  */
 public interface ReleaseVehicle {
 
-    /** UC-INW-06: zdjęcie pojazdu z aktywnego stanu magazynowego po wydaniu. */
+    /** UC-INW-06: removing the vehicle from the active stock after handover. */
     void releaseVehicle(String orderId);
 
-    /** UC-INW-04: automatyczne zwolnienie rezerwacji po przekroczeniu terminu płatności. */
+    /** UC-INW-04: automatic release of the reservation after the payment deadline is exceeded. */
     void releaseReservation(String orderId);
 }

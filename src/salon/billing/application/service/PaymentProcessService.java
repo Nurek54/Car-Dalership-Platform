@@ -14,11 +14,11 @@ import salon.common.model.Money;
 import salon.common.model.OrderId;
 
 /**
- * USLUGA APLIKACJI (Rys. 48 — PaymentProcessService) — orkiestracja salda zamowienia (UC-FIR-03).
+ * APPLICATION SERVICE (Fig. 48 — PaymentProcessService) — orchestration of the order balance (UC-FIR-03).
  *
- * Typu fasada: rozpoczyna i domyka logiczna transakcje przypadku uzycia, koordynuje agregat
- * Rozliczenia oraz porty wyjsciowe i publikuje zdarzenia po sukcesie. Sama nie zawiera regul
- * biznesowych — te sa w agregacie {@link Settlement}. Realizuje port {@link ProcessPayment}.
+ * Facade type: it begins and closes the use case's logical transaction, coordinates the aggregate
+ * the Settlement and the outbound ports and publishes events on success. It contains no rules itself
+ * business ones — those are in the {@link Settlement} aggregate. It implements the {@link ProcessPayment} port.
  */
 public class PaymentProcessService implements ProcessPayment {
 
@@ -55,7 +55,7 @@ public class PaymentProcessService implements ProcessPayment {
         this.eventPublisher = eventPublisher;
     }
 
-    /** Inicjalizacja salda (status OPEN) dla nowego zamowienia — fabryka tworzy agregat. */
+    /** Initializes the balance (OPEN status) for a new order — the factory creates the aggregate. */
     @Override
     public void initializeSettlement(OrderId orderId, Money totalAmount) {
         Settlement settlement = this.settlementFactory.createNew(orderId, totalAmount);
@@ -63,15 +63,15 @@ public class PaymentProcessService implements ProcessPayment {
     }
 
     /**
-     * UC-FIR-03: zaksiegowanie sparowanego przelewu. Agregat rejestruje zdarzenia (collect &amp; pull),
-     * usluga sciaga je po zapisie i publikuje (PaymentRegistered, ew. AdvancePaymentRegistered/SettlementCompleted).
+     * UC-FIR-03: posting the matched transfer. The aggregate records events (collect &amp; pull),
+     * the service pulls them after saving and publishes them (PaymentRegistered, possibly AdvancePaymentRegistered/SettlementCompleted).
      */
     @Override
     public void processPayment(ProcessPaymentCommand command) {
         OrderId orderId = new OrderId(command.orderId());
         Settlement settlement = this.settlementRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new SettlementNotFoundException(
-                        "Brak otwartego salda dla zamowienia " + command.orderId()));
+                        "No open balance for order " + command.orderId()));
 
         settlement.registerPayment(command.transactionId(),
                 Money.of(command.amount(), command.currency()));
@@ -80,7 +80,7 @@ public class PaymentProcessService implements ProcessPayment {
         this.eventPublisher.publishAll(settlement.pullDomainEvents());
     }
 
-    /** Zadanie cykliczne: przypomnienie o kazdym nierozliczonym saldzie (status != SETTLED). */
+    /** Periodic task: reminder for every unsettled balance (status != SETTLED). */
     @Override
     public void sendPaymentReminders() {
         for (Settlement settlement : this.settlementRepository.findAll()) {

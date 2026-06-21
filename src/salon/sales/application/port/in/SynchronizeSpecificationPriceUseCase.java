@@ -3,12 +3,12 @@ package salon.sales.application.port.in;
 import salon.common.model.Money;
 
 /**
- * Port wejściowy (driving) — synchronizacja lokalnej wyceny specyfikacji w Kontekście
- * Sprzedaży na podstawie zdarzenia SpecificationCompleted z Katalogu (UC-CRM-02,
- * warunek wstępny). Wywoływany przez adapter subskrybenta zdarzeń (CatalogEventSubscriberAdapter).
+ * Inbound port (driving) — synchronization of the local specification pricing in the
+ * Sales Context based on the SpecificationCompleted event from the Catalog (UC-CRM-02,
+ * a precondition). Invoked by the event-subscriber adapter (CatalogEventSubscriberAdapter).
  */
 public interface SynchronizeSpecificationPriceUseCase {
 
-    /** Zapis wyceny katalogowej specyfikacji (ze zdarzenia SpecificationCompleted). */
+    /** Saving the catalog pricing of the specification (from the SpecificationCompleted event). */
     void registerSpecificationPrice(String specificationId, Money price);
 }

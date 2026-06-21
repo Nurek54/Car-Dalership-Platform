@@ -4,10 +4,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Model trwałego magazynu dla agregatu ProductCatalog (DTO warstwy infrastruktury).
+ * Persistent-storage model for the ProductCatalog aggregate (infrastructure-layer DTO).
  *
- * Oddzielony od modelu dziedziny – model danych powstaje PO modelu dziedziny i nie
- * wycieka do warstw wewnętrznych (mapowanie dwukierunkowe wykonuje adapter).
+ * Separated from the domain model – the data model is created AFTER the domain model and does not
+ * leak into the inner layers (the bidirectional mapping is done by the adapter).
  */
 public record ProductCatalogRecord(String id,
                                    int modelYear,

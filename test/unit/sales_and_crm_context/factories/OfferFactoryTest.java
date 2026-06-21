@@ -16,7 +16,7 @@ class OfferFactoryTest {
 
     @Test
     void shouldCreateValidDraftOffer() {
-        // Posiadamy poprawne dane wejściowe dla nowej oferty
+        // We have valid input data for the new offer
         CustomerId customerId = new CustomerId("CUST-1");
         SpecificationId specId = new SpecificationId("SPEC-1");
         Money basePrice = Money.of(150000, "PLN");
@@ -24,19 +24,19 @@ class OfferFactoryTest {
         Offer offer = offerFactory.createOffer(customerId, specId, basePrice);
 
         assertThat(offer).isNotNull();
-        assertThat(offer.id()).isNotNull(); // Fabryka sama generuje ID
+        assertThat(offer.id()).isNotNull(); // The factory generates the ID itself
         assertThat(offer.state()).isEqualTo(OfferState.DRAFT);
         assertThat(offer.finalPrice()).isEqualTo(basePrice);
     }
 
     @Test
     void shouldRejectCreatingOfferForNegativePrice() {
-        // Błędna, ujemna kwota z cennika
+        // An invalid, negative amount from the price list
         CustomerId customerId = new CustomerId("CUST-1");
         SpecificationId specId = new SpecificationId("SPEC-1");
         Money invalidPrice = Money.of(-100, "PLN");
 
-        // Fabryka odrzuca próbę utworzenia oferty
+        // The factory rejects the attempt to create the offer
         assertThatThrownBy(() -> offerFactory.createOffer(customerId, specId, invalidPrice))
                 .isInstanceOf(InvalidOfferDataException.class)
                 .hasMessageContaining("Cannot create offer with zero or negative base price");

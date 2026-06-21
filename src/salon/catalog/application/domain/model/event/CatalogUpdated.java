@@ -7,8 +7,8 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Zdarzenie dziedziny emitowane po pomyślnej aktualizacji katalogu/cennika
- * (UC-KON-02, krok 5). Publikowane na szynę danych (RabbitMQ).
+ * Domain event emitted after a successful update of the catalog/price list
+ * (UC-KON-02, step 5). Published on the data bus (RabbitMQ).
  */
 public final class CatalogUpdated implements DomainEvent {
 

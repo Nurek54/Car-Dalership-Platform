@@ -5,13 +5,13 @@ import salon.sales.application.domain.model.customer.CustomerId;
 
 import java.util.Optional;
 
-// Port wyjściowy: repozytorium agregatu Klient (CRM).
+// Outbound port: repository of the Customer aggregate (CRM).
 public interface CustomerDatabaseRepository {
 
     void save(Customer customer);
 
     Optional<Customer> findById(CustomerId id);
 
-    /** UC-CRM-01: szybka weryfikacja, czy klient istnieje w bazie CRM. */
+    /** UC-CRM-01: a quick check whether the customer exists in the CRM database. */
     boolean existsById(String customerId);
 }

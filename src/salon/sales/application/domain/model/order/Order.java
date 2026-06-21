@@ -18,35 +18,35 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Aggregate Root: zamówienie (UC-CRM-03, UC-CRM-04, UC-CRM-05).
+ * Aggregate Root: the order (UC-CRM-03, UC-CRM-04, UC-CRM-05).
  *
- * Model zgodny z docs/Agregate/Sales/customer-offer-order.md i docs/Agregate/Sales/order.md:
+ * Model consistent with docs/Agregate/Sales/customer-offer-order.md and docs/Agregate/Sales/order.md:
  *   pola:    id, sourceOfferId, requiredDeposit, paymentMethod, paymentStatus,
- *            handoverDate, state (+ vehicleId przypisany przy gotowości do wydania)
+ *            handoverDate, state (+ vehicleId assigned upon readiness for handover)
  *   metody:  declarePaymentMethod, activate, markAsReadyForHandover, scheduleHandover,
  *            confirmHandover, revertToReadyForHandover, cancelOrder
- *   stany:   DRAFT_CREATED/DRAFT -> IN_PROGRESS -> READY_FOR_HANDOVER
- *            -> HANDOVER_SCHEDULED -> COMPLETED (CANCELLED — rezygnacja klienta)
+ *   states:  DRAFT_CREATED/DRAFT -> IN_PROGRESS -> READY_FOR_HANDOVER
+ *            -> HANDOVER_SCHEDULED -> COMPLETED (CANCELLED — customer cancellation)
  *
- * Polityka płatności: declarePaymentMethod() hermetyzuje decyzję, które zdarzenie
- * opuści agregat (BankTransferDeclaredEvent / FinancingRequestedEvent).
- * Mechanizm kompensacyjny (saga): revertToReadyForHandover() pozwala bezpiecznie cofnąć
- * zamówienie po odmowie wyksięgowania pojazdu przez Inwentarz (UC-CRM-05, A1) —
- * czyszcząc ustaloną datę wydania.
+ * Payment policy: declarePaymentMethod() encapsulates the decision about which event
+ * will leave the aggregate (BankTransferDeclaredEvent / FinancingRequestedEvent).
+ * Compensating mechanism (saga): revertToReadyForHandover() allows safely reverting
+ * the order after Inventory refuses to remove the vehicle from stock (UC-CRM-05, A1) —
+ * clearing the agreed handover date.
  */
 public class Order extends AbstractAggregateRoot {
 
     private final OrderId id;
     private final OfferId sourceOfferId;
-    private final SpecificationId specificationId; // specyfikacja z oferty (event-carried state transfer do Inwentarza)
-    private final Money requiredDeposit;   // wynegocjowana wartość kontraktu (może być null)
+    private final SpecificationId specificationId; // specification from the offer (event-carried state transfer to Inventory)
+    private final Money requiredDeposit;   // the negotiated contract value (may be null)
 
-    private PaymentMethod paymentMethod;   // zadeklarowana forma płatności (UC-CRM-03, krok 4)
-    private PaymentStatus paymentStatus;   // synchronizowany ze zdarzeń Rozliczeń
-    private LocalDate handoverDate;        // ustalony termin odbioru (UC-CRM-04)
-    private String vehicleId;              // VIN przypisany, gdy pojazd jest gotowy (UC-CRM-04)
+    private PaymentMethod paymentMethod;   // the declared payment method (UC-CRM-03, step 4)
+    private PaymentStatus paymentStatus;   // synchronized from the Billing events
+    private LocalDate handoverDate;        // the agreed pickup date (UC-CRM-04)
+    private String vehicleId;              // VIN assigned when the vehicle is ready (UC-CRM-04)
     private OrderState state;
-    private Long version;                  // znacznik wersji dla blokady optymistycznej (infrastruktura)
+    private Long version;                  // version marker for optimistic locking (infrastructure)
 
     public Order(OrderId id, OfferId sourceOfferId, Money requiredDeposit) {
         this(id, sourceOfferId, null, requiredDeposit);
@@ -72,10 +72,10 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /**
-     * Wołane przez {@link OrderFactory} zaraz po utworzeniu: formalne złożenie zamówienia.
-     * Agregat ogłasza OrderPlacedEvent (m.in. dla Kontekstu Rozliczeń i Inwentarza)
-     * i przechodzi w stan DRAFT. Pakietowy zasięg — odtwarzanie z repozytorium
-     * NIE rejestruje tego zdarzenia.
+     * Called by {@link OrderFactory} right after creation: the formal placement of the order.
+     * The aggregate announces OrderPlacedEvent (among others for the Billing and Inventory Contexts)
+     * and transitions to the DRAFT state. Package scope — reconstitution from the repository
+     * does NOT record this event.
      */
     void markPlaced() {
         this.state = OrderState.DRAFT;
@@ -86,8 +86,8 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /**
-     * UC-CRM-03, krok 4-5: klient deklaruje formę płatności. Agregat decyduje, które
-     * zdarzenie opuści kontekst: BankTransferDeclaredEvent (przelew, z kwotą kontraktu)
+     * UC-CRM-03, steps 4-5: the customer declares the payment method. The aggregate decides which
+     * event will leave the context: BankTransferDeclaredEvent (transfer, with the contract amount)
      * albo FinancingRequestedEvent (kredyt/leasing — uruchamia UC-FIN-01).
      */
     public void declarePaymentMethod(PaymentMethod method) {
@@ -112,7 +112,7 @@ public class Order extends AbstractAggregateRoot {
         }
     }
 
-    // UC-CRM-03 cz.2 (Rys. 19/20 PDF): zaksięgowana wpłata uruchamia realizację.
+    // UC-CRM-03 part 2 (Fig. 19/20 PDF): a posted payment triggers fulfillment.
     public void activate() {
         if (this.state != OrderState.DRAFT_CREATED && this.state != OrderState.DRAFT) {
             throw new InvalidOrderStateException(
@@ -123,7 +123,7 @@ public class Order extends AbstractAggregateRoot {
                 UUID.randomUUID(), this.id.value(), Instant.now()));
     }
 
-    /** Aktualizacja statusu opłacenia (sygnał z Kontekstu Rozliczeń). */
+    /** Updating the payment status (signal from the Billing Context). */
     public void changePaymentStatus(PaymentStatus paymentStatus) {
         if (paymentStatus == null) {
             throw new IllegalArgumentException("paymentStatus must not be null.");
@@ -131,15 +131,15 @@ public class Order extends AbstractAggregateRoot {
         this.paymentStatus = paymentStatus;
     }
 
-    /** Przypisanie fizycznego pojazdu (VIN) zgłoszonego przez Inwentarz. */
+    /** Assigning the physical vehicle (VIN) reported by Inventory. */
     public void assignVehicle(String vehicleId) {
         this.vehicleId = vehicleId;
     }
 
     /**
-     * UC-CRM-04, krok 1-2: sygnał z placu (VehicleReadyForHandoverEvent) — pojazd gotowy
-     * fizycznie i finansowo. Zamówienie przechodzi w stan "Gotowe do odbioru" i ogłasza
-     * zdarzenie, które wyzwala powiadomienie Handlowca.
+     * UC-CRM-04, steps 1-2: a signal from the yard (VehicleReadyForHandoverEvent) — the vehicle is ready
+     * physically and financially. The order transitions to the "Ready for handover" state and announces
+     * an event that triggers the notification of the Salesperson.
      */
     public void markAsReadyForHandover() {
         if (this.state == OrderState.COMPLETED || this.state == OrderState.CANCELLED) {
@@ -152,8 +152,8 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /**
-     * UC-CRM-04, krok 4-5: Handlowiec ustala z klientem termin odbioru — zamówienie przechodzi
-     * w stan "Umówiony na odbiór". Obsługuje także A1 (odroczony odbiór: dalsza data).
+     * UC-CRM-04, steps 4-5: the Salesperson agrees the pickup date with the customer — the order transitions
+     * to the "Handover scheduled" state. It also supports A1 (deferred pickup: a later date).
      */
     public void scheduleHandover(LocalDate date) {
         if (date == null) {
@@ -168,11 +168,11 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /**
-     * UC-CRM-05: rejestracja fizycznego wydania pojazdu (podpisany protokół wydania).
-     * Dozwolone z "Umówiony na odbiór" oraz bezpośrednio z "Gotowe do odbioru" (klient
-     * odbiera auto na miejscu). Agregat ogłasza zamknięcie zamówienia (OrderCompletedEvent)
-     * oraz fakt wydania pojazdu (VehicleHandedOverEvent — m.in. dla Rozliczeń i obsługi
-     * posprzedażowej); komendę ReleaseVehicle do Inwentarza wysyła warstwa aplikacji.
+     * UC-CRM-05: registering the physical handover of the vehicle (a signed handover protocol).
+     * Allowed from "Handover scheduled" and directly from "Ready for handover" (the customer
+     * picks up the car on the spot). The aggregate announces the order closure (OrderCompletedEvent)
+     * and the fact of the vehicle handover (VehicleHandedOverEvent — among others for Billing and after-sales
+     * support); the ReleaseVehicle command to Inventory is sent by the application layer.
      */
     public void confirmHandover() {
         if (this.state != OrderState.HANDOVER_SCHEDULED
@@ -189,10 +189,10 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /**
-     * UC-CRM-05, scenariusz A1: Inwentarz odmówił zwolnienia pojazdu
-     * (VehicleInventoryReleasedError). Mechanizm kompensacyjny (saga): cofamy zamówienie do
-     * "Gotowe do odbioru" i czyścimy ustaloną datę wydania, aby Handlowiec mógł ponowić
-     * odbiór po usunięciu blokady magazynowej.
+     * UC-CRM-05, scenario A1: Inventory refused to release the vehicle
+     * (VehicleInventoryReleasedError). Compensating mechanism (saga): we revert the order to
+     * "Ready for handover" and clear the agreed handover date, so the Salesperson can retry
+     * the handover after the stock lock is removed.
      */
     public void revertToReadyForHandover() {
         if (this.state != OrderState.COMPLETED && this.state != OrderState.HANDOVER_SCHEDULED) {
@@ -204,8 +204,8 @@ public class Order extends AbstractAggregateRoot {
     }
 
     /**
-     * Anulowanie zamówienia (rezygnacja klienta). Wydanego pojazdu nie można już anulować.
-     * Agregat ogłasza OrderCancelledEvent z powodem — m.in. dla Kontekstu Rozliczeń.
+     * Cancelling the order (customer cancellation). A handed-over vehicle can no longer be cancelled.
+     * The aggregate announces OrderCancelledEvent with a reason — among others for the Billing Context.
      */
     public void cancelOrder(String reason) {
         if (reason == null || reason.isBlank()) {
@@ -227,12 +227,12 @@ public class Order extends AbstractAggregateRoot {
         return this.id;
     }
 
-    /** Identyfikator oferty źródłowej (audytowalność: zamówienie oparte o zatwierdzone warunki). */
+    /** Identifier of the source offer (auditability: the order is based on approved terms). */
     public OfferId offerId() {
         return this.sourceOfferId;
     }
 
-    /** Specyfikacja pojazdu z oferty źródłowej (może być null dla zamówień legacy). */
+    /** Vehicle specification from the source offer (may be null for legacy orders). */
     public SpecificationId specificationId() {
         return this.specificationId;
     }

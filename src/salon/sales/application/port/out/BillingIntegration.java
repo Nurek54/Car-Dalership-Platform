@@ -3,18 +3,18 @@ package salon.sales.application.port.out;
 import salon.common.model.Money;
 
 /**
- * Port wyjściowy (driven) do Kontekstu Fakturowania i Rozliczeń.
- * Komunikacja zgodna z kanwami: prośba o proformę/zadatek, rozliczenie anulowanego
- * zamówienia oraz domknięcie salda po wydaniu pojazdu.
+ * Outbound port (driven) to the Billing and Settlement Context.
+ * Communication consistent with the canvases: request for a proforma/deposit, settlement of a cancelled
+ * order and closing the balance after the vehicle handover.
  */
 public interface BillingIntegration {
 
-    /** UC-FIR-01/02: zlecenie wystawienia dokumentu proforma na zadeklarowaną kwotę. */
+    /** UC-FIR-01/02: instruction to issue a proforma document for the declared amount. */
     void requestProformaInvoice(String orderId, Money amount);
 
-    /** Rozliczenie zadatku po anulowaniu zamówienia (z powodem rezygnacji). */
+    /** Settling the deposit after order cancellation (with the cancellation reason). */
     void processCancelledOrderBilling(String orderId, String reason);
 
-    /** UC-CRM-05: domknięcie salda końcowego po fizycznym wydaniu pojazdu. */
+    /** UC-CRM-05: closing the final balance after the physical vehicle handover. */
     void closeOrderBalance(String orderId);
 }

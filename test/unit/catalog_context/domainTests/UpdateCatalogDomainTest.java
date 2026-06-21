@@ -7,12 +7,12 @@ import salon.shared.model.Money;
 
 import static org.assertj.core.api.Assertions.*;
 
-/** UC-KON-02: Automatyczna aktualizacja cennika — reguły domenowe cyklu życia cennika */
+/** UC-KON-02: Automatic price list update — domain rules of the price list life cycle */
 class UpdateCatalogDomainTest {
 
     @Test
     void shouldPublishNewActiveVersionWithCatalogUpdatedEvent() {
-        // Publikacja nowej wersji cennika rozsyła w świat zdarzenie CatalogUpdated
+        // Publishing a new price list version broadcasts the CatalogUpdated event
         ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
 
         assertThat(catalog.state()).isEqualTo(CatalogState.ACTIVE);
@@ -24,7 +24,7 @@ class UpdateCatalogDomainTest {
 
     @Test
     void shouldPullDomainEventsOnlyOnce() {
-        // Wzorzec "collect & pull": warstwa aplikacji ściąga zdarzenia jednorazowo
+        // The "collect & pull" pattern: the application layer pulls the events once
         ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
 
         assertThat(catalog.pullDomainEvents()).hasSize(1);
@@ -33,16 +33,16 @@ class UpdateCatalogDomainTest {
 
     @Test
     void shouldKeepArchivedVersionImmutable() {
-        // Wydanie nowej wersji archiwizuje starą — stare wersje są niemutowalne
+        // Releasing a new version archives the old one — old versions are immutable
         ProductCatalog oldVersion = ProductCatalog.createActive("MY_2025");
         oldVersion.addOption(new CatalogOption(new OptionCode("LED_LIGHTS"), Money.of(4500, "PLN")));
 
         oldVersion.archive();
 
-        // Zamrożony cennik nadal udostępnia swoje opcje do odczytu...
+        // A frozen price list still exposes its options for reading...
         assertThat(oldVersion.findOption(new OptionCode("LED_LIGHTS"))).isPresent();
 
-        // ...ale odrzuca każdą próbę modyfikacji
+        // ...but rejects every modification attempt
         assertThatThrownBy(() -> oldVersion.addOption(
                 new CatalogOption(new OptionCode("TOW_HOOK"), Money.of(2000, "PLN"))))
                 .isInstanceOf(IllegalStateException.class);
@@ -53,7 +53,7 @@ class UpdateCatalogDomainTest {
 
     @Test
     void shouldRejectBlankModelYear() {
-        // Rocznik cennika to obowiązkowy Value Object — pusta wartość łamie niezmiennik
+        // The price list model year is a mandatory Value Object — an empty value breaks the invariant
         assertThatThrownBy(() -> ProductCatalog.createActive(" "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("ModelYear");

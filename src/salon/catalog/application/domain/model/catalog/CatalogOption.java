@@ -6,10 +6,10 @@ import salon.catalog.application.domain.model.shared.OptionCode;
 import java.util.Objects;
 
 /**
- * Obiekt wartości – pojedyncza pozycja katalogu: kod opcji + jej cena bazowa.
+ * Value object – a single catalog entry: the option code + its base price.
  *
- * Wg Reguły 2 projektowania agregatów: zamiast encji potomnych stosujemy obiekty
- * wartości, dzięki czemu agregat ProductCatalog pozostaje mały.
+ * Per Aggregate Design Rule 2: instead of child entities we use value
+ * objects, so that the ProductCatalog aggregate stays small.
  */
 public final class CatalogOption {
 

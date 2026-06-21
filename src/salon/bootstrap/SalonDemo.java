@@ -53,13 +53,13 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Demo (offline, in-process): pełna choreografia "Long Track" zgodna z PDF —
+ * Demo (offline, in-process): the full "Long Track" choreography per the PDF —
  * UC-CRM-01..05 + UC-INW-01/02/03/05/06 + UC-FIR-01/03.
  *
- * Przebieg: konfigurator -> oferta proforma (wycena z Katalogu) -> akceptacja
- * -> brak auta na placu -> prośba o zadatek -> wpłata zadatku (aktywacja zamówienia
- * + zlecenie produkcji) -> dostawa na plac -> dopłata salda (SettlementCompleted
- * -> gotowy do wydania) -> umówienie odbioru -> wydanie pojazdu (ReleaseVehicle).
+ * Flow: configurator -> proforma offer (pricing from the Catalog) -> acceptance
+ * -> no car in the yard -> deposit request -> deposit payment (order activation
+ * + production order) -> delivery to the yard -> balance top-up (SettlementCompleted
+ * -> ready for handover) -> scheduling the handover -> vehicle handover (ReleaseVehicle).
  */
 public class SalonDemo {
 
@@ -72,17 +72,17 @@ public class SalonDemo {
                 inventoryRepo, new InMemorySpecificationReadModelAdapter(),
                 new FactoryIntegrationMockAdapter(), bus);
 
-        // --- SPRZEDAŻ I CRM ---
+        // --- SALES AND CRM ---
         InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
         InMemoryOfferRepository offerRepo = new InMemoryOfferRepository();
         InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
         SalesService sales = new SalesService(
                 customerRepo, offerRepo, orderRepo, bus,
-                new InMemorySpecificationPriceReadModelAdapter(),            // read model wyceny (UC-CRM-02)
+                new InMemorySpecificationPriceReadModelAdapter(),            // pricing read model (UC-CRM-02)
                 new InventoryCommandAdapter(inventory, inventory, inventoryRepo),
-                null);                                                       // billing przez zdarzenia
+                null);                                                       // billing via events
 
-        // --- FAKTUROWANIE I ROZLICZENIA ---
+        // --- BILLING AND SETTLEMENT ---
         InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
         InMemoryDocumentRepository documentRepo = new InMemoryDocumentRepository();
         PaymentProcessService settlements = new PaymentProcessService(
@@ -95,7 +95,7 @@ public class SalonDemo {
                 new SalesCrmIntegrationAdapter(new SalesQueryService(orderRepo, offerRepo, customerRepo)),
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
-        // --- Okablowanie choreografii (subskrypcje jak na kanwach kontekstów) ---
+        // --- Wiring the choreography (subscriptions as on the context canvases) ---
         bus.sales = sales;
         bus.inventory = inventory;
         bus.documents = documents;
@@ -103,14 +103,14 @@ public class SalonDemo {
         bus.orderRepo = orderRepo;
 
         // ===== Scenariusz =====
-        // Symulacja zdarzenia SpecificationCompleted z Katalogu (demo pomija konfigurator):
-        // Inwentarz dostaje kody wyposażenia asynchronicznie i buduje lokalny read model.
+        // Simulation of the SpecificationCompleted event from the Catalog (the demo skips the configurator):
+        // Inventory receives the equipment codes asynchronously and builds a local read model.
         inventory.registerSpecification("SPEC-1",
                 List.of("ENG-HYBRID", "COL-RED", "PKG-COMFORT"));
-        // Sprzedaż dostaje tym samym zdarzeniem wyliczoną cenę katalogową (read model wyceny).
+        // Sales receives the computed catalog price via the same event (pricing read model).
         sales.registerSpecificationPrice("SPEC-1", Money.of(100000, "PLN"));
         sales.registerCustomer(new Customer(new CustomerId("CUST-1"), "Jan Kowalski", "1234563218",
-                new Address("Marszałkowska 1", "00-001", "Warszawa", "PL"),
+                new Address("Main Street 1", "00-001", "Warsaw", "PL"),
                 new ContactData("jan.kowalski@example.com", "+48 600 100 200")));
 
         System.out.println("=== UC-CRM-01: uruchomienie sesji konfiguratora ===");
@@ -118,46 +118,46 @@ public class SalonDemo {
                 new StartConfiguratorSessionCommand("CUST-1", "SP-7"));
         System.out.println("Sesja: " + sessionId);
 
-        System.out.println("\n=== UC-CRM-02: oferta proforma (wycena z Katalogu: 100 000 PLN) ===");
+        System.out.println("\n=== UC-CRM-02: proforma offer (pricing from the Catalog: 100 000 PLN) ===");
         OfferId offerId = sales.generateOffer("CUST-1", "SPEC-1");
-        System.out.println("Oferta " + offerId.value() + ": "
+        System.out.println("Offer " + offerId.value() + ": "
                 + offerRepo.findById(offerId).get().state());
 
-        System.out.println("\n=== UC-CRM-03: akceptacja oferty i utworzenie zamówienia ===");
+        System.out.println("\n=== UC-CRM-03: offer acceptance and order creation ===");
         String orderId = sales.acceptOfferAndCreateOrder(offerId);
-        System.out.println("Zamówienie " + orderId + ": "
+        System.out.println("Order " + orderId + ": "
                 + orderRepo.findById(new OrderId(orderId)).get().state());
 
-        System.out.println("\n=== UC-FIR-03: wpłata zadatku (10% = 10 000 PLN) ===");
+        System.out.println("\n=== UC-FIR-03: deposit payment (10% = 10 000 PLN) ===");
         settlements.processPayment(new ProcessPaymentCommand(
                 orderId, "TX-1", new BigDecimal("10000.00"), "PLN"));
-        System.out.println("Zamówienie po zadatku: "
+        System.out.println("Order after deposit: "
                 + orderRepo.findById(new OrderId(orderId)).get().state());
 
-        System.out.println("\n=== UC-INW-03: dostawa pojazdu z fabryki na plac ===");
+        System.out.println("\n=== UC-INW-03: vehicle delivery from the factory to the yard ===");
         String vin = inventoryRepo.findByOrderId(new OrderId(orderId)).get().vin().value();
         inventory.receiveVehicle(vin);
 
-        System.out.println("\n=== UC-FIR-03: dopłata pozostałego salda ===");
+        System.out.println("\n=== UC-FIR-03: top-up of the remaining balance ===");
         settlements.processPayment(new ProcessPaymentCommand(
                 orderId, "TX-2", new BigDecimal("90000.00"), "PLN"));
 
-        System.out.println("\n=== UC-CRM-04: umówienie odbioru ===");
+        System.out.println("\n=== UC-CRM-04: scheduling the handover ===");
         sales.scheduleHandover(new ScheduleHandoverCommand(orderId, LocalDate.now().plusDays(3)));
-        System.out.println("Zamówienie: " + orderRepo.findById(new OrderId(orderId)).get().state());
+        System.out.println("Order: " + orderRepo.findById(new OrderId(orderId)).get().state());
 
-        System.out.println("\n=== UC-CRM-05: rejestracja fizycznego wydania pojazdu ===");
+        System.out.println("\n=== UC-CRM-05: registering the physical vehicle handover ===");
         sales.confirmHandover(new OrderId(orderId));
-        System.out.println("Zamówienie: " + orderRepo.findById(new OrderId(orderId)).get().state());
-        System.out.println("Pojazd:     " + inventoryRepo.findByVin(
+        System.out.println("Order: " + orderRepo.findById(new OrderId(orderId)).get().state());
+        System.out.println("Vehicle:    " + inventoryRepo.findByVin(
                 inventoryRepo.findAll().get(0).vin()).get().state());
 
-        System.out.println("\n[OK] Pełny cykl PDF (Long Track) zakończony.");
+        System.out.println("\n[OK] Full PDF cycle (Long Track) completed.");
     }
 
     /**
-     * Magistrala in-process: rozsyła zdarzenia domenowe do subskrybentów innych kontekstów
-     * dokładnie tak, jak na kanwach (Inbound/Outbound Communication).
+     * In-process bus: dispatches domain events to subscribers in other contexts
+     * exactly as on the canvases (Inbound/Outbound Communication).
      */
     private static final class InProcessChoreographyBus implements EventPublisher {
 
@@ -175,7 +175,7 @@ public class SalonDemo {
             System.out.println("   [bus] -> " + event.getClass().getSimpleName());
             this.pending.add(event);
             if (this.dispatching) {
-                return; // zdarzenie obsłuży pętla nadrzędna (kolejność FIFO, bez rekurencji)
+                return; // the event will be handled by the outer loop (FIFO order, no recursion)
             }
             this.dispatching = true;
             try {
@@ -188,34 +188,34 @@ public class SalonDemo {
         }
 
         private void dispatch(DomainEvent event) {
-            // Sprzedaż -> Inwentarz: OrderPlaced niesie specificationId -> powiązanie w read modelu
-            // (event-carried state transfer; UC-INW-01/02 czytają potem wyłącznie lokalne dane).
+            // Sales -> Inventory: OrderPlaced carries specificationId -> linkage in the read model
+            // (event-carried state transfer; UC-INW-01/02 then read only local data).
             if (event instanceof OrderPlacedEvent e && inventory != null
                     && e.specificationId() != null) {
                 inventory.linkOrderToSpecification(e.orderId(), e.specificationId());
             }
-            // Sprzedaż -> Rozliczenia: nowe zamówienie -> inicjalizacja salda (wartość kontraktu).
+            // Sales -> Billing: new order -> balance initialization (contract value).
             if (event instanceof OrderPlacedEvent e && settlements != null && orderRepo != null) {
                 orderRepo.findById(new OrderId(e.orderId())).ifPresent(order ->
                         settlements.initializeSettlement(order.id(), order.requiredDeposit()));
             }
-            // Inwentarz -> Rozliczenia: brak auta -> prośba o zadatek (UC-FIR-01).
+            // Inventory -> Billing: no car -> deposit request (UC-FIR-01).
             if (event instanceof VehicleIsNotOnStockEvent e && documents != null) {
-                documents.generateAdvance(new GenerateAdvanceCommand(e.orderId(), "ksiegowy@salon.pl"));
+                documents.generateAdvance(new GenerateAdvanceCommand(e.orderId(), "accountant@salon.pl"));
             }
-            // Rozliczenia -> Sprzedaż: wpłata zaksięgowana -> aktywacja zamówienia (UC-CRM-03 cz.2).
+            // Billing -> Sales: payment posted -> order activation (UC-CRM-03 part 2).
             if (event instanceof PaymentRegisteredEvent e && sales != null) {
                 sales.activateOnDeposit(e.orderId());
             }
-            // Rozliczenia -> Inwentarz: zadatek zaksięgowany -> zlecenie produkcji (UC-INW-02).
+            // Billing -> Inventory: deposit posted -> production order (UC-INW-02).
             if (event instanceof AdvancePaymentRegisteredEvent e && inventory != null) {
                 inventory.orderVehicleFromFactory(e.orderId());
             }
-            // Rozliczenia -> Inwentarz: saldo = 0 -> przygotowanie do wydania (UC-INW-05).
+            // Billing -> Inventory: balance = 0 -> preparation for handover (UC-INW-05).
             if (event instanceof SettlementCompletedEvent e && inventory != null) {
                 inventory.prepareVehicleForHandover(e.orderId());
             }
-            // Inwentarz -> Sprzedaż: pojazd gotowy -> "Gotowe do odbioru" + przypisanie VIN (UC-CRM-04).
+            // Inventory -> Sales: vehicle ready -> "Ready for handover" + VIN assignment (UC-CRM-04).
             if (event instanceof VehicleReadyForHandoverEvent e && sales != null) {
                 sales.markOrderAsReadyForHandover(new OrderId(e.orderId()));
                 orderRepo.findById(new OrderId(e.orderId())).ifPresent(order -> {
@@ -223,20 +223,20 @@ public class SalonDemo {
                     orderRepo.save(order);
                 });
             }
-            // Zdarzenia informacyjne:
+            // Informational events:
             if (event instanceof AdvancePaymentRequestedEvent e) {
-                System.out.println("   [CRM] Klient zamówienia " + e.orderId()
-                        + " poproszony o zadatek (e-mail z danymi do przelewu).");
+                System.out.println("   [CRM] Customer of order " + e.orderId()
+                        + " asked for a deposit (e-mail with transfer details).");
             }
             if (event instanceof FactoryOrderPlacedEvent e) {
-                System.out.println("   [INW] Zlecenie produkcji przyjęte, VIN=" + e.vin() + ".");
+                System.out.println("   [INW] Production order accepted, VIN=" + e.vin() + ".");
             }
             if (event instanceof VehicleDeliveredToStockEvent e) {
-                System.out.println("   [INW] Pojazd " + e.vin() + " dostarczony i sparowany z "
+                System.out.println("   [INW] Vehicle " + e.vin() + " delivered and matched with "
                         + e.orderId() + ".");
             }
             if (event instanceof VehicleInventoryReleasedEvent e) {
-                System.out.println("   [INW] Pojazd " + e.vin() + " wyksięgowany (HANDED_OVER).");
+                System.out.println("   [INW] Vehicle " + e.vin() + " removed from stock (HANDED_OVER).");
             }
         }
     }

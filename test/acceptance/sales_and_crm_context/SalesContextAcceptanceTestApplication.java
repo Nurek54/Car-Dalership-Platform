@@ -10,8 +10,8 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 
 /**
- * Kotwica konfiguracji Springa dla testów akceptacyjnych Kontekstu Sprzedaży
- * (pełny kontekst @SpringBootTest + MockMvc + WireMock na jednym porcie).
+ * Spring configuration anchor for the acceptance tests of the Sales Context
+ * (full context @SpringBootTest + MockMvc + WireMock on a single port).
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration

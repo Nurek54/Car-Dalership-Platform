@@ -3,11 +3,11 @@ package salon.billing.application.port.out;
 import salon.billing.application.domain.model.document.AccountingDocument;
 
 /**
- * PORT WYJSCIOWY (Rys. 48 — PdfGeneration) — generowanie pliku PDF dokumentu.
- * Implementowany przez adapter infrastruktury (np. PdfGenerator); port nie zawiera logiki biznesowej.
+ * OUTBOUND PORT (Fig. 48 — PdfGeneration) — generation of the document's PDF file.
+ * Implemented by an infrastructure adapter (e.g. PdfGenerator); the port contains no business logic.
  */
 public interface PdfGeneration {
 
-    /** @return zawartosc wygenerowanego pliku PDF. */
+    /** @return content of the generated PDF file. */
     byte[] generatePdf(AccountingDocument document);
 }

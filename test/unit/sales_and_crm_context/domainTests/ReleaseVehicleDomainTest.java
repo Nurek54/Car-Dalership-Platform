@@ -12,7 +12,7 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.*;
 
-/** UC-CRM-05: Rejestracja fizycznego wydania pojazdu */
+/** UC-CRM-05: Registering the physical vehicle handover */
 class ReleaseVehicleDomainTest {
 
     // Metoda pomocnicza
@@ -20,22 +20,22 @@ class ReleaseVehicleDomainTest {
         Order order = new Order(new OrderId("ORD-999"), new OfferId("OFF-999"), Money.of(150000, "PLN"));
         order.activate();
         order.markAsReadyForHandover();
-        order.scheduleHandover(LocalDate.now().plusDays(1)); // Stan: HANDOVER_SCHEDULED
+        order.scheduleHandover(LocalDate.now().plusDays(1)); // State: HANDOVER_SCHEDULED
         order.pullDomainEvents();
         return order;
     }
 
     @Test
-    void shouldConfirmHandoverAndCompleteOrder() { // SCENARIUSZ GŁÓWNY
-        // Przekazanie umówione
+    void shouldConfirmHandoverAndCompleteOrder() { // MAIN SCENARIO
+        // The handover is scheduled
         Order order = prepareScheduledOrder();
 
-        // Użytkownik potwierdza fizyczne wydanie kluczyków klientowi
+        // The user confirms the physical handover of the keys to the customer
         order.confirmHandover();
 
-        // Agregat przechodzi do końcowego, niemutowalnego stanu COMPLETED
+        // The aggregate transitions to the final, immutable COMPLETED state
         assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
-        // Generuje się zdarzenie zamykające
+        // A closing event is generated
         assertThat(order.getDomainEvents()).hasAtLeastOneElementOfType(OrderCompletedEvent.class);
     }
 
@@ -43,10 +43,10 @@ class ReleaseVehicleDomainTest {
     void shouldRevertToReadyForHandoverWhenInventoryReleaseFails() {
 
         Order order = prepareScheduledOrder();
-        order.confirmHandover(); // Stan ostateczny: COMPLETED
+        order.confirmHandover(); // Final state: COMPLETED
         order.pullDomainEvents();
 
-        // Moduł CRM odbiera z modułu Inwentarza zdarzenie błędu (VehicleInventoryReleasedError),
+        // The CRM module receives an error event from the Inventory module (VehicleInventoryReleasedError),
         order.revertToReadyForHandover();
 
         assertThat(order.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);

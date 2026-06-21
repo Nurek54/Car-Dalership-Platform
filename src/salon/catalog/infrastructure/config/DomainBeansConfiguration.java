@@ -9,14 +9,14 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Clock;
 
 /**
- * Warstwa konfiguracji (infrastruktura) – neutralny komponent składający system
- * z części przez wstrzykiwanie zależności.
+ * Configuration layer (infrastructure) – a neutral component assembling the system
+ * from parts via dependency injection.
  *
- * Model dziedziny (fabryki, usługa dziedziny) jest WOLNY od zależności frameworkowych
- * (brak adnotacji Spring), dlatego jego egzemplarze tworzymy tutaj i udostępniamy jako
- * ziarna. Klasa należy do warstwy infrastruktury (salon.catalog.infrastructure.config),
- * która – zgodnie z architekturą heksagonalną – może odwoływać się do warstwy aplikacji
- * i dziedziny. Adaptery i usługi aplikacji są wykrywane przez skanowanie komponentów.
+ * The domain model (factories, domain service) is FREE of framework dependencies
+ * (no Spring annotations), so we create its instances here and expose them as
+ * beans. The class belongs to the infrastructure layer (salon.catalog.infrastructure.config),
+ * which – per the hexagonal architecture – may reference the application layer
+ * and the domain. Adapters and application services are discovered via component scanning.
  */
 @Configuration
 public class DomainBeansConfiguration {

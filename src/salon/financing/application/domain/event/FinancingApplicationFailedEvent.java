@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-FIN-01 / A2: bank natychmiast odrzucił wniosek z powodu błędnych/niekompletnych danych
- * (np. błędny NIP). Zdarzenie wraca do Kontekstu Sprzedaży i CRM, aby handlowiec poprawił wniosek.
+ * UC-FIN-01 / A2: the bank immediately rejected the application due to incorrect/incomplete data
+ * (e.g. an incorrect tax ID). The event returns to the Sales and CRM Context so the salesperson can fix the application.
  */
 public record FinancingApplicationFailedEvent(String orderId, String reason,
                                               UUID eventId, Instant occurredOn) implements DomainEvent {

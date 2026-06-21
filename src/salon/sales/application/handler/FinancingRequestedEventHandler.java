@@ -4,9 +4,9 @@ import salon.financing.application.port.out.BankIntegrationAcl;
 import salon.sales.application.domain.event.FinancingRequestedEvent;
 
 /**
- * Handler zdarzenia FinancingRequested (UC-CRM-03, krok 5 — finansowanie):
- * uruchamia w module Finansowym proces sprawdzania zdolności kredytowej/leasingowej
- * (UC-FIN-01, przez ACL banku).
+ * Handler of the FinancingRequested event (UC-CRM-03, step 5 — financing):
+ * it triggers the creditworthiness/leasing-capacity check process in the Financing module
+ * (UC-FIN-01, through the bank ACL).
  */
 public class FinancingRequestedEventHandler {
 

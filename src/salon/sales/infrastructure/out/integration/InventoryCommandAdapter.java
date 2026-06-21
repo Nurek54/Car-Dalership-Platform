@@ -10,9 +10,9 @@ import salon.sales.application.port.out.InventoryIntegration;
 import java.util.Optional;
 
 /**
- * Adapter wyjściowy (in-process) portu {@link InventoryIntegration} — bezpośrednie
- * spięcie z portami wejściowymi Kontekstu Inwentarza (do dem i uruchomień monolitycznych).
- * W środowisku rozproszonym zastępuje go InventoryExternalApiAdapter (HTTP) —
+ * Outbound adapter (in-process) of the {@link InventoryIntegration} port — a direct
+ * wiring to the Inventory Context's inbound ports (for demos and monolithic runs).
+ * In a distributed environment it is replaced by InventoryExternalApiAdapter (HTTP) —
  * kontrakt portu pozostaje bez zmian.
  */
 public class InventoryCommandAdapter implements InventoryIntegration {
@@ -38,7 +38,7 @@ public class InventoryCommandAdapter implements InventoryIntegration {
         this.inventoryRepository = inventoryRepository;
     }
 
-    /** UC-CRM-03 -> UC-INW-01/02: rezerwacja pojazdu z placu lub zlecenie produkcji. */
+    /** UC-CRM-03 -> UC-INW-01/02: reservation of a vehicle from the yard or a production order. */
     @Override
     public void allocateVehicleOrProductionSlot(String orderId) {
         this.reserveVehicle.reserveVehicleForOrder(orderId);
@@ -48,13 +48,13 @@ public class InventoryCommandAdapter implements InventoryIntegration {
     @Override
     public void releasePhysicalVehicle(String vehicleId) {
         if (vehicleId == null || vehicleId.isBlank()) {
-            return; // pojazd nie został jeszcze przypisany — nie ma czego zwalniać
+            return; // the vehicle has not been assigned yet — there is nothing to release
         }
         Optional<InventoryVehicle> vehicle =
                 this.inventoryRepository.findByVin(new VinNumber(vehicleId));
         if (vehicle.isEmpty() || vehicle.get().order() == null) {
-            System.out.println("[InventoryCommandAdapter] Brak rezerwacji dla VIN "
-                    + vehicleId + " — komenda ReleaseVehicle pominięta.");
+            System.out.println("[InventoryCommandAdapter] No reservation for VIN "
+                    + vehicleId + " — the ReleaseVehicle command was skipped.");
             return;
         }
         this.releaseInventory.releaseVehicle(vehicle.get().order().value());

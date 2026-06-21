@@ -3,7 +3,7 @@ package salon.billing.application.command;
 import java.math.BigDecimal;
 
 /**
- * Model danych wejsciowych portu ProcessPayment (UC-FIR-03) — sparowany przelew z wyciagu.
+ * Input data model of the ProcessPayment port (UC-FIR-03) — a matched transfer from the statement.
  */
 public record ProcessPaymentCommand(String orderId, String transactionId,
                                     BigDecimal amount, String currency) {

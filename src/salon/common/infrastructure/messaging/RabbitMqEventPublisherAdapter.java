@@ -8,14 +8,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 /**
- * PRAWDZIWY adapter publikujący zdarzenia do RabbitMQ (NIE mock).
+ * A REAL adapter publishing events to RabbitMQ (NOT a mock).
  *
- * Implementuje port wyjściowy EventPublisher, więc warstwa aplikacji woła publish(event)
- * nie wiedząc nic o brokerze. Tutaj zdarzenie jest:
+ * Implements the EventPublisher outbound port, so the application layer calls publish(event)
+ * without knowing anything about the broker. Here the event is:
  *   1) serializowane do JSON,
- *   2) wysyłane na topic-exchange z routing key = prosta nazwa klasy zdarzenia.
+ *   2) sent to the topic exchange with routing key = the simple class name of the event.
  *
- * Subskrybenci (inne konteksty) wiążą swoje kolejki do interesujących ich routing keys.
+ * Subscribers (other contexts) bind their queues to the routing keys they are interested in.
  */
 public class RabbitMqEventPublisherAdapter implements EventPublisher {
 

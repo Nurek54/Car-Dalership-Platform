@@ -4,18 +4,18 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Obiekt wartości – globalnie unikatowa tożsamość agregatu ProductCatalog.
+ * Value object – globally unique identity of the ProductCatalog aggregate.
  *
- * Wg Reguły 3 projektowania agregatów: VehicleSpecification odwołuje się do
- * ProductCatalog WYŁĄCZNIE przez ten identyfikator (a nie przez referencję),
- * dzięki czemu agregaty pozostają rozłączne.
+ * Per Aggregate Design Rule 3: VehicleSpecification references
+ * ProductCatalog ONLY through this identifier (not through a reference),
+ * so that the aggregates remain disjoint.
  */
 public final class CatalogId {
 
     private final UUID value;
 
     private CatalogId(UUID value) {
-        this.value = Objects.requireNonNull(value, "CatalogId nie może być null");
+        this.value = Objects.requireNonNull(value, "CatalogId cannot be null");
     }
 
     public static CatalogId generate() {

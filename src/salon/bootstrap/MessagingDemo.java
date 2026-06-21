@@ -43,8 +43,8 @@ import java.util.UUID;
 
 /**
  * Demo (RabbitMQ): asynchroniczna choreografia UC-CRM-03 cz.2 (Rys. 19/20 PDF) —
- * Rozliczenia księgują zadatek i publikują PaymentRegisteredEvent na brokerze,
- * a SalesDepositListener (idempotentny po eventId) aktywuje zamówienie w CRM.
+ * Billing posts the deposit and publishes PaymentRegisteredEvent on the broker,
+ * and SalesDepositListener (idempotent by eventId) activates the order in CRM.
  *
  * Wymaga uruchomionego brokera (docker-compose up rabbitmq).
  */
@@ -54,7 +54,7 @@ public class MessagingDemo {
         try (RabbitMqConnection connection = new RabbitMqConnection()) {
             RecordEventSerializer serializer = new RecordEventSerializer();
 
-            // --- SPRZEDAŻ I CRM: oferta -> zamówienie (DRAFT) + konsument zadatku ---
+            // --- SALES AND CRM: offer -> order (DRAFT) + deposit consumer ---
             InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
             InMemoryOfferRepository offerRepo = new InMemoryOfferRepository();
             InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
@@ -64,10 +64,10 @@ public class MessagingDemo {
                     new InMemorySpecificationPriceReadModelAdapter(), null, null);
 
             sales.registerCustomer(new Customer(new CustomerId("CUST-DEMO"), "Jan Kowalski",
-                    "1234563218", new Address("Marszałkowska 1", "00-001", "Warszawa", "PL"),
+                    "1234563218", new Address("Main Street 1", "00-001", "Warsaw", "PL"),
                     new ContactData("jan.kowalski@example.com", "+48 600 100 200")));
             sales.startConfiguratorSession(new StartConfiguratorSessionCommand("CUST-DEMO", "SP-7"));
-            // Wycena katalogowa przyszłaby zdarzeniem SpecificationCompleted (demo pomija konfigurator).
+            // The catalog pricing would arrive via the SpecificationCompleted event (the demo skips the configurator).
             sales.registerSpecificationPrice("SPEC-DEMO", Money.of(100000, "PLN"));
             OfferId offerId = sales.generateOffer("CUST-DEMO", "SPEC-DEMO");
             String orderId = sales.acceptOfferAndCreateOrder(offerId);
@@ -77,7 +77,7 @@ public class MessagingDemo {
             salesConsumer.register("PaymentRegisteredEvent", new SalesDepositListener(sales));
             salesConsumer.start();
 
-            // --- FAKTUROWANIE I ROZLICZENIA ---
+            // --- BILLING AND SETTLEMENT ---
             EventPublisher billingPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
             InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
             InMemoryDocumentRepository documentRepo = new InMemoryDocumentRepository();
@@ -98,15 +98,15 @@ public class MessagingDemo {
                     new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
             System.out.println(">> generateAdvance(" + orderId + ") -> AdvancePaymentRequestedEvent (UC-FIR-01)...");
-            docs.generateAdvance(new GenerateAdvanceCommand(orderId, "ksiegowy@salon.pl"));
+            docs.generateAdvance(new GenerateAdvanceCommand(orderId, "accountant@salon.pl"));
 
-            System.out.println(">> processPayment (zadatek) -> PaymentRegisteredEvent na brokerze...");
+            System.out.println(">> processPayment (deposit) -> PaymentRegisteredEvent on the broker...");
             settlements.processPayment(new ProcessPaymentCommand(
                     orderId, "TX-DEMO-1", new BigDecimal("10000"), "PLN"));
 
-            // Dajemy konsumentowi chwilę na odebranie wiadomości z kolejki.
+            // Give the consumer a moment to receive the message from the queue.
             Thread.sleep(1500);
-            System.out.println(">> Stan zamówienia po przejściu zdarzenia przez kolejkę: "
+            System.out.println(">> Order state after the event passed through the queue: "
                     + orderRepo.findById(new OrderId(orderId)).get().state());
         }
     }

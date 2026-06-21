@@ -10,20 +10,20 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * KORZEŃ AGREGATU – Matryca Produkcyjna / Cennik.
+ * AGGREGATE ROOT – Production Matrix / Price List.
  *
- * Kompletny zbiór opcji (CatalogOption) i reguł zależności (CatalogRule) przypisany
- * do danego rocznika modelowego. Korzeń jest jedynym punktem dostępu do wnętrza
- * agregatu (prawo Demeter) i odpowiada za sprawdzanie niezmienników.
+ * A complete set of options (CatalogOption) and dependency rules (CatalogRule) assigned
+ * to a given model year. The root is the only access point to the interior of
+ * the aggregate (Law of Demeter) and is responsible for checking the invariants.
  *
- * Niezmienniki wymuszane przez agregat:
- *  - katalog ma co najmniej jedną opcję,
- *  - kody opcji są unikatowe,
- *  - reguły odwołują się wyłącznie do istniejących w katalogu opcji.
+ * Invariants enforced by the aggregate:
+ *  - the catalog has at least one option,
+ *  - option codes are unique,
+ *  - rules reference only options that exist in the catalog.
  *
- * Uwaga (Reguła 1): twardy rozdział między słownikiem reguł (ten agregat) a
- * koszykiem konfiguracyjnym użytkownika (VehicleSpecification) chroni system przed
- * zmianą cen w trakcie długotrwałego ofertowania.
+ * Note (Rule 1): the strict separation between the rule dictionary (this aggregate) and
+ * the user's configuration basket (VehicleSpecification) protects the system from
+ * price changes during long-running offering.
  */
 public class ProductCatalog {
 
@@ -35,8 +35,8 @@ public class ProductCatalog {
     private final List<CatalogRule> rules;
 
     /**
-     * Konstruktor pakietowy – wywoływany wyłącznie przez {@code ProductCatalogFactory}
-     * (tworzenie nie jest odpowiedzialnością agregatu ani jego klienta).
+     * Package-private constructor – invoked only by {@code ProductCatalogFactory}
+     * (creation is not the responsibility of the aggregate or its client).
      */
     ProductCatalog(CatalogId id,
                    ModelYear modelYear,
@@ -53,8 +53,8 @@ public class ProductCatalog {
     }
 
     /**
-     * Polecenie stanowe: archiwizuje katalog (UC-KON-02, krok 4 – poprzednie dane
-     * zostają oznaczone jako archiwalne po zapisaniu nowej wersji).
+     * Stateful command: archives the catalog (UC-KON-02, step 4 – the previous data
+     * is marked as archived after the new version is saved).
      */
     public void archive() {
         if (state == CatalogState.ARCHIVED) {
@@ -63,24 +63,24 @@ public class ProductCatalog {
         this.state = CatalogState.ARCHIVED;
     }
 
-    /** Zapytanie: czy podany kod opcji występuje w tym katalogu. */
+    /** Query: whether the given option code exists in this catalog. */
     public boolean containsOption(OptionCode code) {
         return findOption(code).isPresent();
     }
 
-    /** Zapytanie: cena bazowa opcji (rzuca wyjątek, gdy opcja spoza katalogu). */
+    /** Query: the base price of an option (throws an exception if the option is not in the catalog). */
     public Money priceOf(OptionCode code) {
         return findOption(code)
                 .map(CatalogOption::basePrice)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Opcja " + code + " nie istnieje w katalogu " + id));
+                        "Option " + code + " does not exist in catalog " + id));
     }
 
     private Optional<CatalogOption> findOption(OptionCode code) {
         return options.stream().filter(o -> o.code().equals(code)).findFirst();
     }
 
-    /** Kod waluty cennika (katalog ma co najmniej jedną opcję – niezmiennik fabryki). */
+    /** Price list currency code (the catalog has at least one option – factory invariant). */
     public String currencyCode() {
         return options.get(0).basePrice().currency().getCurrencyCode();
     }
@@ -101,7 +101,7 @@ public class ProductCatalog {
         return state;
     }
 
-    /** Tylko-do-odczytu (prawo Demeter – klient nie modyfikuje wnętrza agregatu). */
+    /** Read-only (Law of Demeter – the client does not modify the aggregate's interior). */
     public List<CatalogOption> options() {
         return Collections.unmodifiableList(options);
     }

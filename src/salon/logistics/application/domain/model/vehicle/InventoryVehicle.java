@@ -4,23 +4,23 @@ import salon.common.model.OrderId;
 import salon.logistics.application.domain.exception.IllegalVehicleStateException;
 
 /**
- * KORZEŃ AGREGATU (Rysunek 38) – fizyczny egzemplarz pojazdu w Inwentarzu.
+ * AGGREGATE ROOT (Figure 38) – a physical vehicle instance in Inventory.
  *
- * Agregat strzeże niezmienników cyklu życia pojazdu (maszyna stanów) i jest jedynym
- * miejscem zmiany statusu oraz powiązania z zamówieniem. Odwołanie do zamówienia jest
- * ROZŁĄCZNE (przez {@link OrderId} ze wspólnego rdzenia) — Inwentarz nie zna agregatu Order.
+ * The aggregate guards the invariants of the vehicle's life cycle (state machine) and is the only
+ * place where the status and the link to the order change. The reference to the order is
+ * DISJOINT (through {@link OrderId} from the shared kernel) — Inventory does not know the Order aggregate.
  *
- * Logika biznesowa (przejścia stanów) jest tutaj; orkiestracja i zdarzenia — w usłudze aplikacji.
+ * The business logic (state transitions) is here; orchestration and events — in the application service.
  */
 public class InventoryVehicle {
 
     private final VinNumber vin;
-    private final SpecificationId specification; // może być null dla aut "na stock" bez specyfikacji
+    private final SpecificationId specification; // may be null for "stock" cars without a specification
     private VehicleRole role;
     private VehicleState state;
-    private OrderId order; // 0..1 — przypisane dopiero po rezerwacji/zleceniu
+    private OrderId order; // 0..1 — assigned only after reservation/ordering
 
-    /** Konstruktor pakietowy — egzemplarze tworzy wyłącznie {@link InventoryVehicleFactory}. */
+    /** Package-private constructor — instances are created only by {@link InventoryVehicleFactory}. */
     InventoryVehicle(VinNumber vin, SpecificationId specification,
                      VehicleRole role, VehicleState state, OrderId order) {
         if (vin == null) {
@@ -39,23 +39,23 @@ public class InventoryVehicle {
         this.order = order;
     }
 
-    /** UC-INW-01, krok 3–4: twarda blokada wolnego pojazdu z placu dla zamówienia. */
+    /** UC-INW-01, steps 3–4: hard lock of a free vehicle from the yard for the order. */
     public void lockForOrder(OrderId orderId) {
         if (orderId == null) {
             throw new IllegalArgumentException("orderId must not be null.");
         }
         if (this.state != VehicleState.ON_STOCK) {
             throw new IllegalVehicleStateException(
-                    "Zarezerwować można tylko pojazd ON_STOCK (aktualny: " + this.state + ").");
+                    "Only an ON_STOCK vehicle can be reserved (current: " + this.state + ").");
         }
         this.order = orderId;
         this.state = VehicleState.RESERVED;
     }
 
     /**
-     * UC-INW-03 (Rysunek 38: {@code receiveOnYard(ImporterData)}): zjazd z lawety pojazdu
-     * zamówionego w fabryce. Dane importera (skan VIN) są reconciliowane z kartoteką, po czym
-     * pojazd zostaje sparowany z zamówieniem (RESERVED).
+     * UC-INW-03 (Figure 38: {@code receiveOnYard(ImporterData)}): the transporter unloading of a vehicle
+     * ordered from the factory. The importer data (VIN scan) is reconciled with the record, after which
+     * the vehicle is matched with the order (RESERVED).
      */
     public void receiveOnYard(ImporterData data) {
         if (data == null) {
@@ -63,51 +63,51 @@ public class InventoryVehicle {
         }
         if (!this.vin.equals(data.vin())) {
             throw new IllegalVehicleStateException(
-                    "Zeskanowany VIN " + data.vin() + " nie zgadza się z kartoteką pojazdu " + this.vin + ".");
+                    "The scanned VIN " + data.vin() + " does not match the record of vehicle " + this.vin + ".");
         }
         if (this.state != VehicleState.IN_PRODUCTION) {
             throw new IllegalVehicleStateException(
-                    "Na plac (z parowaniem do zamówienia) można przyjąć tylko pojazd IN_PRODUCTION (aktualny: "
+                    "Only an IN_PRODUCTION vehicle can be received into the yard (with matching to an order) (current: "
                             + this.state + ").");
         }
         this.state = VehicleState.RESERVED;
     }
 
-    /** UC-INW-04, krok 3: automatyczne zdjęcie blokady — pojazd wraca na plac jako wolny. */
+    /** UC-INW-04, step 3: automatic removal of the lock — the vehicle returns to the yard as free. */
     public void releaseReservation() {
         if (this.state != VehicleState.RESERVED) {
             throw new IllegalVehicleStateException(
-                    "Zwolnić można tylko rezerwację pojazdu RESERVED (aktualny: " + this.state + ").");
+                    "Only a RESERVED vehicle's reservation can be released (current: " + this.state + ").");
         }
         this.order = null;
         this.state = VehicleState.ON_STOCK;
     }
 
     /**
-     * UC-INW-05, krok 3: po rozliczeniu salda pojazd staje się gotowy do wydania.
-     * (Metoda spoza minimalnego zestawu z Rysunku 38 — wymagana przez UC-INW-05.)
+     * UC-INW-05, step 3: after the balance is settled the vehicle becomes ready for handover.
+     * (A method outside the minimal set from Figure 38 — required by UC-INW-05.)
      */
     public void prepareForHandover() {
         if (this.state != VehicleState.RESERVED) {
             throw new IllegalVehicleStateException(
-                    "Do wydania można przygotować tylko pojazd RESERVED (aktualny: " + this.state + ").");
+                    "Only a RESERVED vehicle can be prepared for handover (current: " + this.state + ").");
         }
         this.state = VehicleState.READY_FOR_HANDOVER;
     }
 
     /**
-     * UC-INW-06, krok 3: fizyczne wydanie — zdjęcie z aktywnego stanu magazynowego.
-     * (Metoda spoza minimalnego zestawu z Rysunku 38 — wymagana przez UC-INW-06.)
+     * UC-INW-06, step 3: physical handover — removal from the active stock.
+     * (A method outside the minimal set from Figure 38 — required by UC-INW-06.)
      */
     public void handOver() {
         if (this.state != VehicleState.READY_FOR_HANDOVER) {
             throw new IllegalVehicleStateException(
-                    "Wydać można tylko pojazd READY_FOR_HANDOVER (aktualny: " + this.state + ").");
+                    "Only a READY_FOR_HANDOVER vehicle can be handed over (current: " + this.state + ").");
         }
         this.state = VehicleState.HANDED_OVER;
     }
 
-    /** Oznaczenie egzemplarza jako demonstracyjnego (Rysunek 38). */
+    /** Marking the instance as a demonstration one (Figure 38). */
     public void markAsDemo() {
         this.role = VehicleRole.DEMO;
     }
@@ -128,7 +128,7 @@ public class InventoryVehicle {
         return state;
     }
 
-    /** Może zwrócić null, gdy pojazd nie jest przypisany do żadnego zamówienia (model rozłączny). */
+    /** May return null when the vehicle is not assigned to any order (disjoint model). */
     public OrderId order() {
         return order;
     }

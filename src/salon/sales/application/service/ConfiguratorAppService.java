@@ -12,12 +12,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Realizuje UC-CRM-01: uruchomienie sesji konfiguratora dla ZAREJESTROWANEGO klienta.
+ * Implements UC-CRM-01: starting a configurator session for a REGISTERED customer.
  *
- * Wariant z weryfikacją tożsamości: zanim sesja zostanie zainicjowana, usługa sprawdza,
- * czy klient istnieje w bazie CRM (existsById) — sesji nie wolno otworzyć dla
- * nieistniejącego identyfikatora. Sprzedaż nie trzyma stanu sesji (byt po stronie
- * Katalogu); tutaj jest tylko inicjacja szansy sprzedaży i emisja zdarzenia.
+ * Variant with identity verification: before the session is initiated, the service checks
+ * whether the customer exists in the CRM database (existsById) — the session must not be opened for
+ * a non-existent identifier. Sales does not hold the session state (the entity is on the
+ * Catalog side); here there is only the initiation of the sales opportunity and the event emission.
  */
 @Service
 public class ConfiguratorAppService implements StartConfigurator {

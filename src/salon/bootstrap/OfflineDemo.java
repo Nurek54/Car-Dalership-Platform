@@ -51,15 +51,15 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Demo (offline): reguły domenowe poszczególnych agregatów w izolacji —
- * Katalog (Fail-fast EXCLUDES), Sprzedaż (polityka rabatowa + maszyna stanów oferty),
- * Fakturowanie i Rozliczenia (UC-FIR-02/03 — ścieżka "auto ze stocku").
+ * Demo (offline): domain rules of individual aggregates in isolation —
+ * Catalog (Fail-fast EXCLUDES), Sales (discount policy + offer state machine),
+ * Billing and Settlement (UC-FIR-02/03 — the "car from stock" path).
  */
 public class OfflineDemo {
 
     public static void main(String[] args) {
-        System.out.println("=== KATALOG: konfiguracja pojazdu (Fail-fast) ===");
-        // Katalog jest niezmienny — budujemy go fabryką z kompletnego zbioru opcji i reguł.
+        System.out.println("=== CATALOG: vehicle configuration (Fail-fast) ===");
+        // The catalog is immutable — we build it with a factory from a complete set of options and rules.
         ProductCatalog catalog = new ProductCatalogFactory().createNew(
                 ModelYear.of(2026),
                 java.util.List.of(
@@ -77,52 +77,52 @@ public class OfflineDemo {
         spec.addOption(OptionCode.of("MANUAL_GEARBOX"), catalog);
         try {
             spec.addOption(OptionCode.of("ADAPTIVE_CRUISE"), catalog);
-            // Reguły wykluczające waliduje usługa dziedziny (a nie sam agregat).
+            // Exclusion rules are validated by the domain service (not the aggregate itself).
             ruleValidation.validateSelection(spec, catalog);
         } catch (CombinationNotAllowedException e) {
-            System.out.println("[OK] Reguła zadziałała: " + e.getMessage());
+            System.out.println("[OK] Rule fired: " + e.getMessage());
         }
 
-        System.out.println("\n=== SPRZEDAŻ: polityka rabatowa i maszyna stanów oferty ===");
+        System.out.println("\n=== SALES: discount policy and offer state machine ===");
         Offer offer = new Offer(OfferId.generate(), new CustomerId("CUST-1"),
                 SpecificationId.generate(), Money.of(new BigDecimal("100000"), "PLN"));
         offer.applyDiscount(new Discount(new BigDecimal("5.00")));
         offer.publishOffer();
-        System.out.println("[OK] Oferta po publikacji: " + offer.state()
-                + ", cena końcowa: " + offer.finalPrice().amount() + " PLN");
+        System.out.println("[OK] Offer after publication: " + offer.state()
+                + ", final price: " + offer.finalPrice().amount() + " PLN");
 
-        // Rabat ponad politykę salonu -> agregat odrzuca (hermetyzacja decyzji cenowych).
+        // A discount above the dealership policy -> the aggregate rejects it (encapsulation of pricing decisions).
         Offer greedy = new Offer(OfferId.generate(), new CustomerId("CUST-2"),
                 SpecificationId.generate(), Money.of(new BigDecimal("100000"), "PLN"));
         try {
             greedy.applyDiscount(new Discount(new BigDecimal("35.00")));
         } catch (IllegalArgumentException e) {
-            System.out.println("[OK] Polityka rabatowa zadziałała: " + e.getMessage());
+            System.out.println("[OK] Discount policy fired: " + e.getMessage());
         }
 
-        // Konwersja: zamówienie może powstać wyłącznie z oferty ACCEPTED (reguła w agregacie).
+        // Conversion: an order can be created only from an ACCEPTED offer (rule in the aggregate).
         offer.accept();
         Order order = new OrderFactory().createFromOffer(offer.id(), offer.toSnapshot());
         order.declarePaymentMethod(PaymentMethod.BANK_TRANSFER);
-        System.out.println("[OK] Zamówienie " + order.id().value() + " w stanie "
-                + order.state() + " (płatność: " + order.paymentMethod() + ")");
-        // Migawkę (toSnapshot) można zbudować WYŁĄCZNIE z oferty ACCEPTED — reguła w agregacie.
+        System.out.println("[OK] Order " + order.id().value() + " in state "
+                + order.state() + " (payment: " + order.paymentMethod() + ")");
+        // The snapshot (toSnapshot) can be built ONLY from an ACCEPTED offer — rule in the aggregate.
         try {
             greedy.publishOffer();
             new OrderFactory().createFromOffer(greedy.id(), greedy.toSnapshot());
         } catch (InvalidOfferStateException e) {
-            System.out.println("[OK] Migawka tylko z ACCEPTED — " + e.getMessage());
+            System.out.println("[OK] Snapshot only from ACCEPTED — " + e.getMessage());
         }
 
-        System.out.println("\n=== FAKTUROWANIE I ROZLICZENIA: UC-FIR-02 / 03 ===");
+        System.out.println("\n=== BILLING AND SETTLEMENT: UC-FIR-02 / 03 ===");
         InProcessEventPublisherAdapter bus = new InProcessEventPublisherAdapter();
 
-        // Repozytoria CRM potrzebne adapterowi SalesIntegration (dane nabywcy po orderId).
+        // CRM repositories needed by the SalesIntegration adapter (buyer data by orderId).
         InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
         InMemoryOfferRepository offerRepo = new InMemoryOfferRepository();
         InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
         customerRepo.save(new Customer(new CustomerId("CUST-1"), "Jan Kowalski", "1234563218",
-                new Address("Marszałkowska 1", "00-001", "Warszawa", "PL"),
+                new Address("Main Street 1", "00-001", "Warsaw", "PL"),
                 new ContactData("jan.kowalski@example.com", "+48 600 100 200")));
         offerRepo.save(offer);
         orderRepo.save(order);
@@ -130,7 +130,7 @@ public class OfflineDemo {
         InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
         InMemoryDocumentRepository documentRepo = new InMemoryDocumentRepository();
 
-        // --- UC-FIR-03: inicjalizacja salda + rejestracja wpłat ---
+        // --- UC-FIR-03: balance initialization + payment registration ---
         PaymentProcessService settlements = new PaymentProcessService(
                 settlementRepo, new SettlementFactory(), documentRepo,
                 new NotificationMockAdapter(), bus);
@@ -139,15 +139,15 @@ public class OfflineDemo {
         listener.on(new OrderReadyForSettlementEvent(UUID.randomUUID(), order.id().value(),
                 new BigDecimal("100000"), "PLN", Instant.now()));
 
-        // Wpłata częściowa -> PARTIAL_PAYMENT.
+        // Partial payment -> PARTIAL_PAYMENT.
         settlements.processPayment(new ProcessPaymentCommand(
                 order.id().value(), "TX-1", new BigDecimal("20000"), "PLN"));
-        // Dopłata do pełnej kwoty -> SETTLED + SettlementCompletedEvent.
+        // Top-up to the full amount -> SETTLED + SettlementCompletedEvent.
         settlements.processPayment(new ProcessPaymentCommand(
                 order.id().value(), "TX-2", new BigDecimal("80000"), "PLN"));
-        System.out.println("[OK] Saldo " + order.id().value() + " rozliczone (status SETTLED).");
+        System.out.println("[OK] Balance " + order.id().value() + " settled (status SETTLED).");
 
-        // --- UC-FIR-02: faktura końcowa (dane nabywcy dociągnięte z kontekstu Sprzedaży) ---
+        // --- UC-FIR-02: final invoice (buyer data fetched from the Sales context) ---
         DocumentGenerationService docs = new DocumentGenerationService(
                 settlementRepo, documentRepo,
                 new InvoiceCalculationService(), new AccountingDocumentFactory(),
@@ -156,10 +156,10 @@ public class OfflineDemo {
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
         String invoiceId = docs.generateInvoice(new GenerateInvoiceCommand(
-                order.id().value(), "Faktura koncowa " + order.id().value(), "ksiegowy@salon.pl"));
-        System.out.println("[OK] Faktura wystawiona, id=" + invoiceId);
+                order.id().value(), "Final invoice " + order.id().value(), "accountant@salon.pl"));
+        System.out.println("[OK] Invoice issued, id=" + invoiceId);
 
-        // Reguła ważności w agregacie: oferta po terminie nie przejdzie accept().
+        // Validity rule in the aggregate: an expired offer will not pass accept().
         try {
             Offer stale = new Offer(OfferId.generate(), new CustomerId("CUST-3"), SpecificationId.generate());
             stale.publishOffer();
@@ -167,7 +167,7 @@ public class OfflineDemo {
                     stale, "validityDate", java.time.LocalDate.now().minusDays(1));
             stale.accept();
         } catch (OfferExpiredException e) {
-            System.out.println("[OK] Reguła ważności w agregacie: " + e.getMessage());
+            System.out.println("[OK] Validity rule in the aggregate: " + e.getMessage());
         }
     }
 }

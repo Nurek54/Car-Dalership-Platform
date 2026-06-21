@@ -1,11 +1,11 @@
 package salon.billing.application.domain.model.settlement;
 
 /**
- * Typ standardowy (Enumeration na diagramie klas) — stan salda zamówienia.
+ * Standard type (Enumeration in the class diagram) — state of the order balance.
  *
- * OPEN            – saldo otwarte, brak (pełnych) wpłat;
- * PARTIAL_PAYMENT – zaksięgowano wpłatę częściową (UC-FIR-03 / A1);
- * SETTLED         – saldo = 0, zamówienie w pełni opłacone (UC-FIR-03).
+ * OPEN            – balance open, no (full) payments;
+ * PARTIAL_PAYMENT – a partial payment was posted (UC-FIR-03 / A1);
+ * SETTLED         – balance = 0, order fully paid (UC-FIR-03).
  */
 public enum SettlementStatus {
     OPEN,

@@ -4,8 +4,8 @@ import salon.sales.application.port.out.BillingIntegration;
 import salon.sales.application.domain.event.BankTransferDeclaredEvent;
 
 /**
- * Handler zdarzenia BankTransferDeclared (UC-CRM-03, krok 5 — przelew):
- * zleca Kontekstowi Rozliczeń wystawienie dokumentu proforma z danymi do przelewu.
+ * Handler of the BankTransferDeclared event (UC-CRM-03, step 5 — transfer):
+ * it instructs the Billing Context to issue a proforma document with transfer details.
  */
 public class BankTransferDeclaredEventHandler {
 

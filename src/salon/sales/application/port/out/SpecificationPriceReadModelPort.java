@@ -6,19 +6,19 @@ import salon.common.model.SpecificationId;
 import java.util.Optional;
 
 /**
- * Port wyjściowy (driven) — lokalna kopia wyceny specyfikacji w Kontekście Sprzedaży
+ * Outbound port (driven) — the local copy of the specification pricing in the Sales Context
  * (read model, event-carried state transfer).
  *
- * Zastępuje synchroniczne odpytywanie Katalogu (dawne CatalogDatabaseRepository.getSpecificationPrice):
- * wyliczona cena katalogowa przyjeżdża asynchronicznie w zdarzeniu SpecificationCompleted
- * (Katalog). W momencie generowania oferty (UC-CRM-02) Sprzedaż czyta wyłącznie własne dane —
- * żadnej komunikacji synchronicznej między kontekstami.
+ * It replaces synchronous querying of the Catalog (the former CatalogDatabaseRepository.getSpecificationPrice):
+ * the computed catalog price arrives asynchronously in the SpecificationCompleted event
+ * (Catalog). At the moment of generating the offer (UC-CRM-02) Sales reads only its own data —
+ * no synchronous communication between contexts.
  */
 public interface SpecificationPriceReadModelPort {
 
-    /** Zapis/aktualizacja wyceny specyfikacji (ze zdarzenia SpecificationCompleted). */
+    /** Saving/updating the specification pricing (from the SpecificationCompleted event). */
     void saveSpecificationPrice(SpecificationId specificationId, Money price);
 
-    /** Wycena specyfikacji (pusty Optional = cena jeszcze nie dotarła zdarzeniem). */
+    /** The specification pricing (an empty Optional = the price has not yet arrived via an event). */
     Optional<Money> findPrice(SpecificationId specificationId);
 }

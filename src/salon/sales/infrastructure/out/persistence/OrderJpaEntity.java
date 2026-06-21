@@ -24,7 +24,7 @@ public class OrderJpaEntity {
     public String vehicleId;
     public String state;
 
-    /** Blokada optymistyczna: konflikt wersji odrzuca zapis nieaktualnej kopii agregatu. */
+    /** Optimistic locking: a version conflict rejects saving a stale copy of the aggregate. */
     @Version
     public Long version;
 

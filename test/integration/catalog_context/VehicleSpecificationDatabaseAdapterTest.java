@@ -25,7 +25,7 @@ class VehicleSpecificationDatabaseAdapterTest {
 
     @Autowired private VehicleSpecificationDatabaseAdapter databaseAdapter;
 
-    // Cennik pomocniczy (nie jest utrwalany — adapter specyfikacji go nie potrzebuje przy odczycie)
+    // An auxiliary price list (not persisted — the specification adapter does not need it on read)
     private ProductCatalog createCatalog() {
         ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
         catalog.addOption(new CatalogOption(new OptionCode("LED_LIGHTS"), Money.of(4500, "PLN")));
@@ -35,7 +35,7 @@ class VehicleSpecificationDatabaseAdapterTest {
 
     @Test
     void shouldSaveAndLoadDraftSpecificationFromSqlDatabase() {
-        // Świeża specyfikacja (DRAFT, bez opcji i bez wyceny)
+        // A fresh specification (DRAFT, without options and without pricing)
         SpecificationId id = new SpecificationId("SPEC-DB-1");
         VehicleSpecification specification =
                 new VehicleSpecification(id, new CatalogId("CAT-1"));
@@ -43,7 +43,7 @@ class VehicleSpecificationDatabaseAdapterTest {
         databaseAdapter.save(specification);
         Optional<VehicleSpecification> loaded = databaseAdapter.findById(id);
 
-        // Agregat wraca z bazy w stanie początkowym
+        // The aggregate comes back from the database in its initial state
         assertThat(loaded).isPresent();
         assertThat(loaded.get().state()).isEqualTo(SpecificationState.DRAFT);
         assertThat(loaded.get().getCatalogId()).isEqualTo(new CatalogId("CAT-1"));
@@ -53,7 +53,7 @@ class VehicleSpecificationDatabaseAdapterTest {
 
     @Test
     void shouldRoundTripPickedOptionsTotalPriceAndState() {
-        // Specyfikacja w budowie: dwie opcje dobrane wg cennika
+        // A specification under construction: two options selected per the price list
         ProductCatalog catalog = createCatalog();
         SpecificationId id = new SpecificationId("SPEC-DB-2");
         VehicleSpecification specification = new VehicleSpecification(id, catalog.getCatalogId());
@@ -63,9 +63,9 @@ class VehicleSpecificationDatabaseAdapterTest {
         databaseAdapter.save(specification);
         VehicleSpecification reloaded = databaseAdapter.findById(id).orElseThrow();
 
-        // Wybrane opcje, stan i suma wyceny wracają z bazy bez zmian
+        // The selected options, state and total pricing come back from the database unchanged
         assertThat(reloaded.state()).isEqualTo(SpecificationState.IN_PROGRESS);
-        // (bez @OrderColumn baza nie gwarantuje kolejności elementów kolekcji)
+        // (without @OrderColumn the database does not guarantee the order of collection elements)
         assertThat(reloaded.getSelectedOptions())
                 .containsExactlyInAnyOrder(new OptionCode("LED_LIGHTS"), new OptionCode("PANORAMIC_ROOF"));
         assertThat(reloaded.getTotalPrice().amount()).isEqualByComparingTo("12500");
@@ -84,10 +84,10 @@ class VehicleSpecificationDatabaseAdapterTest {
         databaseAdapter.save(specification);
         VehicleSpecification reloaded = databaseAdapter.findById(id).orElseThrow();
 
-        // Stan FINAL przetrwał rundę przez bazę...
+        // The FINAL state survived the round trip through the database...
         assertThat(reloaded.state()).isEqualTo(SpecificationState.FINAL);
 
-        // ...i odtworzony agregat nadal blokuje modyfikacje
+        // ...and the reconstituted aggregate still blocks modifications
         assertThatThrownBy(() -> reloaded.addOption(new OptionCode("PANORAMIC_ROOF"), catalog))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("finalized");
@@ -95,7 +95,7 @@ class VehicleSpecificationDatabaseAdapterTest {
 
     @Test
     void shouldReturnEmptyWhenSpecificationDoesNotExist() {
-        // Zapytanie o nieistniejący identyfikator nie kończy się wyjątkiem
+        // A query for a non-existent identifier does not end with an exception
         assertThat(databaseAdapter.findById(new SpecificationId("SPEC-GHOST"))).isEmpty();
     }
 }

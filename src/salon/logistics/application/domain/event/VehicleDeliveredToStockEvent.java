@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-INW-03: fizyczny pojazd zjechał z lawety na plac i został sparowany z zamówieniem
+ * UC-INW-03: the physical vehicle came off the transporter onto the yard and was matched with the order
  * (status "Zarezerwowany").
  */
 public record VehicleDeliveredToStockEvent(String orderId, String vin,

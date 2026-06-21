@@ -26,12 +26,12 @@ import java.time.Clock;
 import java.time.Instant;
 
 /**
- * USŁUGA APLIKACJI (fasada przypadku użycia UC-KON-01) – realizacja portu
- * wejściowego {@link BuildSpecification}.
+ * APPLICATION SERVICE (use-case facade for UC-KON-01) – implementation of the inbound
+ * port {@link BuildSpecification}.
  *
- * Wykonuje operacje NIEBIZNESOWE: orkiestracja przypadku użycia, zarządzanie
- * transakcjami utrwalania i obsługa zdarzeń dziedziny. Logikę biznesową (reguły,
- * niezmienniki, ceny) delegowuje do agregatów i usługi dziedziny.
+ * Performs NON-BUSINESS operations: use-case orchestration, management
+ * of persistence transactions and handling of domain events. The business logic (rules,
+ * invariants, prices) is delegated to the aggregates and the domain service.
  */
 @Service
 public class BuildSpecificationService implements BuildSpecification {
@@ -57,14 +57,14 @@ public class BuildSpecificationService implements BuildSpecification {
         this.clock = clock;
     }
 
-    /** Krok 1: otwarcie sesji konfiguratora i utworzenie roboczej specyfikacji. */
+    /** Step 1: opening a configurator session and creating a working specification. */
     @Override
     @Transactional
     public SpecificationView initiate(InitiateConfiguratorSessionCommand command) {
         ProductCatalog catalog = catalogRepository
                 .findActiveByModelYear(ModelYear.of(command.modelYear()))
                 .orElseThrow(() -> new CatalogNotFoundException(
-                        "Brak aktywnego katalogu dla rocznika " + command.modelYear()));
+                        "No active catalog for model year " + command.modelYear()));
 
         VehicleSpecification specification =
                 specificationFactory.createDraft(catalog.id(), catalog.currencyCode());
@@ -72,7 +72,7 @@ public class BuildSpecificationService implements BuildSpecification {
         return SpecificationView.from(specification);
     }
 
-    /** Kroki 2–4: dobranie opcji + bieżąca weryfikacja reguł wykluczających (A1). */
+    /** Steps 2–4: adding an option + on-the-fly verification of exclusion rules (A1). */
     @Override
     @Transactional
     public SpecificationView addOption(AddOptionCommand command) {
@@ -80,8 +80,8 @@ public class BuildSpecificationService implements BuildSpecification {
         ProductCatalog catalog = loadCatalogFor(specification);
 
         specification.addOption(OptionCode.of(command.optionCode()), catalog);
-        // Walidacja całego stanu po dobraniu opcji – jeśli kombinacja zablokowana,
-        // wyjątek przerywa transakcję i specyfikacja nie zostaje zapisana.
+        // Validation of the whole state after adding an option – if the combination is blocked,
+        // the exception aborts the transaction and the specification is not saved.
         ruleValidationService.validateSelection(specification, catalog);
 
         specificationRepository.save(specification);
@@ -99,7 +99,7 @@ public class BuildSpecificationService implements BuildSpecification {
         return SpecificationView.from(specification);
     }
 
-    /** Kroki 5–7: weryfikacja kompletności, zatwierdzenie i emisja zdarzenia. */
+    /** Steps 5–7: completeness verification, finalization and event emission. */
     @Override
     @Transactional
     public SpecificationView finalizeSpecification(FinalizeSpecificationCommand command) {
@@ -129,6 +129,6 @@ public class BuildSpecificationService implements BuildSpecification {
     private ProductCatalog loadCatalogFor(VehicleSpecification specification) {
         return catalogRepository.findById(specification.catalogId())
                 .orElseThrow(() -> new CatalogNotFoundException(
-                        "Brak katalogu " + specification.catalogId()));
+                        "No catalog " + specification.catalogId()));
     }
 }

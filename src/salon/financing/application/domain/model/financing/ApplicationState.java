@@ -1,12 +1,12 @@
 package salon.financing.application.domain.model.financing;
 
 /**
- * Stan wniosku o finansowanie (Rysunek 43).
+ * State of the financing application (Figure 43).
  *
- * DRAFT – wniosek utworzony lokalnie z danych zamówienia;
- * PENDING – wysłany do banku, „W trakcie weryfikacji bankowej" (UC-FIN-01);
- * APPROVED – bank wydał decyzję pozytywną (UC-FIN-02);
- * REJECTED – bank wydał decyzję negatywną (UC-FIN-02 / A1).
+ * DRAFT – the application created locally from the order data;
+ * PENDING – sent to the bank, "Under bank verification" (UC-FIN-01);
+ * APPROVED – the bank issued a positive decision (UC-FIN-02);
+ * REJECTED – the bank issued a negative decision (UC-FIN-02 / A1).
  */
 public enum ApplicationState {
     DRAFT,

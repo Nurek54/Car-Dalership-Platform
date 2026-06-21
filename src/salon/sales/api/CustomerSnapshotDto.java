@@ -1,12 +1,12 @@
 package salon.sales.api;
 
 /**
- * Published Language Kontekstu Sprzedaży i CRM — migawka danych nabywcy
- * udostępniana innym kontekstom (np. Fakturowaniu) bez ujawniania agregatów
+ * Published Language of the Sales and CRM Context — a snapshot of buyer data
+ * made available to other contexts (e.g. Billing) without exposing the aggregates
  * domenowych ({@code Customer}, {@code Offer}, {@code Order}).
  *
- * Zawiera wyłącznie dane potrzebne konsumentom; konteksty-klienci tłumaczą
- * ten DTO na własne obiekty wartości w swoich ACL.
+ * It contains only the data needed by consumers; client contexts translate
+ * this DTO into their own value objects in their ACLs.
  */
 public record CustomerSnapshotDto(String fullName, String nip) {
 

@@ -3,21 +3,21 @@ package salon.catalog.infrastructure.out.acl;
 import java.util.List;
 
 /**
- * OBCY model danych zewnętrznego systemu producenta/importera (Blackbox).
+ * FOREIGN data model of the external manufacturer/importer system (Blackbox).
  *
- * Celowo używa nazewnictwa i struktury dostawcy (kontekst „na górze”), które różnią
- * się od języka wszechobecnego kontekstu Katalogu. Tłumaczenie na model lokalny
- * realizuje {@link ImporterCatalogTranslator} w ramach warstwy ACL.
+ * It intentionally uses the vendor's naming and structure (the "upstream" context), which differ
+ * from the ubiquitous language of the Catalog context. Translation into the local model
+ * is performed by {@link ImporterCatalogTranslator} within the ACL layer.
  */
 public record ExternalCatalogPackage(int year,
                                      List<ExternalItem> priceList,
                                      List<ExternalRestriction> restrictions) {
 
-    /** Pozycja cennika w formacie dostawcy (cena jako grosze + kod waluty ISO). */
+    /** A price-list entry in the vendor format (price as cents + ISO currency code). */
     public record ExternalItem(String featureCode, long priceMinorUnits, String currencyIso) {
     }
 
-    /** Ograniczenie kombinacji w formacie dostawcy (kind = "INCOMPATIBLE_WITH" | "DEPENDS_ON"). */
+    /** A combination constraint in the vendor format (kind = "INCOMPATIBLE_WITH" | "DEPENDS_ON"). */
     public record ExternalRestriction(String fromFeature, String toFeature, String kind) {
     }
 }

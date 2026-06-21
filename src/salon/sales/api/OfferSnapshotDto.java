@@ -3,11 +3,11 @@ package salon.sales.api;
 import salon.common.model.Money;
 
 /**
- * Published Language Kontekstu Sprzedaży i CRM — migawka oferty źródłowej zamówienia
- * udostępniana innym kontekstom (np. Finansowaniu) bez ujawniania agregatu {@code Offer}.
+ * Published Language of the Sales and CRM Context — a snapshot of the order's source offer
+ * made available to other contexts (e.g. Financing) without exposing the {@code Offer} aggregate.
  *
- * {@link Money} pochodzi ze Wspólnego Jądra (Shared Kernel), więc może bezpiecznie
- * przekraczać granice kontekstów.
+ * {@link Money} comes from the Shared Kernel, so it can safely
+ * cross context boundaries.
  */
 public record OfferSnapshotDto(String offerId, Money finalPrice) {
 

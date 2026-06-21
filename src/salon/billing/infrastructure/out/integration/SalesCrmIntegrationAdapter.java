@@ -7,12 +7,12 @@ import salon.sales.api.CustomerSnapshotDto;
 import salon.sales.api.SalesQueryFacade;
 
 /**
- * ADAPTER WYJSCIOWY (Rys. 48 — SalesQueryService, ACL) — realizacja portu {@link SalesIntegration}.
+ * OUTBOUND ADAPTER (Fig. 48 — SalesQueryService, ACL) — implementation of the {@link SalesIntegration} port.
  *
- * Warstwa Zapobiegajaca Uszkodzeniu: zalezy wylacznie od publicznej fasady Sprzedazy
+ * Anti-Corruption Layer: it depends only on the public Sales facade
  * ({@link SalesQueryFacade}, Jezyk Opublikowany) i tlumaczy jej migawke CustomerSnapshotDto na
- * lokalny obiekt wartosci Fakturowania {@link BuyerDetails}. Jadro Fakturowania nie zna agregatow
- * Sprzedazy (Customer/Offer/Order).
+ * the Billing-local value object {@link BuyerDetails}. The Billing core does not know the aggregates
+ * of Sales (Customer/Offer/Order).
  */
 public class SalesCrmIntegrationAdapter implements SalesIntegration {
 

@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "PojazdGotowyDoWydania" — komunikat z Kontekstu Inwentarza (UC-INW-05) odbierany
- * przez Sprzedaż/CRM: pojazd o danym VIN jest gotowy fizycznie i finansowo,
- * zamówienie ma przejść w stan "Gotowe do odbioru" (UC-CRM-04).
+ * "VehicleReadyForHandover" — a message from the Inventory Context (UC-INW-05) received
+ * by Sales/CRM: the vehicle with the given VIN is ready physically and financially,
+ * the order is to transition to the "Ready for handover" state (UC-CRM-04).
  */
 public record VehicleReadyForHandoverEvent(UUID eventId,
                                            String vin,

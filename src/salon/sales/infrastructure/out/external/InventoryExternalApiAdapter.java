@@ -14,10 +14,10 @@ import salon.sales.application.domain.exception.InventoryLockedException;
 import java.util.Map;
 
 /**
- * Adapter wyjściowy (ExternalApiAdapter) portu {@link InventoryIntegration} —
- * klient HTTP do Kontekstu Inwentarza i Logistyki.
+ * Outbound adapter (ExternalApiAdapter) of the {@link InventoryIntegration} port —
+ * an HTTP client to the Inventory and Logistics Context.
  *
- * HTTP 409 (konflikt rezerwacji/brak slotów) -> InventoryLockedException z powodem z JSON,
+ * HTTP 409 (reservation conflict/no slots) -> InventoryLockedException with a reason from JSON,
  * HTTP 5xx/timeout -> ExternalServiceUnavailableException.
  */
 @Component
@@ -36,7 +36,7 @@ public class InventoryExternalApiAdapter implements InventoryIntegration {
         this.baseUrl = "http://localhost:" + inventoryPort;
     }
 
-    /** UC-CRM-03 -> UC-INW-01/02: rezerwacja pojazdu z placu lub slotu produkcyjnego. */
+    /** UC-CRM-03 -> UC-INW-01/02: reservation of a vehicle from the yard or a production slot. */
     @Override
     public void allocateVehicleOrProductionSlot(String orderId) {
         try {
@@ -50,11 +50,11 @@ public class InventoryExternalApiAdapter implements InventoryIntegration {
         }
     }
 
-    /** UC-CRM-05, krok 3: komenda ReleaseVehicle (UC-INW-06). Brak VIN = brak fizycznej blokady. */
+    /** UC-CRM-05, step 3: the ReleaseVehicle command (UC-INW-06). No VIN = no physical lock. */
     @Override
     public void releasePhysicalVehicle(String vehicleId) {
         if (vehicleId == null || vehicleId.isBlank()) {
-            return; // pojazd nie został jeszcze przypisany — nie ma czego zwalniać
+            return; // the vehicle has not been assigned yet — there is nothing to release
         }
         try {
             this.restTemplate.postForEntity(this.baseUrl + "/api/inventory/releases",
@@ -67,7 +67,7 @@ public class InventoryExternalApiAdapter implements InventoryIntegration {
         }
     }
 
-    // Wyciąga pole "reason" z prostego JSON-a błędu ({"reason": "..."}).
+    // Extracts the "reason" field from a simple error JSON ({"reason": "..."}).
     private String extractReason(String body) {
         if (body != null) {
             int idx = body.indexOf("\"reason\"");

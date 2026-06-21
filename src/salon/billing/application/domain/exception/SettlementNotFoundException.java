@@ -1,8 +1,8 @@
 package salon.billing.application.domain.exception;
 
 /**
- * Brak otwartego salda (Settlement) dla wskazanego zamowienia — np. wplata lub zadanie faktury
- * dla zamowienia, dla ktorego nie zainicjowano jeszcze rozliczenia.
+ * No open balance (Settlement) for the indicated order — e.g. a payment or an invoice request
+ * for an order whose settlement has not yet been initialized.
  */
 public class SettlementNotFoundException extends RuntimeException {
 

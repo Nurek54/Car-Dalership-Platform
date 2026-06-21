@@ -13,7 +13,7 @@ class CustomerTest {
 
     @Test
     void shouldSuccessfullyVerifyValidTaxId() {
-        // Klient z poprawnym, 10-cyfrowym polskim numerem NIP
+        // A customer with a valid, 10-digit Polish tax ID
         Customer customer = new Customer(
                 new CustomerId("C-001"),
                 "Jan Kowalski",
@@ -22,19 +22,19 @@ class CustomerTest {
                 new ContactData("jan@example.com", "123456789")
         );
 
-        // Weryfikacja nie rzuca wyjątku, status weryfikacji jest poprawny
+        // The verification does not throw, the verification status is correct
         assertThatCode(() -> customer.verifyTaxId())
                 .doesNotThrowAnyException();
     }
 
     @Test
     void shouldThrowExceptionWhenTaxIdIsInvalid() {
-        // Klient z błędnym NIP-em
+        // A customer with an invalid tax ID
         Customer customer = new Customer(
                 new CustomerId("C-002"),
                 "Jan Krzak",
                 "INVALID_NIP_123",
-                new Address("Kraków", "30-001", "Fikcyjna 2", "Poland"),
+                new Address("Krakow", "30-001", "Fictional 2", "Poland"),
                 new ContactData("krzak@example.com", "987654321")
         );
 
@@ -46,13 +46,13 @@ class CustomerTest {
 
     @Test
     void shouldUpdateContactDetailsWithoutChangingIdentity() {
-        // Istniejący klient
+        // An existing customer
         CustomerId id = new CustomerId("C-003");
         Customer customer = new Customer(
                 id,
                 "Anna Nowak",
-                null, // Osoba fizyczna, brak NIP
-                new Address("Poznań", "60-001", "Stara 1", "Poland"),
+                null, // An individual, no tax ID
+                new Address("Poznan", "60-001", "Old 1", "Poland"),
                 new ContactData("anna@example.com", "111222333")
         );
 
@@ -60,7 +60,7 @@ class CustomerTest {
         ContactData newContact = new ContactData("nowa.anna@example.com", "999888777");
         customer.updateContactDetails(newContact);
 
-        // Dane kontaktowe są zaktualizowane, ale tożsamość (ID) pozostaje nienaruszona
+        // The contact details are updated, but the identity (ID) remains intact
         assertThat(customer.contact().email()).isEqualTo("nowa.anna@example.com");
         assertThat(customer.contact().phoneNumber()).isEqualTo("999888777");
         assertThat(customer.id()).isEqualTo(id);

@@ -14,39 +14,39 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.*;
 
-/** UC-CRM-04: Obsługa zaproszenia klienta po odbiór */
+/** UC-CRM-04: Handling the customer's invitation for pickup */
 class ScheduleHandoverDomainTest {
 
-    // Metoda pomocnicza - symuluje zamówienie, które jest w trakcie produkcji (IN_PROGRESS)
+    // Helper method - simulates an order that is in production (IN_PROGRESS)
     private Order prepareInProgressOrder() {
         Order order = new Order(new OrderId("ORD-10"), new OfferId("OFF-10"), Money.of(150000, "PLN"));
-        order.activate(); // Przejście z DRAFT_CREATED do IN_PROGRESS
-        order.pullDomainEvents(); // Czyścimy listę zdarzeń przed właściwym testem
+        order.activate(); // Transition from DRAFT_CREATED to IN_PROGRESS
+        order.pullDomainEvents(); // We clear the event list before the actual test
         return order;
     }
 
     @Test
-    void shouldBecomeReadyForHandoverAndEmitEvent() { // SCENARIUSZ GŁÓWNY
-        // Zamówienie jest w trakcie realizacji (fabryka wyprodukowała auto)
+    void shouldBecomeReadyForHandoverAndEmitEvent() { // MAIN SCENARIO
+        // The order is in progress (the factory produced the car)
         Order order = prepareInProgressOrder();
 
-        // System logistyczny informuje, że auto zjechało z lawety i jest na placu
+        // The logistics system reports that the car came off the transporter and is in the yard
         order.markAsReadyForHandover();
 
-        // Stan zamówienia pozwala na wydanie (READY_FOR_HANDOVER)
+        // The order state allows handover (READY_FOR_HANDOVER)
         assertThat(order.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);
 
-        // Wygenerowano wewnętrzne zdarzenie o gotowości
+        // An internal readiness event was generated
         assertThat(order.getDomainEvents()).hasAtLeastOneElementOfType(OrderReadyForHandoverEvent.class);
     }
 
     @Test
     void shouldRejectScheduleHandoverBeforeReady() {
-        // Zamówienie, którego pojazd jest w produkcji (IN_PROGRESS)
+        // An order whose vehicle is in production (IN_PROGRESS)
         Order order = prepareInProgressOrder();
 
-        // Handlowiec próbuje umówić odbiór z klientem na jutro
-        // Domena bezwzględnie to blokuje - nie umawiamy aut, których nie ma wyprodukowanych
+        // The Salesperson tries to schedule the pickup with the customer for tomorrow
+        // The domain blocks this unconditionally - we do not schedule cars that have not been produced
         assertThatThrownBy(() -> order.scheduleHandover(LocalDate.now().plusDays(1)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Order must be in READY_FOR_HANDOVER state to schedule handover");
@@ -54,14 +54,14 @@ class ScheduleHandoverDomainTest {
 
     @Test
     void shouldRejectReadyForHandoverWhenAlreadyCompleted() {
-        // Zamówienie, które zostało już zakończone i wydane
+        // An order that has already been completed and handed over
         Order order = prepareInProgressOrder();
         order.markAsReadyForHandover();
         order.scheduleHandover(LocalDate.now());
         order.changePaymentStatus(PaymentStatus.PAID);
-        order.confirmHandover(); // Stan: COMPLETED
+        order.confirmHandover(); // State: COMPLETED
 
-        // Próba ponownego oznaczenia go jako "gotowe do wydania"
+        // An attempt to mark it again as "ready for handover"
         assertThatThrownBy(order::markAsReadyForHandover)
                 .isInstanceOf(InvalidOrderStateException.class)
                 .hasMessageContaining("Cannot change state to READY_FOR_HANDOVER. Order is already COMPLETED");

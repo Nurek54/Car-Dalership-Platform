@@ -6,8 +6,8 @@ import salon.catalog.application.domain.model.specification.VehicleSpecification
 import java.util.Optional;
 
 /**
- * PORT WYJŚCIOWY – repozytorium agregatu VehicleSpecification
- * („SpecificationDatabaseRepository”). Utrwala koszyki konfiguracyjne (również
+ * OUTBOUND PORT – repository of the VehicleSpecification aggregate
+ * ("SpecificationDatabaseRepository"). Persists configuration baskets (also
  * wersje robocze – UC-KON-01 / A2).
  */
 public interface VehicleSpecificationRepository {

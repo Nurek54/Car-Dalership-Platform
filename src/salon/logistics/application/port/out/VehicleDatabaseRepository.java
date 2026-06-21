@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * PORT WYJŚCIOWY (Rysunek 37) – „VehicleDatabaseRepository”.
+ * OUTBOUND PORT (Figure 37) – "VehicleDatabaseRepository".
  *
- * Lokalna baza pojazdów na placu (Stock). Inwentarz jest jedynym właścicielem informacji
- * o tym, do jakiego zamówienia przypisany jest dany VIN i czy fizycznie jest on na placu.
+ * The local database of vehicles in the yard (Stock). Inventory is the sole owner of the information
+ * about which order a given VIN is assigned to and whether it is physically in the yard.
  */
 public interface VehicleDatabaseRepository {
 

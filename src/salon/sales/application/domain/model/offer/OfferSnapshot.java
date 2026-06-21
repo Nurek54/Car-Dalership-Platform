@@ -5,14 +5,14 @@ import salon.common.model.Money;
 import salon.common.model.SpecificationId;
 
 /**
- * Value Object: niemutowalna migawka oferty przekazywana do {@code OrderFactory}
- * przy tworzeniu Zamówienia (UC-SPR-02).
+ * Value Object: an immutable snapshot of the offer passed to {@code OrderFactory}
+ * when creating the Order (UC-SPR-02).
  *
- * Zgodnie z docs/Agregate/Sales/order.md oraz docs/Agregate/Guidelines/value-object-audit.md
- * fabryka Zamówienia korzysta WYŁĄCZNIE z niemutowalnych obiektów wartości oferty —
- * NIE z referencji do agregatu Offer — aby nie przenosić referencji między korzeniami agregatów.
+ * Per docs/Agregate/Sales/order.md and docs/Agregate/Guidelines/value-object-audit.md
+ * the Order factory uses ONLY the immutable value objects of the offer —
+ * NOT a reference to the Offer aggregate — so as not to carry references between aggregate roots.
  *
- * {@code finalPrice} może być null, jeśli oferty nie wyceniono.
+ * {@code finalPrice} may be null if the offer was not priced.
  */
 public record OfferSnapshot(OfferId offerId,
                             CustomerId customerId,

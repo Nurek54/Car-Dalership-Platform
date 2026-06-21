@@ -7,13 +7,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Zamienia dowolne zdarzenie (które jest rekordem) na płaską mapę pól, a potem na JSON.
+ * Converts any event (which is a record) into a flat map of fields, and then into JSON.
  *
- * Wszystkie nasze zdarzenia to rekordy o płaskich polach (String/UUID/Instant). Zamiast pisać
- * osobny serializator dla każdego z nich, czytamy komponenty rekordu i zapisujemy je jako tekst.
- * Dodajemy pole "type" = prosta nazwa klasy, po którym subskrybent rozpozna rodzaj zdarzenia.
+ * All our events are records with flat fields (String/UUID/Instant). Instead of writing
+ * a separate serializer for each of them, we read the record components and store them as text.
+ * We add a "type" field = the simple class name, by which the subscriber recognizes the event kind.
  *
- * To jedyne miejsce w całym module, gdzie używamy refleksji — i tylko po to, by nie powielać kodu.
+ * This is the only place in the whole module where we use reflection — and only to avoid duplicating code.
  */
 public class RecordEventSerializer implements EventSerializer {
 

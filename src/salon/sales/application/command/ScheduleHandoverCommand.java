@@ -3,8 +3,8 @@ package salon.sales.application.command;
 import java.time.LocalDate;
 
 /**
- * Komenda dla UC-CRM-04 (krok 4-5): Handlowiec wprowadza uzgodniony z klientem termin odbioru.
- * Obsługuje też scenariusz A1 (odroczony odbiór) — wystarczy późniejsza data.
+ * Command for UC-CRM-04 (steps 4-5): the Salesperson enters the handover date agreed with the customer.
+ * It also supports scenario A1 (deferred pickup) — a later date is enough.
  */
 public record ScheduleHandoverCommand(String orderId, LocalDate handoverDate) {
 

@@ -5,14 +5,14 @@ import salon.sales.application.domain.model.offer.OfferSnapshot;
 import salon.common.model.OrderId;
 
 /**
- * Fabryka agregatu Order (węzeł "OrderFactory" w docs/Architecture/SalesArchitecture.md,
- * PDF rozdz. 3.3.3 "Transformacja Agregatów").
+ * Factory of the Order aggregate (the "OrderFactory" node in docs/Architecture/SalesArchitecture.md,
+ * PDF chapter 3.3.3 "Aggregate Transformation").
  *
- * Buduje poprawne Zamówienie z migawki zaakceptowanej oferty ({@link OfferSnapshot}).
- * Zgodnie z docs/Agregate/Guidelines/value-object-audit.md fabryka wyciąga z oferty
- * wyłącznie niemutowalne obiekty wartości (OfferId, finalPrice) — NIE przyjmuje
- * referencji do agregatu Offer. Regułę "tylko z oferty ACCEPTED" egzekwuje sam
- * agregat Offer w metodzie toSnapshot().
+ * Builds a valid Order from the snapshot of an accepted offer ({@link OfferSnapshot}).
+ * Per docs/Agregate/Guidelines/value-object-audit.md the factory extracts from the offer
+ * only the immutable value objects (OfferId, finalPrice) — it does NOT accept
+ * a reference to the Offer aggregate. The "only from an ACCEPTED offer" rule is enforced by
+ * the Offer aggregate in the toSnapshot() method.
  */
 public class OrderFactory {
 
@@ -27,11 +27,11 @@ public class OrderFactory {
             throw new IllegalArgumentException(
                     "Snapshot offerId does not match the provided offerId");
         }
-        // requiredDeposit = finalPrice z oferty (może być null, jeśli nie wyceniono).
-        // specificationId z migawki — popłynie w OrderPlacedEvent do Inwentarza (UC-INW-01/02).
+        // requiredDeposit = finalPrice from the offer (may be null if not priced).
+        // specificationId from the snapshot — it will flow in OrderPlacedEvent to Inventory (UC-INW-01/02).
         Order order = new Order(OrderId.generate(), offerId,
                 snapshot.specificationId(), snapshot.finalPrice());
-        // Formalne złożenie zamówienia ogłasza agregat (OrderPlacedEvent — m.in. dla Rozliczeń).
+        // The formal placement of the order is announced by the aggregate (OrderPlacedEvent — among others for Billing).
         order.markPlaced();
         return order;
     }

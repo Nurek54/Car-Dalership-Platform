@@ -1,17 +1,17 @@
 package salon.catalog.application.port.in;
 
 /**
- * PORT WEJŚCIOWY (kontrakt) – „UpdateCatalog” z diagramu portów i adapterów.
+ * INBOUND PORT (contract) – "UpdateCatalog" from the ports-and-adapters diagram.
  *
- * Publikuje usługę automatycznej aktualizacji cennika i katalogu (UC-KON-02).
- * Wywoływany przez adapter wejściowy CronJob (zadanie cykliczne) lub przez zdarzenie
+ * Exposes the service for automatic update of the price list and catalog (UC-KON-02).
+ * Invoked by the CronJob inbound adapter (periodic task) or by an event
  * integracyjne z systemu producenta/importera.
  */
 public interface UpdateCatalog {
 
     /**
-     * Pobiera, tłumaczy (ACL), waliduje i zapisuje nowy katalog, archiwizując bieżący,
-     * a następnie emituje CatalogUpdated. W razie błędu emituje CatalogUpdateFailed.
+     * Fetches, translates (ACL), validates and saves the new catalog, archiving the current one,
+     * and then emits CatalogUpdated. On error it emits CatalogUpdateFailed.
      */
     void update();
 }

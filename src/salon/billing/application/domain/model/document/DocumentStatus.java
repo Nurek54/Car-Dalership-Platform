@@ -1,11 +1,11 @@
 package salon.billing.application.domain.model.document;
 
 /**
- * Typ standardowy (Enumeration na diagramie klas) — cykl życia dokumentu księgowego.
+ * Standard type (Enumeration in the class diagram) — life cycle of the accounting document.
  *
- * DRAFT  – utworzony lokalnie, przed wystawieniem;
- * ISSUED – wystawiony (PDF wygenerowany i przypisany do zamówienia) — UC-FIR-02;
- * ERROR  – błąd generowania dokumentu (UC-FIR-02 / A1).
+ * DRAFT  – created locally, before issuing;
+ * ISSUED – issued (PDF generated and assigned to the order) — UC-FIR-02;
+ * ERROR  – document generation error (UC-FIR-02 / A1).
  */
 public enum DocumentStatus {
     DRAFT,

@@ -15,13 +15,13 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * KORZEŃ AGREGATU (Diagram klas — «AggregateRoot» Settlement).
+ * AGGREGATE ROOT (Class diagram — «AggregateRoot» Settlement).
  *
- * Strzeże spójności transakcyjnej salda zamówienia: lista wpłat ({@link Payment}) i status
- * ({@link SettlementStatus}) zmieniają się wyłącznie przez polecenia korzenia, atomowo w jednej
- * transakcji (UC-FIR-03). Odwołanie do zamówienia jest rozłączne — wyłącznie przez {@link OrderId}
- * (Wspólne Jądro). Zdarzenia rejestruje wg wzorca „collect &amp; pull" ({@link AbstractAggregateRoot}):
- * decyzja „jakie zdarzenie" zostaje w domenie, a usługa aplikacji je ściąga i publikuje.
+ * Guards the transactional consistency of the order balance: the list of payments ({@link Payment}) and the status
+ * ({@link SettlementStatus}) change only through the root's commands, atomically in a single
+ * transaction (UC-FIR-03). The reference to the order is disjoint — only through {@link OrderId}
+ * (Shared Kernel). It records events using the „collect &amp; pull" pattern ({@link AbstractAggregateRoot}):
+ * the decision "which event" stays in the domain, and the application service pulls and publishes it.
  */
 public class Settlement extends AbstractAggregateRoot {
 
@@ -31,10 +31,10 @@ public class Settlement extends AbstractAggregateRoot {
     private final List<Payment> payments;
     private SettlementStatus status;
 
-    /** Czy wysłano prośbę o zadatek (UC-FIR-01) — steruje emisją AdvancePaymentRegisteredEvent. */
+    /** Whether a deposit request was sent (UC-FIR-01) — controls the emission of AdvancePaymentRegisteredEvent. */
     private boolean advanceRequested;
 
-    /** Konstruktor pakietowy — egzemplarze tworzy wyłącznie {@link SettlementFactory}. */
+    /** Package-private constructor — instances are created only by {@link SettlementFactory}. */
     Settlement(SettlementId id, OrderId orderId, Money totalAmount, SettlementStatus status) {
         if (id == null) {
             throw new IllegalArgumentException("id must not be null.");
@@ -57,8 +57,8 @@ public class Settlement extends AbstractAggregateRoot {
     }
 
     /**
-     * UC-FIR-01, krok 2-4: oznaczenie wymagalności zadatku i wyemitowanie
-     * {@link AdvancePaymentRequestedEvent} (klient zostanie poproszony o wpłatę).
+     * UC-FIR-01, steps 2-4: marking the deposit as due and emitting
+     * {@link AdvancePaymentRequestedEvent} (the customer will be asked to pay).
      */
     public void requestAdvancePayment() {
         this.advanceRequested = true;
@@ -66,14 +66,14 @@ public class Settlement extends AbstractAggregateRoot {
     }
 
     /**
-     * UC-FIR-03: zaksięgowanie przelewu i przeliczenie salda — niezmiennik atomowy.
-     * Rejestruje {@link PaymentRegisteredEvent}; jeśli to pierwsza wpłata po prośbie o zadatek,
-     * dodatkowo {@link AdvancePaymentRegisteredEvent} (wyzwala produkcję — UC-INW-02).
+     * UC-FIR-03: posting the transfer and recomputing the balance — an atomic invariant.
+     * Records {@link PaymentRegisteredEvent}; if this is the first payment after the deposit request,
+     * additionally {@link AdvancePaymentRegisteredEvent} (triggers production — UC-INW-02).
      */
     public void registerPayment(String transactionId, Money amount) {
         if (this.status == SettlementStatus.SETTLED) {
             throw new salon.billing.application.domain.exception.IllegalSettlementStateException(
-                    "Saldo zamówienia " + this.orderId.value() + " jest już rozliczone (SETTLED).");
+                    "The balance of order " + this.orderId.value() + " is already settled (SETTLED).");
         }
         boolean firstPayment = this.payments.isEmpty();
         this.payments.add(new Payment(transactionId, amount, LocalDateTime.now()));
@@ -85,8 +85,8 @@ public class Settlement extends AbstractAggregateRoot {
     }
 
     /**
-     * Polityka korekcji salda (prywatna — niezmiennik korzenia): saldo = 0 -> SETTLED
-     * (+ {@link SettlementCompletedEvent}); wpłata niepełna (A1) -> PARTIAL_PAYMENT.
+     * Balance adjustment policy (private — root invariant): balance = 0 -> SETTLED
+     * (+ {@link SettlementCompletedEvent}); a partial payment (A1) -> PARTIAL_PAYMENT.
      */
     private void recalculateBalance() {
         boolean fullyPaid = outstandingBalance().getAmount().signum() <= 0;
@@ -100,7 +100,7 @@ public class Settlement extends AbstractAggregateRoot {
         }
     }
 
-    /** Saldo pozostałe do zapłaty = kwota kontraktu - suma zaksięgowanych wpłat (uwzględnia zadatek). */
+    /** Remaining balance due = contract amount - sum of posted payments (includes the deposit). */
     public Money outstandingBalance() {
         Money paid = Money.of(BigDecimal.ZERO, this.totalAmount.currency());
         for (Payment payment : this.payments) {

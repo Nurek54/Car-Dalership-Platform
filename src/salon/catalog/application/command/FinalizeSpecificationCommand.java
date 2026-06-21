@@ -1,15 +1,15 @@
 package salon.catalog.application.command;
 
 /**
- * Polecenie zatwierdzenia specyfikacji (UC-KON-01, krok 5).
+ * Command to finalize the specification (UC-KON-01, step 5).
  *
- * Należy do warstwy aplikacji (kontrakt portu wejściowego BuildSpecification).
+ * Belongs to the application layer (the BuildSpecification inbound port contract).
  */
 public record FinalizeSpecificationCommand(String specificationId) {
 
     public FinalizeSpecificationCommand {
         if (specificationId == null || specificationId.isBlank()) {
-            throw new IllegalArgumentException("specificationId jest wymagany");
+            throw new IllegalArgumentException("specificationId is required");
         }
     }
 }

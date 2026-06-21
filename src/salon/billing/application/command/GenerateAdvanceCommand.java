@@ -1,7 +1,7 @@
 package salon.billing.application.command;
 
 /**
- * Model danych wejsciowych portu GenerateAdvance (UC-FIR-01).
+ * Input data model of the GenerateAdvance port (UC-FIR-01).
  * Walidacja syntaktyczna (niebiznesowa) w konstruktorze — zadanie uslugi aplikacji.
  */
 public record GenerateAdvanceCommand(String orderId, String authorizedIssuer) {

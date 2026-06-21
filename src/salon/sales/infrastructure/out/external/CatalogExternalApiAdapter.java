@@ -16,15 +16,15 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 /**
- * Adapter wyjściowy (ExternalApiAdapter, ACL) — klient HTTP modułu Katalogu (UC-CRM-02).
- * Realizuje port Sprzedaży {@link CatalogPriceQueryPort}: tłumaczy JSON z zewnętrznego
- * API na hermetyczny obiekt wartości Money (salon.common.model.Money).
+ * Outbound adapter (ExternalApiAdapter, ACL) — an HTTP client of the Catalog module (UC-CRM-02).
+ * Implements the Sales port {@link CatalogPriceQueryPort}: it translates JSON from the external
+ * API into the encapsulated value object Money (salon.common.model.Money).
  *
- * Zależność prowadzi do wewnątrz: adapter zależy od portu zdefiniowanego przez własny
- * kontekst (Sprzedaż), a nie od portu repozytorium Katalogu.
+ * The dependency points inward: the adapter depends on a port defined by its own
+ * context (Sales), not on the Catalog repository port.
  *
- * HTTP 404 -> SpecificationNotFoundException (kontrolowany błąd biznesowy),
- * HTTP 5xx/timeout -> ExternalServiceUnavailableException (błąd infrastruktury).
+ * HTTP 404 -> SpecificationNotFoundException (a controlled business error),
+ * HTTP 5xx/timeout -> ExternalServiceUnavailableException (an infrastructure error).
  */
 @Component
 public class CatalogExternalApiAdapter implements CatalogPriceQueryPort {

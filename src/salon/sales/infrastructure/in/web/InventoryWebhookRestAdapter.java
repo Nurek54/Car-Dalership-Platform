@@ -9,8 +9,8 @@ import salon.sales.application.service.SalesService;
 import salon.common.model.OrderId;
 
 /**
- * Adapter sterujący (driving) — webhook dla zdarzeń z Kontekstu Inwentarza (UC-CRM-04, krok 1).
- * Alternatywny (synchroniczny) kanał dla VehicleReadyForHandover obok subskrybenta kolejki.
+ * Driving adapter — webhook for events from the Inventory Context (UC-CRM-04, step 1).
+ * An alternative (synchronous) channel for VehicleReadyForHandover alongside the queue subscriber.
  */
 @RestController
 @RequestMapping("/api/sales/webhooks/inventory")
@@ -25,14 +25,14 @@ public class InventoryWebhookRestAdapter {
         this.salesAppService = salesAppService;
     }
 
-    /** Pojazd zjechał na plac i jest gotowy — zamówienie przechodzi w "Gotowe do odbioru". */
+    /** The vehicle arrived in the yard and is ready — the order transitions to "Ready for handover". */
     @PostMapping("/vehicle-ready")
     public ResponseEntity<Void> onVehicleReady(@RequestBody VehicleReadyWebhookRequest request) {
         salesAppService.markOrderAsReadyForHandover(new OrderId(request.orderId()));
         return ResponseEntity.ok().build();
     }
 
-    /** DTO webhooka — pola zdarzenia VehicleReadyForHandover z Inwentarza. */
+    /** Webhook DTO — fields of the VehicleReadyForHandover event from Inventory. */
     public record VehicleReadyWebhookRequest(String eventId, String vin,
                                              String orderId, String occurredOn) {
     }

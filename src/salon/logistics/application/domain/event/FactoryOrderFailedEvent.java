@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "ZlecenieProdukcjiOdrzucone" (UC-INW-02, scenariusz A1) — API fabryki zwróciło błąd
- * (np. problem z połączeniem); zlecenie produkcji nie zostało przyjęte.
+ * "ProductionOrderRejected" (UC-INW-02, scenario A1) — the factory API returned an error
+ * (e.g. a connection problem); the production order was not accepted.
  */
 public record FactoryOrderFailedEvent(UUID eventId,
                                       String orderId,

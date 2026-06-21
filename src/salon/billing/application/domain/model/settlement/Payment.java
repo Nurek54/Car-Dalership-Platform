@@ -5,11 +5,11 @@ import salon.common.model.Money;
 import java.time.LocalDateTime;
 
 /**
- * ENCJA LOKALNA agregatu Rozliczenia (Diagram klas — «Entity» Payment).
+ * LOCAL ENTITY of the Settlement aggregate (Class diagram — «Entity» Payment).
  *
- * Tożsamość lokalna = transactionId (identyfikator przelewu z wyciągu bankowego), unikatowa
- * wyłącznie w granicy agregatu. Encja jest ukryta — dostęp tylko przez korzeń {@link Settlement}
- * (prawo Demeter). Niemutowalna po utworzeniu: pojedyncza, zaksięgowana wpłata jest faktem.
+ * Local identity = transactionId (transfer identifier from the bank statement), unique
+ * only within the aggregate boundary. The entity is hidden — access only through the root {@link Settlement}
+ * (Law of Demeter). Immutable after creation: a single, posted payment is a fact.
  */
 public record Payment(String transactionId, Money amount, LocalDateTime paymentDate) {
 

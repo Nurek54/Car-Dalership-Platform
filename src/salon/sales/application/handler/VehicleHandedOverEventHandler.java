@@ -5,8 +5,8 @@ import salon.sales.application.port.out.BillingIntegration;
 import salon.sales.application.domain.event.VehicleHandedOverEvent;
 
 /**
- * Handler zdarzenia VehicleHandedOver (UC-CRM-05): po wydaniu pojazdu zleca domknięcie
- * salda w Kontekście Rozliczeń i rejestruje pojazd w obsłudze posprzedażowej.
+ * Handler of the VehicleHandedOver event (UC-CRM-05): after the vehicle handover it instructs the closing
+ * of the balance in the Billing Context and registers the vehicle in after-sales support.
  */
 public class VehicleHandedOverEventHandler {
 

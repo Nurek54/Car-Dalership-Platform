@@ -1,7 +1,7 @@
 package salon.sales.application.command;
 
 /**
- * Komenda dla UC-CRM-01: Handlowiec inicjuje sesję konfiguratora dla konkretnego klienta.
+ * Command for UC-CRM-01: the Salesperson initiates a configurator session for a specific customer.
  */
 public record StartConfiguratorSessionCommand(String customerId, String salespersonId) {
 

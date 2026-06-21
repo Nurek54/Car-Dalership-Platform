@@ -3,11 +3,11 @@ package salon.logistics.infrastructure.in.messaging;
 import salon.logistics.application.port.in.ReserveVehicle;
 
 /**
- * ADAPTER WEJŚCIOWY (Rysunek 37: EventListener) – subskrybent zdarzeń Kontekstu Finansowania.
+ * INBOUND ADAPTER (Figure 37: EventListener) – subscriber of the Financing Context events.
  *
- * Po potwierdzeniu gotowości do realizacji zamówienia (FinancingApproved / BankTransferDeclared)
- * uruchamia UC-INW-01 (rezerwacja pojazdu z placu). Warstwa zapobiegająca uszkodzeniu (ACL):
- * komunikaty zewnętrzne reprezentujemy jako lokalne rekordy i tłumaczymy na wywołanie portu.
+ * After confirmation of readiness to fulfill the order (FinancingApproved / BankTransferDeclared)
+ * it triggers UC-INW-01 (reservation of a vehicle from the yard). Anti-corruption layer (ACL):
+ * we represent external messages as local records and translate them into a port call.
  */
 public class FinancingEventSubscriberAdapter {
 
@@ -36,7 +36,7 @@ public class FinancingEventSubscriberAdapter {
         }
     }
 
-    /** Lokalne (ACL) reprezentacje zdarzeń przychodzących z Kontekstu Finansowania. */
+    /** Local (ACL) representations of events incoming from the Financing Context. */
     public record FinancingApproved(String orderId) {
     }
 

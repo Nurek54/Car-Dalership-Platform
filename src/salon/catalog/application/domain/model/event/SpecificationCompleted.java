@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Zdarzenie dziedziny emitowane po zatwierdzeniu specyfikacji (UC-KON-01, krok 7).
- * Komunikacja wyjściowa kontekstu (OHS) – publikowane na szynę (RabbitMQ).
+ * Domain event emitted after the specification is finalized (UC-KON-01, step 7).
+ * Outbound context communication (OHS) – published on the bus (RabbitMQ).
  */
 public final class SpecificationCompleted implements DomainEvent {
 

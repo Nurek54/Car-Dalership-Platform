@@ -4,8 +4,8 @@ import salon.sales.application.port.out.BillingIntegration;
 import salon.sales.application.domain.event.OrderCancelledEvent;
 
 /**
- * Handler zdarzenia OrderCancelled: przekazuje powód anulowania do Kontekstu Rozliczeń
- * (rozliczenie zadatku wg winy rezygnacji).
+ * Handler of the OrderCancelled event: it passes the cancellation reason to the Billing Context
+ * (settling the deposit according to fault for the cancellation).
  */
 public class OrderCancelledEventHandler {
 

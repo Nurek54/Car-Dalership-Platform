@@ -1,15 +1,15 @@
 package salon.catalog.infrastructure.out.acl;
 
 /**
- * Techniczny klient zewnętrznego systemu importera/producenta („ImporterService”).
+ * Technical client of the external importer/manufacturer system ("ImporterService").
  *
- * Reprezentuje granicę do systemu Blackbox (webhook / szyna zdarzeń / API). Konkretna
- * implementacja (HTTP/SOAP/kolejka) jest dostarczana przez infrastrukturę integracyjną
- * poza tym kontekstem – mapowanie kontekstów typu KONFORMISTA po stronie transportu,
- * a tłumaczenie modelu wykonuje dopiero warstwa ACL.
+ * Represents the boundary to the Blackbox system (webhook / event bus / API). The concrete
+ * implementation (HTTP/SOAP/queue) is provided by the integration infrastructure
+ * outside this context – a CONFORMIST context mapping on the transport side,
+ * while the model translation is performed only by the ACL layer.
  */
 public interface ImporterServiceClient {
 
-    /** Pobiera najnowszy pakiet katalogowy w obcym formacie dostawcy. */
+    /** Fetches the latest catalog package in the vendor's foreign format. */
     ExternalCatalogPackage downloadLatestPackage();
 }

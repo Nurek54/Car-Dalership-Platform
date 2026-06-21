@@ -6,18 +6,18 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * ADAPTER WYJŚCIOWY (ACL, Rysunek 37: ImporterACL) – atrapa integracji z systemem fabryki.
+ * OUTBOUND ADAPTER (ACL, Figure 37: ImporterACL) – a mock integration with the factory system.
  *
- * Symuluje synchroniczne złożenie zlecenia produkcji: zwraca nadany przez fabrykę numer VIN.
- * Wariant zgłaszający {@code FactoryOrderFailedException} reprezentowałby scenariusz UC-INW-02 / A1.
+ * Simulates synchronous placement of a production order: returns the VIN assigned by the factory.
+ * A variant throwing {@code FactoryOrderFailedException} would represent the UC-INW-02 / A1 scenario.
  */
 public class FactoryIntegrationMockAdapter implements ImporterACL {
 
     @Override
     public String placeFactoryOrder(String orderId, List<String> optionCodes) {
         String vin = "VIN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        System.out.println("[FactoryIntegrationMockAdapter] Zlecenie produkcji dla " + orderId
-                + " przyjęte przez fabrykę, nadany VIN=" + vin + ".");
+        System.out.println("[FactoryIntegrationMockAdapter] Production order for " + orderId
+                + " accepted by the factory, assigned VIN=" + vin + ".");
         return vin;
     }
 }

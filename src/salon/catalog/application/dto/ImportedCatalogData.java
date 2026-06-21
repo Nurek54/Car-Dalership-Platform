@@ -7,13 +7,13 @@ import salon.catalog.application.domain.model.catalog.ModelYear;
 import java.util.List;
 
 /**
- * DTO wejściowe portu {@link salon.catalog.application.port.out.CatalogImporterPort}:
- * dane katalogu już PRZETŁUMACZONE do modelu lokalnego (obiekty wartości dziedziny).
+ * Input DTO of the {@link salon.catalog.application.port.out.CatalogImporterPort} port:
+ * catalog data already TRANSLATED into the local model (domain value objects).
  *
- * Dane z kontekstu „na górze” modelujemy jako obiekty wartości (PDF, rozdz. 3).
- * Trzymamy ten rekord w pakiecie application.dto, a nie w application.port — port
- * pozostaje wyłącznie interfejsem (reguła: porty to interfejsy). Zbudowanie agregatu
- * z tych danych jest zadaniem fabryki w usłudze aplikacji.
+ * Data from the "upstream" context is modeled as value objects (PDF, chapter 3).
+ * We keep this record in the application.dto package, not in application.port — the port
+ * remains solely an interface (rule: ports are interfaces). Building the aggregate
+ * from this data is the task of the factory in the application service.
  */
 public record ImportedCatalogData(ModelYear modelYear,
                                   List<CatalogOption> options,

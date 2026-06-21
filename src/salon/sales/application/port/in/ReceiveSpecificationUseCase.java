@@ -3,9 +3,9 @@ package salon.sales.application.port.in;
 import salon.sales.application.domain.model.offer.OfferId;
 
 /**
- * Port wejściowy dla UC-CRM-02 (wygenerowanie oferty proforma) — odpowiednik węzła
+ * Inbound port for UC-CRM-02 (generating the proforma offer) — the counterpart of the node
  * "IssueProformaUseCase" w docs/Architecture/SalesArchitecture.md (PDF rozdz. 3.3.3).
- * Wycena specyfikacji dociągana jest z modułu Katalogu (port wyjściowy).
+ * The specification pricing is fetched from the Catalog module (outbound port).
  */
 public interface ReceiveSpecificationUseCase {
 

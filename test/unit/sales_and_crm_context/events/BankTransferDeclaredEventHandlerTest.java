@@ -23,7 +23,7 @@ class BankTransferDeclaredEventHandlerTest {
 
     @Test
     void shouldRequestProformaInvoiceWhenBankTransferIsDeclared() {
-        // Klient zadeklarował przelew
+        // The customer declared a bank transfer
         Money declaredAmount = Money.of(150000, "PLN");
         BankTransferDeclaredEvent event = new BankTransferDeclaredEvent(
                 UUID.randomUUID(),
@@ -34,7 +34,7 @@ class BankTransferDeclaredEventHandlerTest {
 
         eventHandler.handle(event);
 
-        // Zlecamy do działu Rozliczeń wystawienie dokumentu proforma
+        // We instruct the Billing department to issue a proforma document
         verify(billingPort).requestProformaInvoice("ORD-500", declaredAmount);
     }
 }

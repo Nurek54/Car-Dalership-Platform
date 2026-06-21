@@ -6,13 +6,13 @@ import salon.billing.application.port.in.GenerateAdvance;
 import salon.billing.application.port.in.GenerateInvoice;
 
 /**
- * ADAPTER WEJSCIOWY (Rys. 48 — EventListener) — subskrybent zdarzen Inwentarza i Logistyki,
- * wyzwalajacych wystawianie dokumentow:
- *  - VehicleIsNotOnStock     -> GenerateAdvance  (UC-FIR-01: prosba o zadatek),
- *  - VehicleReservedFromStock -> GenerateInvoice (UC-FIR-02: faktura koncowa).
+ * INBOUND ADAPTER (Fig. 48 — EventListener) — subscriber of the Inventory and Logistics events,
+ * that trigger document issuance:
+ *  - VehicleIsNotOnStock     -> GenerateAdvance  (UC-FIR-01: deposit request),
+ *  - VehicleReservedFromStock -> GenerateInvoice (UC-FIR-02: final invoice).
  *
- * ACL: zdarzenia zewnetrzne reprezentujemy lokalnymi rekordami i tlumaczymy na komendy portow.
- * authorizedIssuer (np. e-mail ksiegowego) wstrzykiwany z konfiguracji jako wystawca dokumentu.
+ * ACL: we represent external events as local records and translate them into port commands.
+ * authorizedIssuer (e.g. the accountant's e-mail) injected from configuration as the document issuer.
  */
 public class BillingEventSubscriberAdapter {
 
@@ -37,18 +37,18 @@ public class BillingEventSubscriberAdapter {
         this.authorizedIssuer = authorizedIssuer;
     }
 
-    /** UC-FIR-01: brak pojazdu na placu -> prosba o zadatek. */
+    /** UC-FIR-01: no vehicle in the yard -> deposit request. */
     public void handleVehicleIsNotOnStock(VehicleIsNotOnStock event) {
         requireOrderId(event == null ? null : event.orderId());
         this.generateAdvance.generateAdvance(
                 new GenerateAdvanceCommand(event.orderId(), this.authorizedIssuer));
     }
 
-    /** UC-FIR-02: pojazd zarezerwowany z placu -> faktura koncowa. */
+    /** UC-FIR-02: vehicle reserved from the yard -> final invoice. */
     public void handleVehicleReservedFromStock(VehicleReservedFromStock event) {
         requireOrderId(event == null ? null : event.orderId());
         this.generateInvoice.generateInvoice(new GenerateInvoiceCommand(
-                event.orderId(), "Faktura koncowa " + event.orderId(), this.authorizedIssuer));
+                event.orderId(), "Final invoice " + event.orderId(), this.authorizedIssuer));
     }
 
     private static void requireOrderId(String orderId) {
@@ -57,7 +57,7 @@ public class BillingEventSubscriberAdapter {
         }
     }
 
-    /** Lokalne (ACL) reprezentacje zdarzen z Kontekstu Inwentarza i Logistyki. */
+    /** Local (ACL) representations of events from the Inventory and Logistics Context. */
     public record VehicleIsNotOnStock(String orderId) {
     }
 

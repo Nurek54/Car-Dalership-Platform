@@ -1,14 +1,14 @@
 package salon.sales.application.domain.model.offer;
 
 /**
- * Cykl życia oferty (proformy) — zgodnie z modelem agregatu
- * (docs/Agregate/Sales/customer-offer-order.md) i PDF (rozdz. 3.3.4):
- * oferta kończy życie w jednoznacznym stanie terminalnym ACCEPTED lub REJECTED,
- * po którym staje się niemutowalnym, historycznym dowodem wynegocjowanych warunków.
+ * The life cycle of the offer (proforma) — per the aggregate model
+ * (docs/Agregate/Sales/customer-offer-order.md) and the PDF (chapter 3.3.4):
+ * the offer ends its life in an unambiguous terminal state ACCEPTED or REJECTED,
+ * after which it becomes an immutable, historical record of the negotiated terms.
  */
 public enum OfferState {
-    DRAFT,      // "W przygotowaniu" — robocza, można wyceniać i rabatować
-    PUBLISHED,  // "Utworzona" — wygenerowana i zaprezentowana klientowi
-    ACCEPTED,   // "Zaakceptowana" — klient przyjął warunki (stan terminalny)
-    REJECTED    // "Odrzucona" — klient zrezygnował (stan terminalny)
+    DRAFT,      // "In preparation" — a draft, can be priced and discounted
+    PUBLISHED,  // "Created" — generated and presented to the customer
+    ACCEPTED,   // "Accepted" — the customer accepted the terms (terminal state)
+    REJECTED    // "Rejected" — the customer declined (terminal state)
 }

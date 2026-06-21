@@ -3,16 +3,16 @@ package salon.sales.application.port.out;
 import salon.common.model.Money;
 
 /**
- * Port wyjściowy (driven) Kontekstu Sprzedaży — synchroniczne zapytanie o cenę
- * katalogową specyfikacji (integracja HTTP z modułem Katalogu).
+ * Outbound port (driven) of the Sales Context — a synchronous query for the catalog
+ * price of the specification (HTTP integration with the Catalog module).
  *
- * Reguła odwrócenia zależności (D z SOLID): to KONTEKST SPRZEDAŻY definiuje, czego
- * potrzebuje od Katalogu (własny port), a adapter w warstwie infrastruktury realizuje
- * ten kontrakt. Sprzedaż nie zależy już od portu repozytorium Katalogu.
+ * The Dependency Inversion Principle (the D in SOLID): it is the SALES CONTEXT that defines what
+ * it needs from the Catalog (its own port), and an adapter in the infrastructure layer implements
+ * this contract. Sales no longer depends on the Catalog repository port.
  *
- * Uwaga: w trybie zdarzeniowym (event-carried state transfer) wycena dociera
- * asynchronicznie przez {@link SpecificationPriceReadModelPort} ze zdarzenia
- * SpecificationCompleted; ten port pozostaje dla integracji synchronicznej, gdy jest wymagana.
+ * Note: in the event-driven mode (event-carried state transfer) the pricing arrives
+ * asynchronously through {@link SpecificationPriceReadModelPort} from the
+ * SpecificationCompleted event; this port remains for synchronous integration when required.
  */
 public interface CatalogPriceQueryPort {
 

@@ -32,14 +32,14 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * USŁUGA APLIKACJI (Rysunek 37) – „InventoryManagementService”.
+ * APPLICATION SERVICE (Figure 37) – "InventoryManagementService".
  *
- * Jedyny punkt orkiestracji Kontekstu Inwentarza i Logistyki. Realizuje cztery porty wejściowe
+ * The single orchestration point of the Inventory and Logistics Context. Implements four inbound ports
  * z diagramu architektury: {@link ReserveVehicle}, {@link ReceiveVehicle}, {@link ReleaseVehicle}
- * i {@link PrepareForHandover} (pokrywając UC-INW-01..06), korzystając z czterech portów wyjściowych:
- * {@link VehicleDatabaseRepository}, {@link CatalogIntegration}, {@link ImporterACL} i wspólnego
- * {@link EventPublisher}. Operacje NIEBIZNESOWE (pobranie agregatu, zapis, emisja zdarzeń) są tutaj;
- * reguły cyklu życia pojazdu — w agregacie {@link InventoryVehicle}.
+ * and {@link PrepareForHandover} (covering UC-INW-01..06), using four outbound ports:
+ * {@link VehicleDatabaseRepository}, {@link CatalogIntegration}, {@link ImporterACL} and the shared
+ * {@link EventPublisher}. NON-BUSINESS operations (fetching the aggregate, saving, emitting events) are here;
+ * the vehicle life-cycle rules — in the {@link InventoryVehicle} aggregate.
  */
 public class InventoryManagementService implements
         ReserveVehicle, ReceiveVehicle, ReleaseVehicle, PrepareForHandover {
@@ -72,9 +72,9 @@ public class InventoryManagementService implements
         this.eventPublisher = eventPublisher;
     }
 
-    // ===== Zasilanie lokalnej kopii danych Katalogu (port wyjściowy CatalogIntegration) =====
-    // Metody pomocnicze wołane przez korzeń kompozycji / demo; subskrybenty zdarzeń mogą też
-    // pisać bezpośrednio do portu CatalogIntegration.
+    // ===== Feeding the local copy of the Catalog data (CatalogIntegration outbound port) =====
+    // Helper methods called by the composition root / demo; event subscribers may also
+    // write directly to the CatalogIntegration port.
 
     public void registerSpecification(String specificationId, List<String> optionCodes) {
         this.catalogIntegration.saveSpecification(specificationId, optionCodes);
@@ -84,7 +84,7 @@ public class InventoryManagementService implements
         this.catalogIntegration.linkOrderToSpecification(orderId, specificationId);
     }
 
-    // ===== ReserveVehicle: UC-INW-01 (rezerwacja z placu) + UC-INW-02 (zlecenie produkcji) =====
+    // ===== ReserveVehicle: UC-INW-01 (reservation from the yard) + UC-INW-02 (production order) =====
 
     @Override
     public void reserveVehicleForOrder(String orderId) {
@@ -98,12 +98,12 @@ public class InventoryManagementService implements
 
         if (free.isPresent()) {
             InventoryVehicle vehicle = free.get();
-            vehicle.lockForOrder(order);                    // ON_STOCK -> RESERVED (reguła w agregacie)
+            vehicle.lockForOrder(order);                    // ON_STOCK -> RESERVED (rule in the aggregate)
             this.vehicleRepository.save(vehicle);
             this.eventPublisher.publish(
                     new VehicleReservedFromStockEvent(orderId, vehicle.vin().value()));
         } else {
-            // A1: brak wolnego auta na placu -> ścieżka zamówienia produkcji / zadatku.
+            // A1: no free car in the yard -> the production-order / deposit path.
             this.eventPublisher.publish(new VehicleIsNotOnStockEvent(orderId));
         }
     }
@@ -127,7 +127,7 @@ public class InventoryManagementService implements
         }
     }
 
-    // ===== ReceiveVehicle: UC-INW-03 (przyjęcie pojazdu na stan magazynowy) =====
+    // ===== ReceiveVehicle: UC-INW-03 (receiving the vehicle into stock) =====
 
     @Override
     public void receiveVehicle(String vin) {
@@ -143,26 +143,26 @@ public class InventoryManagementService implements
             this.eventPublisher.publish(new VehicleDeliveredToStockEvent(
                     order == null ? null : order.value(), vin));
         } else {
-            // A1: auto "na stock" bez zamówienia -> rejestracja jako wolne, bez zdarzenia.
+            // A1: a "stock" car without an order -> registered as free, without an event.
             ImporterData data = new ImporterData(vinNumber, null, List.of());
             this.vehicleRepository.save(this.vehicleFactory.createStockArrival(data));
         }
     }
 
-    // ===== ReleaseVehicle: UC-INW-06 (wydanie) + UC-INW-04 (zwolnienie blokady) =====
+    // ===== ReleaseVehicle: UC-INW-06 (handover) + UC-INW-04 (lock release) =====
 
     @Override
     public void releaseVehicle(String orderId) {
         InventoryVehicle vehicle = this.vehicleRepository.findByOrderId(new OrderId(orderId))
                 .orElseThrow(() -> new VehicleNotFoundException(
-                        "Brak pojazdu do wydania dla zamówienia " + orderId));
+                        "No vehicle to hand over for order " + orderId));
         try {
             vehicle.handOver();                              // READY_FOR_HANDOVER -> HANDED_OVER
             this.vehicleRepository.save(vehicle);
             this.eventPublisher.publish(
                     new VehicleInventoryReleasedEvent(orderId, vehicle.vin().value()));
         } catch (IllegalVehicleStateException e) {
-            // A1: niewłaściwy status pojazdu -> zdarzenie kompensacyjne dla Sprzedaży.
+            // A1: incorrect vehicle status -> a compensating event for Sales.
             this.eventPublisher.publish(new VehicleInventoryReleasedErrorEvent(orderId, e.getMessage()));
         }
     }
@@ -171,7 +171,7 @@ public class InventoryManagementService implements
     public void releaseReservation(String orderId) {
         Optional<InventoryVehicle> reserved = this.vehicleRepository.findByOrderId(new OrderId(orderId));
         if (reserved.isEmpty()) {
-            // A1: pojazd nie istnieje w rezerwacjach (wcześniej usunięty/wydany) — nic do zrobienia.
+            // A1: the vehicle does not exist among the reservations (previously removed/handed over) — nothing to do.
             return;
         }
         InventoryVehicle vehicle = reserved.get();
@@ -181,13 +181,13 @@ public class InventoryManagementService implements
                 new VehicleReservationCancelledEvent(orderId, vehicle.vin().value()));
     }
 
-    // ===== PrepareForHandover: UC-INW-05 (przygotowanie do wydania po rozliczeniu) =====
+    // ===== PrepareForHandover: UC-INW-05 (preparation for handover after settlement) =====
 
     @Override
     public void prepareVehicleForHandover(String orderId) {
         InventoryVehicle vehicle = this.vehicleRepository.findByOrderId(new OrderId(orderId))
                 .orElseThrow(() -> new VehicleNotFoundException(
-                        "Brak zarezerwowanego pojazdu dla zamówienia " + orderId));
+                        "No reserved vehicle for order " + orderId));
         vehicle.prepareForHandover();                        // RESERVED -> READY_FOR_HANDOVER
         this.vehicleRepository.save(vehicle);
         this.eventPublisher.publish(

@@ -28,10 +28,10 @@ import salon.financing.infrastructure.out.mock.BankIntegrationMockAdapter;
 import salon.financing.infrastructure.out.mock.InMemoryFinancingRepository;
 import salon.financing.infrastructure.in.messaging.FinancingEventListener;
 
-// UWAGA: Kontekst Katalogu i Konfiguratora NIE jest już spinany w tym pliku.
-// Po przebudowie jest samodzielnie wstrzykiwany przez component-scan
-// (@Service/@Component/@Repository) oraz salon.catalog.infrastructure.config.DomainBeansConfiguration
-// (fabryki, RuleValidationService, Clock). Ręczne beany kolidowałyby z beanami skanowanymi.
+// NOTE: The Catalog and Configurator Context is no longer wired in this file.
+// After the refactor it is injected on its own via component-scan
+// (@Service/@Component/@Repository) and salon.catalog.infrastructure.config.DomainBeansConfiguration
+// (factories, RuleValidationService, Clock). Manual beans would collide with the scanned beans.
 
 import salon.logistics.application.service.InventoryManagementService;
 import salon.logistics.application.port.out.ImporterACL;
@@ -53,33 +53,33 @@ import salon.sales.infrastructure.out.mock.InMemorySpecificationPriceReadModelAd
 import salon.common.application.EventPublisher;
 
 /**
- * Korzeń kompozycji (Composition Root) dla uruchomienia produkcyjnego pod Springiem.
+ * Composition Root for the production run under Spring.
  *
- * Usługi i adaptery Kontekstów Sprzedaży oraz Katalogu są beanami komponentowymi
- * (@Service/@Component/@Repository) i wstrzykują się przez component-scan — NIE spinamy ich tutaj.
- * Tu spinamy konteksty pozostające czystymi POJO (Rozliczenia, Logistykę, Finansowanie)
- * oraz adaptery międzykontekstowe (ACL do CRM, subskrybenty zdarzeń).
+ * The services and adapters of the Sales and Catalog Contexts are component beans
+ * (@Service/@Component/@Repository) and are injected via component-scan — we do NOT wire them here.
+ * Here we wire the contexts that remain pure POJOs (Billing, Logistics, Financing)
+ * and the cross-context adapters (ACL to CRM, event subscribers).
  */
 @Configuration
 public class SalonWiringConfiguration {
 
-    // --- Porty wyjściowe spoza persystencji bazodanowej (na czas startu: implementacje mock) ---
+    // --- Outbound ports outside database persistence (for startup: mock implementations) ---
 
     @Bean
     public VehicleDatabaseRepository inventoryRepository() {
         return new InMemoryInventoryRepository();
     }
 
-    /** Port wyjściowy „ImporterACL" (Rysunek 37) — integracja z systemem fabryki/importera. */
+    /** Outbound port "ImporterACL" (Figure 37) — integration with the factory/importer system. */
     @Bean
     public ImporterACL importerAcl() {
         return new FactoryIntegrationMockAdapter();
     }
 
     /**
-     * Port wyjściowy „CatalogIntegration" (Rysunek 37) — lokalna kopia danych Katalogu
-     * zasilana asynchronicznie zdarzeniami SpecificationCompleted (Katalog) i OrderPlaced (Sprzedaż),
-     * zamiast synchronicznego odpytywania innych kontekstów.
+     * Outbound port "CatalogIntegration" (Figure 37) — a local copy of the Catalog data
+     * fed asynchronously by the SpecificationCompleted (Catalog) and OrderPlaced (Sales) events,
+     * instead of synchronously querying other contexts.
      */
     @Bean
     public CatalogIntegration catalogIntegration() {
@@ -87,8 +87,8 @@ public class SalonWiringConfiguration {
     }
 
     /**
-     * Lokalny read model wyceny specyfikacji Sprzedaży — zasilany asynchronicznie zdarzeniem
-     * SpecificationCompleted (Katalog), zamiast synchronicznego odpytywania Katalogu o cenę (UC-CRM-02).
+     * Sales' local read model of specification pricing — fed asynchronously by the
+     * SpecificationCompleted event (Catalog), instead of synchronously querying the Catalog for the price (UC-CRM-02).
      */
     @Bean
     public SpecificationPriceReadModelPort specificationPriceReadModelPort() {
@@ -106,9 +106,9 @@ public class SalonWiringConfiguration {
     }
 
     /**
-     * UC-FIR-01/02: dane nabywcy dociągane z Kontekstu Sprzedaży (ACL, Query po OrderId).
-     * Adapter zależy wyłącznie od publicznej fasady Sprzedaży (Published Language),
-     * a nie od jej repozytoriów i agregatów.
+     * UC-FIR-01/02: buyer data fetched from the Sales Context (ACL, query by OrderId).
+     * The adapter depends only on the public Sales facade (Published Language),
+     * not on its repositories and aggregates.
      */
     @Bean
     public SalesIntegration crmIntegrationPort(SalesQueryFacade salesQueryFacade) {
@@ -130,13 +130,13 @@ public class SalonWiringConfiguration {
         return new InMemoryFinancingRepository();
     }
 
-    /** Zapytanie o zdolność: adapter publikuje FinancingRequestedEvent (UC-CRM-03 -> UC-FIN-01). */
+    /** Creditworthiness query: the adapter publishes FinancingRequestedEvent (UC-CRM-03 -> UC-FIN-01). */
     @Bean
     public FinancingIntegrationPort financingIntegrationPort(EventPublisher eventPublisherPort) {
         return new FinancingEventBusAdapter(eventPublisherPort);
     }
 
-    // --- Inwentarz i Logistyka: scentralizowana usługa aplikacyjna (UC-INW-01..06) ---
+    // --- Inventory and Logistics: centralized application service (UC-INW-01..06) ---
 
     @Bean
     public InventoryManagementService inventoryManagementAppService(
@@ -148,7 +148,7 @@ public class SalonWiringConfiguration {
                 catalogIntegration, importerAcl, eventPublisherPort);
     }
 
-    // --- Fakturowanie i Rozliczenia ---
+    // --- Billing and Settlement ---
 
     @Bean
     public PaymentProcessService settlementAppService(SettlementDatabaseRepository settlementRepository,
@@ -179,7 +179,7 @@ public class SalonWiringConfiguration {
         return new PaymentReminderCronJobAdapter(settlementAppService);
     }
 
-    // --- Finansowanie ---
+    // --- Financing ---
 
     @Bean
     public salon.financing.application.port.out.SalesIntegration financingCrmIntegrationPort(
@@ -196,19 +196,19 @@ public class SalonWiringConfiguration {
                 financingCrmIntegrationPort, bankIntegrationAclPort, eventPublisherPort);
     }
 
-    /** Finansowanie <- Sprzedaż: FinancingRequestedEvent wyzwala UC-FIN-01 (złożenie wniosku). */
+    /** Financing <- Sales: FinancingRequestedEvent triggers UC-FIN-01 (application submission). */
     @Bean
     public FinancingEventListener financingEventListener(ProcessFinancingService financingAppService) {
         return new FinancingEventListener(financingAppService);
     }
 
-    // --- Katalog i Konfigurator (UC-KON-01/02) ---
-    // Brak ręcznego spinania: po przebudowie kontekst wstrzykuje się sam przez component-scan
+    // --- Catalog and Configurator (UC-KON-01/02) ---
+    // No manual wiring: after the refactor the context injects itself via component-scan
     // (BuildSpecificationService/UpdateCatalogService = @Service, adaptery = @Component/@Repository)
-    // oraz salon.catalog.infrastructure.config.DomainBeansConfiguration (ProductCatalogFactory,
+    // and salon.catalog.infrastructure.config.DomainBeansConfiguration (ProductCatalogFactory,
     // VehicleSpecificationFactory, RuleValidationService, Clock).
 
-    // --- Adaptery sterujące (subskrybenty zdarzeń) jako beany ---
+    // --- Driving adapters (event subscribers) as beans ---
 
     @Bean
     public salon.sales.infrastructure.in.messaging.BillingEventSubscriberAdapter
@@ -216,7 +216,7 @@ public class SalonWiringConfiguration {
         return new salon.sales.infrastructure.in.messaging.BillingEventSubscriberAdapter(salesAppService);
     }
 
-    /** Sprzedaż <- Katalog: SpecificationCompleted zasila lokalny read model wyceny (UC-CRM-02). */
+    /** Sales <- Catalog: SpecificationCompleted feeds the local pricing read model (UC-CRM-02). */
     @Bean
     public salon.sales.infrastructure.in.messaging.CatalogEventSubscriberAdapter
     catalogEventSubscriberAdapter(SalesService salesAppService) {
@@ -228,7 +228,7 @@ public class SalonWiringConfiguration {
         return new LogisticsEventSubscriberAdapter(salesAppService);
     }
 
-    /** Inwentarz <- Sprzedaż: OrderPlaced (powiązanie spec.) oraz komenda ReleaseVehicle (UC-INW-06). */
+    /** Inventory <- Sales: OrderPlaced (spec. linkage) and the ReleaseVehicle command (UC-INW-06). */
     @Bean
     public salon.logistics.infrastructure.in.messaging.SalesEventSubscriberAdapter
     logisticsSalesEventSubscriberAdapter(CatalogIntegration catalogIntegration,
@@ -237,7 +237,7 @@ public class SalonWiringConfiguration {
                 catalogIntegration, inventoryManagementAppService);
     }
 
-    /** Inwentarz <- Katalog: SpecificationCompleted zasila lokalną kopię danych Katalogu. */
+    /** Inventory <- Catalog: SpecificationCompleted feeds the local copy of the Catalog data. */
     @Bean
     public salon.logistics.infrastructure.in.messaging.CatalogEventSubscriberAdapter
     logisticsCatalogEventSubscriberAdapter(CatalogIntegration catalogIntegration) {
@@ -262,7 +262,7 @@ public class SalonWiringConfiguration {
     public salon.billing.infrastructure.in.messaging.BillingEventSubscriberAdapter
     billingEventSubscriberAdapter(DocumentGenerationService documentAppService) {
         return new salon.billing.infrastructure.in.messaging.BillingEventSubscriberAdapter(
-                documentAppService, documentAppService, "ksiegowy@salon.pl");
+                documentAppService, documentAppService, "accountant@salon.pl");
     }
 
     @Bean

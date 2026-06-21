@@ -18,9 +18,9 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
 class HexagonalArchitectureTest {
 
     /**
-     * Korzeń kompozycji (salon.bootstrap.* — uruchamialne main: SalonDemo/MessagingDemo) celowo
-     * spina ze sobą wszystkie warstwy (to zadanie "Composition Root"/wiring). Nie podlega regułom
-     * warstw heksagonalnych, więc wyłączamy go z analizy — zgodnie z dokumentacją architektury.
+     * The composition root (salon.bootstrap.* — runnable main: SalonDemo/MessagingDemo) deliberately
+     * wires together all layers (that is the "Composition Root"/wiring task). It is not subject to the
+     * hexagonal-layer rules, so we exclude it from the analysis — per the architecture documentation.
      */
     static final class DoNotIncludeBootstrap implements ImportOption {
         @Override
@@ -37,14 +37,14 @@ class HexagonalArchitectureTest {
             .layer("Application").definedBy("..application..")
             .layer("Infrastructure").definedBy("..infrastructure..")
 
-            // Definiowanie kierunku zależności
+            // Defining the direction of dependencies
             .whereLayer("Infrastructure").mayOnlyBeAccessedByLayers("Infrastructure")
             .whereLayer("Application").mayOnlyBeAccessedByLayers("Infrastructure", "Application")
             .whereLayer("Domain").mayOnlyBeAccessedByLayers("Application", "Infrastructure", "Domain")
 
-            // Udokumentowany wyjątek (patrz docs/Architecture/CatalogArchitecture.md): bezstanowy
-            // SERWIS DZIEDZINOWY (..domain.service..) sam pobiera agregat z repozytorium (port
-            // wyjściowy w warstwie aplikacji), aby walidacja reguł (Fail-fast) działała w domenie.
+            // A documented exception (see docs/Architecture/CatalogArchitecture.md): a stateless
+            // DOMAIN SERVICE (..domain.service..) itself fetches the aggregate from the repository (the
+            // outbound in the application layer), so that rule validation (Fail-fast) runs in the domain.
             .ignoreDependency(resideInAPackage("..domain.service.."), resideInAPackage("..application.."));
 
     @ArchTest
@@ -60,13 +60,13 @@ class HexagonalArchitectureTest {
             .should().notDependOnEachOther()
             .because("Contexts should be isolated. We using Domain Events!");
 
-    @ArchTest       // porty powinny być interfejsami
+    @ArchTest       // ports should be interfaces
     static final ArchRule portsShouldBeInterfaces = classes()
             .that().resideInAPackage("..application.port..")
             .should().beInterfaces()
             .because("Ports in Hexagonal Architecture must be interfaces!");
 
-    @ArchTest       // Eventy muszą być Rekordami
+    @ArchTest       // Events must be Records
     static final ArchRule domainEventsShouldBeRecords = classes()
             .that().resideInAPackage("..domain.event..")
             .and().areTopLevelClasses()

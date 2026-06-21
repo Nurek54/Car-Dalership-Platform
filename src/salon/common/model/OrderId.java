@@ -3,9 +3,9 @@ package salon.common.model;
 import java.util.UUID;
 
 /**
- * Value Object: identyfikator zamówienia. Wspólny rdzeń — używają go zarówno
- * Rozliczenia (odwołanie do zamówienia z innego kontekstu) jak i Sprzedaż (własny agregat Order).
- * Zgodnie z DDD odwołujemy się do zamówienia TYLKO przez to ID (model rozłączny).
+ * Value Object: an order identifier. Shared kernel — used by both
+ * Billing (a reference to an order from another context) and Sales (its own Order aggregate).
+ * Per DDD we reference the order ONLY through this ID (a disjoint model).
  */
 public record OrderId(String value) {
 

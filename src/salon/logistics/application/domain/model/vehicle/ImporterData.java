@@ -3,10 +3,10 @@ package salon.logistics.application.domain.model.vehicle;
 import java.util.List;
 
 /**
- * Obiekt wartości (Rysunek 38) – dane pojazdu dostarczone przez system importera/fabryki
- * w momencie zjazdu z lawety (UC-INW-03). Zgodnie z założeniem kanwy skan numeru VIN jest
- * bezbłędny i pokrywa się z cyfrowymi danymi zamówienia produkcyjnego, dlatego to właśnie
- * {@code ImporterData} jest źródłem prawdy przy przyjęciu pojazdu na plac.
+ * Value object (Figure 38) – vehicle data provided by the importer/factory system
+ * at the moment it comes off the transporter (UC-INW-03). Per the canvas assumption the VIN scan is
+ * error-free and matches the digital data of the production order, which is why
+ * {@code ImporterData} is the source of truth when receiving the vehicle into the yard.
  */
 public record ImporterData(VinNumber vin, SpecificationId specificationId, List<String> optionCodes) {
 

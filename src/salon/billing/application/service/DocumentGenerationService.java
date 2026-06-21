@@ -24,12 +24,12 @@ import salon.common.model.Money;
 import salon.common.model.OrderId;
 
 /**
- * USLUGA APLIKACJI (Rys. 48 — DocumentGenerationService) — orkiestrator wystawiania dokumentow.
+ * APPLICATION SERVICE (Fig. 48 — DocumentGenerationService) — orchestrator of document issuance.
  *
- * Realizuje porty wejsciowe {@link GenerateAdvance} (UC-FIR-01) i {@link GenerateInvoice} (UC-FIR-02).
- * Koordynuje: usluge dziedziny {@link InvoiceCalculationService}, ACL Sprzedazy ({@link SalesIntegration}),
- * fabryke i agregat dokumentu, porty {@link PdfGeneration}/{@link NotificationGeneration}/{@link DocumentDatabaseRepository}
- * oraz publikacje zdarzen. Reguly biznesowe pozostaja w agregatach — usluga jedynie spina kroki PU.
+ * Implements the inbound ports {@link GenerateAdvance} (UC-FIR-01) and {@link GenerateInvoice} (UC-FIR-02).
+ * It coordinates: the domain service {@link InvoiceCalculationService}, the Sales ACL ({@link SalesIntegration}),
+ * the factory and the document aggregate, the ports {@link PdfGeneration}/{@link NotificationGeneration}/{@link DocumentDatabaseRepository}
+ * and event publication. Business rules remain in the aggregates — the service only ties together the use-case steps.
  */
 public class DocumentGenerationService implements GenerateAdvance, GenerateInvoice {
 
@@ -91,9 +91,9 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
     }
 
     /**
-     * UC-FIR-01: Wyslanie prosby o zadatek. Liczy kwote zadatku, dociaga dane nabywcy (ACL),
-     * tworzy i wystawia proforme, powiadamia klienta, a nastepnie oznacza wymagalnosc zadatku
-     * na saldzie (agregat emituje AdvancePaymentRequestedEvent — publikowane na koncu).
+     * UC-FIR-01: Sending the deposit request. Computes the deposit amount, fetches the buyer data (ACL),
+     * creates and issues the proforma, notifies the customer, and then marks the deposit as due
+     * on the balance (the aggregate emits AdvancePaymentRequestedEvent — published at the end).
      */
     @Override
     public String generateAdvance(GenerateAdvanceCommand command) {
@@ -105,7 +105,7 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
 
             AccountingDocument document = this.documentFactory.createInvoice(
                     settlement.orderId(), buyer, this.seller, advance,
-                    "Prosba o zadatek " + command.orderId(), command.authorizedIssuer());
+                    "Deposit request " + command.orderId(), command.authorizedIssuer());
             String documentId = issueAndNotify(document);
 
             settlement.requestAdvancePayment();
@@ -114,7 +114,7 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
             this.eventPublisher.publishAll(settlement.pullDomainEvents());
             return documentId;
         } catch (RuntimeException e) {
-            // A1: brak wymaganych informacji do wygenerowania prosby.
+            // A1: missing information required to generate the request.
             this.eventPublisher.publish(
                     new ErrorDuringPaymentRequestEvent(command.orderId(), e.getMessage()));
             throw e;
@@ -122,8 +122,8 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
     }
 
     /**
-     * UC-FIR-02: Stworzenie faktury koncowej na kwote pozostala do zaplaty (uwzglednia zadatek).
-     * Tworzy i wystawia fakture, generuje PDF, powiadamia klienta i emituje InvoiceCreatedEvent.
+     * UC-FIR-02: Creating the final invoice for the amount remaining due (includes the deposit).
+     * Creates and issues the invoice, generates the PDF, notifies the customer and emits InvoiceCreatedEvent.
      */
     @Override
     public String generateInvoice(GenerateInvoiceCommand command) {
@@ -148,7 +148,7 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
         }
     }
 
-    /** Wspolna sciezka: zapis DRAFT -> PDF -> markAsIssued -> zapis -> powiadomienie klienta. */
+    /** Common path: save DRAFT -> PDF -> markAsIssued -> save -> notify the customer. */
     private String issueAndNotify(AccountingDocument document) {
         this.documentRepository.save(document);
         byte[] pdf = this.pdfGeneration.generatePdf(document);
@@ -161,6 +161,6 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
     private Settlement loadSettlement(String orderId) {
         return this.settlementRepository.findByOrderId(new OrderId(orderId))
                 .orElseThrow(() -> new SettlementNotFoundException(
-                        "Brak otwartego salda dla zamowienia " + orderId));
+                        "No open balance for order " + orderId));
     }
 }

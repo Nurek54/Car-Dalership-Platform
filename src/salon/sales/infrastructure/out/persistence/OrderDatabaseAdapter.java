@@ -16,10 +16,10 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 /**
- * Adapter wyjściowy (DatabaseAdapter) portu OrderDatabaseRepository — mapowanie agregatu Order
- * na model JPA. Odtwarzanie z bazy NIE rejestruje zdarzeń domenowych (omija fabrykę);
- * wersja rekordu (@Version) wędruje z agregatem — zapis nieaktualnej kopii kończy się
- * ObjectOptimisticLockingFailureException (saveAndFlush wymusza weryfikację od razu).
+ * Outbound adapter (DatabaseAdapter) of the OrderDatabaseRepository port — mapping the Order aggregate
+ * to the JPA model. Reconstitution from the database does NOT record domain events (it bypasses the factory);
+ * the record version (@Version) travels with the aggregate — saving a stale copy ends in
+ * ObjectOptimisticLockingFailureException (saveAndFlush forces immediate verification).
  */
 @Component
 public class OrderDatabaseAdapter implements OrderDatabaseRepository {
@@ -40,7 +40,7 @@ public class OrderDatabaseAdapter implements OrderDatabaseRepository {
         return repository.findById(id.value()).map(this::toDomain);
     }
 
-    /** Zamówienie utworzone z danej oferty (audytowalność konwersji UC-CRM-03). */
+    /** The order created from a given offer (auditability of the UC-CRM-03 conversion). */
     public Optional<Order> findByOfferId(OfferId offerId) {
         return repository.findBySourceOfferId(offerId.value()).map(this::toDomain);
     }

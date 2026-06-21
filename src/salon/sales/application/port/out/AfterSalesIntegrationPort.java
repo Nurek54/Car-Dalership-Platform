@@ -1,8 +1,8 @@
 package salon.sales.application.port.out;
 
 /**
- * Port wyjściowy (driven) do obsługi posprzedażowej: wydany pojazd zostaje
- * zarejestrowany w module serwisowym (przeglądy, gwarancja).
+ * Outbound port (driven) to after-sales support: the handed-over vehicle is
+ * registered in the service module (inspections, warranty).
  */
 public interface AfterSalesIntegrationPort {
 

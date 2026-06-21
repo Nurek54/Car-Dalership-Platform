@@ -4,9 +4,9 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Techniczne zdarzenie błędu integracji (UC-KON-02, scenariusz alternatywny A1).
- * Emitowane, gdy translacja lub walidacja pakietu katalogowego się nie powiedzie;
- * szczegóły są logowane dla wsparcia IT.
+ * Technical integration-error event (UC-KON-02, alternative scenario A1).
+ * Emitted when translation or validation of the catalog package fails;
+ * details are logged for IT support.
  */
 public final class CatalogUpdateFailed implements DomainEvent {
 

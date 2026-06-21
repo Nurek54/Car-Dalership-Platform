@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-FIR-03: saldo zamowienia = 0 PLN (w pelni oplacone).
- * Plynie do Inwentarza i Logistyki — pojazd "Gotowy do wydania" (UC-INW-05).
+ * UC-FIR-03: order balance = 0 PLN (fully paid).
+ * Flows to Inventory and Logistics — vehicle "Ready for handover" (UC-INW-05).
  *
- * Zapis faktu (czas przeszly dokonany), zgodny z jezykiem wszechobecnym Kontekstu Fakturowania.
+ * Record of a fact (past perfect tense), consistent with the ubiquitous language of the Billing Context.
  */
 public record SettlementCompletedEvent(String orderId, UUID eventId, Instant occurredOn)
         implements DomainEvent {

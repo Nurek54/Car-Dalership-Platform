@@ -1,9 +1,9 @@
 package salon.catalog.application.domain.exception;
 
 /**
- * Wyjątek dziedziny – błąd walidacji strukturalnej lub logicznej katalogu
- * (UC-KON-02, scenariusz alternatywny A1: brak cen, niespójne reguły, niezgodny format).
- * Powoduje odrzucenie pakietu i emisję zdarzenia CatalogUpdateFailed.
+ * Domain exception – structural or logical validation error of the catalog
+ * (UC-KON-02, alternative scenario A1: missing prices, inconsistent rules, incompatible format).
+ * Causes the package to be rejected and the CatalogUpdateFailed event to be emitted.
  */
 public class CatalogValidationException extends RuntimeException {
 

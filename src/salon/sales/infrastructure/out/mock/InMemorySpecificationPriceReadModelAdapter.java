@@ -9,10 +9,10 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Adapter wyjściowy (in-memory) portu {@link SpecificationPriceReadModelPort} — lokalna
- * kopia wyceny specyfikacji Kontekstu Sprzedaży, zasilana zdarzeniami SpecificationCompleted
- * (Katalog). W środowisku docelowym zastąpi go adapter bazodanowy (tabela read modelu
- * w schemacie Sprzedaży).
+ * Outbound adapter (in-memory) of the {@link SpecificationPriceReadModelPort} port — the local
+ * copy of the Sales Context specification pricing, fed by SpecificationCompleted events
+ * (Catalog). In the target environment it will be replaced by a database adapter (a read-model table
+ * in the Sales schema).
  */
 public class InMemorySpecificationPriceReadModelAdapter implements SpecificationPriceReadModelPort {
 

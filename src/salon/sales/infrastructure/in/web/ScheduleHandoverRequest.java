@@ -2,7 +2,7 @@ package salon.sales.infrastructure.in.web;
 
 import jakarta.validation.constraints.NotBlank;
 
-/** DTO wejściowe UC-CRM-04: uzgodniona z klientem data odbioru pojazdu (ISO-8601). */
+/** Input DTO for UC-CRM-04: the vehicle pickup date agreed with the customer (ISO-8601). */
 public record ScheduleHandoverRequest(
-        @NotBlank(message = "Data odbioru jest wymagana") String handoverDate) {
+        @NotBlank(message = "The handover date is required") String handoverDate) {
 }

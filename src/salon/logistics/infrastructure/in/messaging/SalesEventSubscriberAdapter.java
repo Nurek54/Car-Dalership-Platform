@@ -4,11 +4,11 @@ import salon.logistics.application.port.in.ReleaseVehicle;
 import salon.logistics.application.port.out.CatalogIntegration;
 
 /**
- * ADAPTER WEJŚCIOWY (Rysunek 37: EventListener) – subskrybent zdarzeń/komend Kontekstu Sprzedaży i CRM.
+ * INBOUND ADAPTER (Figure 37: EventListener) – subscriber of the Sales and CRM Context events/commands.
  *
- * Obsługuje dwie ścieżki:
- *  - OrderPlaced -> powiązanie zamówienia z jego specyfikacją w lokalnej kopii danych Katalogu,
- *  - ReleaseVehicle (komenda) -> UC-INW-06 (zdjęcie pojazdu ze stanu po wydaniu).
+ * Handles two paths:
+ *  - OrderPlaced -> linking the order with its specification in the local copy of the Catalog data,
+ *  - ReleaseVehicle (command) -> UC-INW-06 (removing the vehicle from stock after handover).
  */
 public class SalesEventSubscriberAdapter {
 
@@ -41,7 +41,7 @@ public class SalesEventSubscriberAdapter {
         this.releaseVehicle.releaseVehicle(command.orderId());
     }
 
-    /** Lokalne (ACL) reprezentacje komunikatów z Kontekstu Sprzedaży i CRM. */
+    /** Local (ACL) representations of messages from the Sales and CRM Context. */
     public record OrderPlaced(String orderId, String specificationId) {
     }
 

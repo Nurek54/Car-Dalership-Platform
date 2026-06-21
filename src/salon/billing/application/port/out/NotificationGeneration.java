@@ -5,16 +5,16 @@ import salon.common.model.Money;
 import salon.common.model.OrderId;
 
 /**
- * PORT WYJSCIOWY (Rys. 48 — NotificationGeneration) — powiadomienia do klienta.
+ * OUTBOUND PORT (Fig. 48 — NotificationGeneration) — notifications to the customer.
  *
- * UC-FIR-01/02: e-mail z danymi do przelewu i wystawiona faktura; dodatkowo cykliczne
- * przypomnienia o niezaplaconym saldzie (UC-FIR-03).
+ * UC-FIR-01/02: an e-mail with transfer details and the issued invoice; additionally periodic
+ * reminders about the unpaid balance (UC-FIR-03).
  */
 public interface NotificationGeneration {
 
-    /** Wyslanie do klienta wystawionego dokumentu (faktura/proforma) z danymi do przelewu. */
+    /** Sends the issued document (invoice/proforma) with transfer details to the customer. */
     void notifyInvoiceIssued(AccountingDocument document, byte[] pdf);
 
-    /** Przypomnienie o niezaplaconym saldzie zamowienia. */
+    /** Reminder about the order's unpaid balance. */
     void notifyPaymentReminder(OrderId orderId, Money outstanding);
 }

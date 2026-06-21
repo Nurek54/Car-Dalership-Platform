@@ -11,8 +11,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ADAPTER WYJSCIOWY (Rys. 48 — DBAdapter) — implementacja {@link SettlementDatabaseRepository}
- * w pamieci (typu trwaly magazyn: save zapisuje/nadpisuje). Indeks po identyfikatorze zamowienia.
+ * OUTBOUND ADAPTER (Fig. 48 — DBAdapter) — implementation of {@link SettlementDatabaseRepository}
+ * in memory (persistent-store style: save writes/overwrites). Indexed by order identifier.
  */
 public class InMemorySettlementRepository implements SettlementDatabaseRepository {
 

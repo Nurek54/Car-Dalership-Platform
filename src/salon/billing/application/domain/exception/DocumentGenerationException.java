@@ -1,7 +1,7 @@
 package salon.billing.application.domain.exception;
 
 /**
- * UC-FIR-02 / A1: nie udalo sie wygenerowac pliku dokumentu (PDF) lub przypisac go do zamowienia.
+ * UC-FIR-02 / A1: failed to generate the document file (PDF) or assign it to the order.
  */
 public class DocumentGenerationException extends RuntimeException {
 

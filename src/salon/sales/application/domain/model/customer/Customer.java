@@ -3,16 +3,16 @@ package salon.sales.application.domain.model.customer;
 import salon.sales.application.domain.exception.InvalidTaxIdException;
 
 /**
- * Aggregate Root: Klient kontekstu Sprzedaży i CRM.
+ * Aggregate Root: the Customer of the Sales and CRM context.
  *
- * Model wg docs/Agregate/Sales/customer-offer-order.md oraz
+ * Model per docs/Agregate/Sales/customer-offer-order.md and
  * docs/Architecture/SalesArchitecture.md:
- *  - tożsamość: {@link CustomerId},
- *  - dane: fullName, nip, {@link Address}, {@link ContactData},
+ *  - identity: {@link CustomerId},
+ *  - data: fullName, nip, {@link Address}, {@link ContactData},
  *  - operacje: {@link #updateContactDetails(ContactData)}, {@link #verifyTaxId()}.
  *
- * Obiekty wartości (Address, ContactData) są niemutowalne — każda zmiana to
- * podmiana całego obiektu przez agregat (patrz value-object-audit.md).
+ * Value objects (Address, ContactData) are immutable — every change is
+ * a replacement of the whole object by the aggregate (see value-object-audit.md).
  */
 public class Customer {
 
@@ -45,7 +45,7 @@ public class Customer {
     }
 
     /**
-     * Aktualizacja danych kontaktowych — podmiana całego obiektu wartości.
+     * Updating the contact details — replacement of the whole value object.
      */
     public void updateContactDetails(ContactData newContact) {
         if (newContact == null) {
@@ -55,8 +55,8 @@ public class Customer {
     }
 
     /**
-     * Weryfikacja numeru NIP (uproszczona): NIP musi istnieć i mieć 10 cyfr.
-     * W kodzie produkcyjnym zwykle integracja z rejestrem (np. VIES/GUS).
+     * Tax ID verification (simplified): the tax ID must exist and have 10 digits.
+     * In production code this is usually an integration with a registry (e.g. VIES/GUS).
      */
     public void verifyTaxId() {
         if (this.nip == null || this.nip.isBlank()) {

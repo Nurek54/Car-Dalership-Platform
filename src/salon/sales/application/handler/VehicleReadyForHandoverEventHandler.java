@@ -5,8 +5,8 @@ import salon.sales.application.domain.event.VehicleReadyForHandoverEvent;
 import salon.common.model.OrderId;
 
 /**
- * Handler zdarzenia VehicleReadyForHandover z Kontekstu Inwentarza (UC-CRM-04, krok 1):
- * reagujemy na zdarzenie z zewnątrz, aktualizując stan agregatu przez usługę aplikacyjną.
+ * Handler of the VehicleReadyForHandover event from the Inventory Context (UC-CRM-04, step 1):
+ * we react to an external event, updating the aggregate state through the application service.
  */
 public class VehicleReadyForHandoverEventHandler {
 

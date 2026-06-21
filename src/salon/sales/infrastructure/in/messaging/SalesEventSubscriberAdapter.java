@@ -6,11 +6,11 @@ import salon.sales.application.domain.event.VehicleReadyForHandoverEvent;
 import salon.common.model.OrderId;
 
 /**
- * Adapter sterujący (driving) — subskrybent komunikatów z Kontekstu Inwentarza
- * w Kontekście Sprzedaży (UC-CRM-04, krok 1: VehicleReadyForHandover).
+ * Driving adapter — subscriber of messages from the Inventory Context
+ * in the Sales Context (UC-CRM-04, step 1: VehicleReadyForHandover).
  *
- * Adapter wyłapuje błędy warstwy aplikacji i loguje je, NIE wysadzając nasłuchu —
- * pojedynczy zatruty komunikat nie może zablokować całej kolejki.
+ * The adapter catches application-layer errors and logs them, WITHOUT blowing up the listener —
+ * a single poisoned message must not block the whole queue.
  */
 @Component
 public class SalesEventSubscriberAdapter {
@@ -24,7 +24,7 @@ public class SalesEventSubscriberAdapter {
         this.salesAppService = salesAppService;
     }
 
-    /** UC-CRM-04: pojazd gotowy fizycznie i finansowo -> zamówienie "Gotowe do odbioru". */
+    /** UC-CRM-04: the vehicle is ready physically and financially -> order "Ready for handover". */
     public void onVehicleReadyForHandover(VehicleReadyForHandoverEvent event) {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
@@ -32,7 +32,7 @@ public class SalesEventSubscriberAdapter {
         try {
             salesAppService.markOrderAsReadyForHandover(new OrderId(event.orderId()));
         } catch (Exception e) {
-            System.err.println("[SalesEventSubscriberAdapter] Nie udało się przetworzyć zdarzenia "
+            System.err.println("[SalesEventSubscriberAdapter] Failed to process the event "
                     + event.eventId() + ": " + e.getMessage());
         }
     }

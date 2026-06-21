@@ -1,9 +1,9 @@
 package salon.logistics.application.domain.model.vehicle;
 
 /**
- * Obiekt wartości: numer VIN — naturalny, niezmienny identyfikator fizycznego pojazdu.
- * Zgodnie z założeniem kanwy skan VIN jest bezbłędny i pokrywa się z danymi cyfrowymi
- * zamówienia produkcyjnego.
+ * Value object: the VIN — the natural, immutable identifier of a physical vehicle.
+ * Per the canvas assumption the VIN scan is error-free and matches the digital data
+ * of the production order.
  */
 public record VinNumber(String value) {
 

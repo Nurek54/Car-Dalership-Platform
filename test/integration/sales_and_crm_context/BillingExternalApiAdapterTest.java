@@ -20,24 +20,24 @@ class BillingExternalApiAdapterTest {
 
     @Test
     void shouldRequestProformaInvoiceSuccessfully() {
-        // Księgowość przyjmuje zlecenie na proformę (202 Accepted)
+        // Accounting accepts the proforma order (202 Accepted)
         Money deposit = Money.of(50000, "PLN");
         stubFor(post(urlEqualTo("/api/billing/proforma-requests"))
                 .withRequestBody(matchingJsonPath("$.orderId", equalTo("ORD-888")))
                 .withRequestBody(matchingJsonPath("$.amount", equalTo("50000.00")))
                 .willReturn(aResponse().withStatus(202)));
 
-        // Metoda wykonuje się prawidłowo, powiadamiając system księgowy
+        // The method executes correctly, notifying the accounting system
         assertDoesNotThrow(() -> billingAdapter.requestProformaInvoice("ORD-888", deposit));
     }
 
     @Test
     void shouldCloseOrderBalanceSuccessfully() {
-        // Zgłaszamy wydanie auta, Księgowość domyka saldo końcowe i wystawia fakturę VAT
+        // We report the car handover, Accounting closes the final balance and issues the VAT invoice
         stubFor(put(urlEqualTo("/api/billing/accounts/ORD-999/close"))
                 .willReturn(aResponse().withStatus(200)));
 
-        // Adapter pomyślnie wysyła żądanie typu PUT (aktualizacja stanu)
+        // The adapter successfully sends a PUT request (state update)
         assertDoesNotThrow(() -> billingAdapter.closeOrderBalance("ORD-999"));
 
         // Weryfikacja
@@ -46,14 +46,14 @@ class BillingExternalApiAdapterTest {
 
     @Test
     void shouldThrowExceptionWhenBillingSystemTimesOut() {
-        // System księgowy zawiesił się
+        // The accounting system hung
         stubFor(post(urlEqualTo("/api/billing/proforma-requests"))
                 .willReturn(aResponse()
-                        .withFixedDelay(5000) // WireMock wstrzyma odpowiedź o 5 sekund
+                        .withFixedDelay(5000) // WireMock will delay the response by 5 seconds
                         .withStatus(200)));
 
-        // Nasz adapter (który powinien mieć skonfigurowany np. 2-sekundowy timeout)
-        // przerywa oczekiwanie i rzuca własnym wyjątkiem o niedostępności
+        // Our adapter (which should have e.g. a 2-second timeout configured)
+        // aborts the wait and throws its own unavailability exception
         Money deposit = Money.of(10000, "PLN");
         assertThatThrownBy(() -> billingAdapter.requestProformaInvoice("ORD-TIMEOUT", deposit))
                 .isInstanceOf(ExternalServiceUnavailableException.class);

@@ -14,7 +14,7 @@ import salon.shared.model.SpecificationId;
 
 import static org.assertj.core.api.Assertions.*;
 
-/** UC-KON-01: Budowa specyfikacji pojazdu — domena + serwis dziedzinowy walidacji reguł */
+/** UC-KON-01: Building the vehicle specification — domain + rule-validation domain service */
 class BuildSpecificationDomainTest {
 
     private InMemoryCatalogRepository catalogRepository;
@@ -23,7 +23,7 @@ class BuildSpecificationDomainTest {
 
     @BeforeEach
     void setupCatalog() {
-        // Cennik: silnik wysokoprężny WYMAGA automatu, automat WYKLUCZA skrzynię manualną
+        // Price list: the diesel engine REQUIRES the automatic, the automatic EXCLUDES the manual gearbox
         catalog = ProductCatalog.createActive("MY_2026");
         catalog.addOption(new CatalogOption(new OptionCode("DIESEL_ENGINE"), Money.of(12000, "PLN")));
         catalog.addOption(new CatalogOption(new OptionCode("AUTO_GEARBOX"), Money.of(9000, "PLN")));
@@ -46,7 +46,7 @@ class BuildSpecificationDomainTest {
     void shouldBuildValidSpecificationThroughDomainService() {
         VehicleSpecification specification = newSpecification();
 
-        // Serwis dziedzinowy sam pobiera cennik z repozytorium i zleca agregatowi dodanie opcji
+        // The domain service itself fetches the price list from the repository and instructs the aggregate to add the option
         ruleValidation.validateAndAddOption(specification, new OptionCode("DIESEL_ENGINE"));
         ruleValidation.validateAndAddOption(specification, new OptionCode("AUTO_GEARBOX"));
 
@@ -59,7 +59,7 @@ class BuildSpecificationDomainTest {
         VehicleSpecification specification = newSpecification();
         ruleValidation.validateAndAddOption(specification, new OptionCode("AUTO_GEARBOX"));
 
-        // Walidacja Technologiczna (Fail-fast): manualna skrzynia wyklucza się z automatem
+        // Technological Validation (Fail-fast): the manual gearbox is mutually exclusive with the automatic
         assertThatThrownBy(() ->
                 ruleValidation.validateAndAddOption(specification, new OptionCode("MANUAL_GEARBOX")))
                 .isInstanceOf(RuleViolationException.class)
@@ -69,10 +69,10 @@ class BuildSpecificationDomainTest {
     @Test
     void shouldBlockFinalizationWhenRequiredOptionIsMissing() {
         VehicleSpecification specification = newSpecification();
-        // Wybrano diesla, ale bez wymaganego automatu
+        // Diesel was selected, but without the required automatic
         ruleValidation.validateAndAddOption(specification, new OptionCode("DIESEL_ENGINE"));
 
-        // Reguła finalizacji: kompletność wg REQUIRES blokuje zamknięcie konfiguracji
+        // Finalization rule: completeness per REQUIRES blocks closing the configuration
         assertThatThrownBy(() -> ruleValidation.assertComplete(specification))
                 .isInstanceOf(RuleViolationException.class)
                 .hasMessageContaining("requires");
@@ -84,7 +84,7 @@ class BuildSpecificationDomainTest {
         ruleValidation.validateAndAddOption(specification, new OptionCode("DIESEL_ENGINE"));
         ruleValidation.validateAndAddOption(specification, new OptionCode("AUTO_GEARBOX"));
 
-        // Kompletna konfiguracja przechodzi ocenę i daje się sfinalizować
+        // A complete configuration passes the assessment and can be finalized
         ruleValidation.assertComplete(specification);
         specification.finalizeSpecification();
 
@@ -97,7 +97,7 @@ class BuildSpecificationDomainTest {
 
     @Test
     void shouldFailWhenCatalogReferencedBySpecificationDoesNotExist() {
-        // Specyfikacja wskazuje na cennik, którego nie ma w repozytorium
+        // The specification points to a price list that is not in the repository
         VehicleSpecification orphan =
                 new VehicleSpecification(SpecificationId.generate(), new CatalogId("CAT-GHOST"));
 

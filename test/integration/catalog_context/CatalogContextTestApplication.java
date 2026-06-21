@@ -10,13 +10,13 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 
 /**
- * Kotwica konfiguracji Springa dla testów pakietu integration.catalog_context
+ * Spring configuration anchor for the tests in the integration.catalog_context package
  * (@SpringBootTest, @DataJpaTest, @WebMvcTest).
  *
- * Produkcyjny korzeń kompozycji (salon.bootstrap.SalonApplication) leży poza drzewem
- * pakietów testów, więc Spring Boot by go nie odnalazł. Kotwica odtwarza zachowanie
- * @SpringBootApplication (TypeExcludeFilter pozwala plasterkom filtrować beany),
- * a @AutoConfigurationPackage wskazuje encje i repozytoria JPA w drzewie salon.*.
+ * The production composition root (salon.bootstrap.SalonApplication) lies outside the tree
+ * test packages, so Spring Boot would not find it. The anchor reproduces the behavior
+ * of @SpringBootApplication (TypeExcludeFilter lets the slices filter beans),
+ * and @AutoConfigurationPackage points to the JPA entities and repositories in the salon.* tree.
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration

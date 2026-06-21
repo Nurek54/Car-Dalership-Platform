@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "PojazdWydany" (UC-CRM-05) — klient odebrał pojazd z salonu.
- * Nasłuchują: Kontekst Rozliczeń (domknięcie salda — handler VehicleHandedOverEventHandler)
- * oraz obsługa posprzedażowa.
+ * "VehicleHandedOver" (UC-CRM-05) — the customer picked up the vehicle from the dealership.
+ * Listeners: the Billing Context (closing the balance — the VehicleHandedOverEventHandler)
+ * and after-sales support.
  */
 public record VehicleHandedOverEvent(UUID eventId,
                                      String orderId,

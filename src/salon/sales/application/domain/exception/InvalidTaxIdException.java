@@ -1,6 +1,6 @@
 package salon.sales.application.domain.exception;
 
-/** Weryfikacja formalna klienta: niepoprawny format numeru NIP (agregat Customer). */
+/** Formal customer verification: incorrect tax ID format (the Customer aggregate). */
 public class InvalidTaxIdException extends RuntimeException {
     public InvalidTaxIdException(String message) {
         super(message);

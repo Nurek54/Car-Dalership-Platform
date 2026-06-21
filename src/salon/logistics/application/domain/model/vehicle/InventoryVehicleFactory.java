@@ -3,13 +3,13 @@ package salon.logistics.application.domain.model.vehicle;
 import salon.common.model.OrderId;
 
 /**
- * Fabryka agregatu {@link InventoryVehicle} — jedyny sposób tworzenia egzemplarzy
- * (konstruktor agregatu jest pakietowy). Pilnuje poprawnego stanu początkowego
- * w zależności od ścieżki powstania pojazdu w Inwentarzu.
+ * Factory of the {@link InventoryVehicle} aggregate — the only way to create instances
+ * (the aggregate's constructor is package-private). It enforces a correct initial state
+ * depending on the path by which the vehicle is created in Inventory.
  */
 public class InventoryVehicleFactory {
 
-    /** UC-INW-02: pojazd zlecony w fabryce — powstaje od razu przypisany do zamówienia. */
+    /** UC-INW-02: a vehicle ordered from the factory — created already assigned to the order. */
     public InventoryVehicle createForFactoryOrder(VinNumber vin, OrderId order, SpecificationId specification) {
         if (order == null) {
             throw new IllegalArgumentException("order must not be null.");
@@ -17,7 +17,7 @@ public class InventoryVehicleFactory {
         return new InventoryVehicle(vin, specification, VehicleRole.STOCK, VehicleState.IN_PRODUCTION, order);
     }
 
-    /** UC-INW-03 / A1: fizyczny pojazd przyjęty na plac bez zamówienia — dostępny jako wolny. */
+    /** UC-INW-03 / A1: a physical vehicle received into the yard without an order — available as free. */
     public InventoryVehicle createStockArrival(ImporterData data) {
         if (data == null) {
             throw new IllegalArgumentException("data must not be null.");

@@ -1,9 +1,9 @@
 package salon.catalog.application.domain.exception;
 
 /**
- * Wyjątek dziedziny – wybrana kombinacja opcji jest zablokowana przez producenta
- * (UC-KON-01, scenariusz alternatywny A1). Blokuje zatwierdzenie specyfikacji;
- * kontekst NIE emituje wtedy zdarzenia SpecificationCompleted.
+ * Domain exception – the selected combination of options is blocked by the manufacturer
+ * (UC-KON-01, alternative scenario A1). Blocks finalization of the specification;
+ * the context then does NOT emit the SpecificationCompleted event.
  */
 public class CombinationNotAllowedException extends RuntimeException {
 

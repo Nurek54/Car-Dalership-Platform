@@ -32,7 +32,7 @@ class OfferDatabaseAdapterTest {
         databaseAdapter.save(offer);
         Optional<Offer> loadedOffer = databaseAdapter.findById(offerId);
 
-        // Zapisane dane są te same przy odczycie
+        // The saved data is the same on read
         assertThat(loadedOffer).isPresent();
         assertThat(loadedOffer.get().state()).isEqualTo(OfferState.DRAFT);
         assertThat(loadedOffer.get().finalPrice()).isEqualTo(Money.of(150000, "PLN"));
@@ -40,12 +40,12 @@ class OfferDatabaseAdapterTest {
 
     @Test
     void shouldUpdateOfferStateToPublished() {
-        // Posiadamy zapisaną ofertę
+        // We have a saved offer
         OfferId offerId = new OfferId("OFF-DB-2");
         Offer offer = new Offer(offerId, new CustomerId("C-2"), new SpecificationId("S-2"), Money.of(200000, "PLN"));
         databaseAdapter.save(offer);
 
-        // Wyciągamy ją, zmieniamy stan (publikujemy) i zapisujemy
+        // We fetch it, change its state (publish) and save
         Offer savedOffer = databaseAdapter.findById(offerId).orElseThrow();
         savedOffer.publishOffer();
         databaseAdapter.save(savedOffer);
@@ -56,23 +56,23 @@ class OfferDatabaseAdapterTest {
 
     @Test
     void shouldPreventConcurrentModificationsWithOptimisticLocking() {
-        // Mamy ofertę
+        // We have an offer
         OfferId offerId = new OfferId("OFF-DB-3");
         Offer baseOffer = new Offer(offerId, new CustomerId("C-3"), new SpecificationId("S-3"), Money.of(100000, "PLN"));
         databaseAdapter.save(baseOffer);
 
-        // Dwa osobne wątki wczytują te same dane
+        // Two separate threads load the same data
         Offer viewA = databaseAdapter.findById(offerId).orElseThrow();
         Offer viewB = databaseAdapter.findById(offerId).orElseThrow();
 
-        // Wątek A zapisuje zmiany (publikuje ofertę)
+        // Thread A saves the changes (publishes the offer)
         viewA.publishOffer();
         databaseAdapter.save(viewA);
 
-        // Wątek B odrzuca i próbuje zapisać
+        // Thread B rejects and tries to save
         viewB.reject();
 
-        // Baza odrzuca zapis wątku B z powodu nieaktualnej wersji obiektu (Optimistic Lock)
+        // The database rejects thread B's save due to a stale object version (Optimistic Lock)
         assertThatThrownBy(() -> databaseAdapter.save(viewB))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
     }

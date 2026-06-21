@@ -6,12 +6,12 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Model danych wyjściowych (read DTO) zwracany przez usługę aplikacji.
+ * Output data model (read DTO) returned by the application service.
  *
- * Wg PDF (rozdz. 4): usługa zwraca MINIMALNE dane wyjściowe – zalecany obiekt
- * wartości / DTO, nie agregat ani encję. Dzięki temu model dziedziny nie wycieka
- * do adapterów wejściowych. Należy do warstwy aplikacji (kontrakt portu wejściowego),
- * obok – nie wewnątrz – pakietu application.port (porty muszą być interfejsami).
+ * Per the PDF (chapter 4): the service returns MINIMAL output data – a recommended value
+ * object / DTO, not an aggregate or entity. This prevents the domain model from leaking
+ * to the inbound adapters. It belongs to the application layer (the inbound port contract),
+ * alongside – not inside – the application.port package (ports must be interfaces).
  */
 public record SpecificationView(String specificationId,
                                 String catalogId,

@@ -1,9 +1,9 @@
 package salon.sales.infrastructure.in.messaging;
 
 /**
- * Zdarzenie PRZYCHODZĄCE (integracyjne) z Inwentarza (UC-CRM-05, A1): nie udało się zwolnić
- * pojazdu z magazynu (np. blokada magazynowa). Żyje w warstwie integracyjnej, więc domena
- * Sprzedaży pozostaje nietknięta. eventId służy do deduplikacji po stronie subskrybenta.
+ * INCOMING (integration) event from Inventory (UC-CRM-05, A1): failed to release
+ * the vehicle from stock (e.g. a stock lock). It lives in the integration layer, so the Sales
+ * domain stays untouched. eventId is used for deduplication on the subscriber side.
  */
 public record VehicleInventoryReleasedError(String eventId, String orderId, String reason) {
 }

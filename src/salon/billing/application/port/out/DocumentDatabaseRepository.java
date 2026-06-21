@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * PORT WYJSCIOWY (Rys. 48 — DocumentDatabaseRepository) — utrwalanie agregatu Dokumentu Ksiegowego.
+ * OUTBOUND PORT (Fig. 48 — DocumentDatabaseRepository) — persistence of the Accounting Document aggregate.
  */
 public interface DocumentDatabaseRepository {
 

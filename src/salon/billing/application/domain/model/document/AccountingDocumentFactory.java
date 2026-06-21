@@ -4,10 +4,10 @@ import salon.common.model.Money;
 import salon.common.model.OrderId;
 
 /**
- * FABRYKA (Rys. 48 — AccountingDocumentFactory): hermetyzuje tworzenie agregatu
- * {@link AccountingDocument}. Deleguje do metody wytwórczej korzenia
- * ({@link AccountingDocument#createInvoice}) — klient (usługa aplikacji) nie zna algorytmu budowy
- * ani reguł terminu płatności. Operacja atomowa, zwraca dokument w stanie DRAFT.
+ * FACTORY (Fig. 48 — AccountingDocumentFactory): encapsulates the creation of the aggregate
+ * {@link AccountingDocument}. Delegates to the root's factory method
+ * ({@link AccountingDocument#createInvoice}) — the client (application service) does not know the construction algorithm
+ * nor the due-date rules. An atomic operation, returns a document in the DRAFT state.
  */
 public class AccountingDocumentFactory {
 

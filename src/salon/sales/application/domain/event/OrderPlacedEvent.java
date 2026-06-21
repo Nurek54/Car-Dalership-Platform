@@ -6,13 +6,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "ZamowienieZlozone" (UC-CRM-03) — zamówienie powstało z zaakceptowanej oferty.
- * Nasłuchują: Kontekst Rozliczeń (inicjalizacja salda) oraz Inwentarz
- * (alokacja pojazdu / slotu produkcyjnego — handler OrderPlacedEventHandler).
+ * "OrderPlaced" (UC-CRM-03) — the order was created from an accepted offer.
+ * Listeners: the Billing Context (balance initialization) and Inventory
+ * (vehicle / production-slot allocation — the OrderPlacedEventHandler).
  *
- * Zdarzenie niesie specificationId (event-carried state transfer): Inwentarz wiąże
- * zamówienie ze specyfikacją lokalnie i nie musi synchronicznie odpytywać
- * Kontekstu Sprzedaży ani Katalogu o kody wyposażenia (UC-INW-01/02).
+ * The event carries specificationId (event-carried state transfer): Inventory links
+ * the order with the specification locally and does not have to synchronously query
+ * the Sales Context or the Catalog for the equipment codes (UC-INW-01/02).
  */
 public record OrderPlacedEvent(UUID eventId,
                                String orderId,

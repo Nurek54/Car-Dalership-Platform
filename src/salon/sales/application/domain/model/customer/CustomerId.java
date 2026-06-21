@@ -1,15 +1,15 @@
 package salon.sales.application.domain.model.customer;
 
 /**
- * Value Object: identyfikator Klienta w kontekście Sprzedaży i CRM.
+ * Value Object: the Customer identifier in the Sales and CRM context.
  *
- * Wspólny dla agregatów {@code Customer} i {@code Offer} (patrz
- * docs/Architecture/SalesArchitecture.md oraz docs/Agregate/Sales/customer-offer-order.md),
- * dlatego mieszka w pakiecie {@code model.customer}, a nie wewnątrz pakietu oferty.
+ * Shared by the {@code Customer} and {@code Offer} aggregates (see
+ * docs/Architecture/SalesArchitecture.md and docs/Agregate/Sales/customer-offer-order.md),
+ * which is why it lives in the {@code model.customer} package, not inside the offer package.
  *
- * To odrębny typ od identyfikatora klienta w kontekście Finansowania
- * (salon.financing.domain.model.financing.CustomerId) — każdy Bounded Context
- * ma własny model (model rozłączny).
+ * It is a distinct type from the customer identifier in the Financing context
+ * (salon.financing.domain.model.financing.CustomerId) — each Bounded Context
+ * has its own model (a disjoint model).
  */
 public record CustomerId(String value) {
 

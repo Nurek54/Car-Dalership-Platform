@@ -45,18 +45,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Testy akceptacyjne Kontekstu Katalogu i Konfiguratora (UC-KON-01, UC-KON-02).
+ * Acceptance tests of the Catalog and Configurator Context (UC-KON-01, UC-KON-02).
  *
- * Kontekst nie wystawia adapterów REST — zgodnie z diagramami sekwencji sterują nim:
- * konfigurator Klienta (BuildSpecificationUseCase) oraz webhook/cron Importera
- * (UpdateCatalogUseCase). Testy wchodzą więc przez porty wejściowe (use case'y),
- * a weryfikują warunki końcowe tam, gdzie w sales: w fizycznej bazie SQL i na szynie
- * zdarzeń (RabbitTemplate). Importer (Blackbox) jest zaślepiony na poziomie portu ACL.
+ * The context exposes no REST adapters — per the sequence diagrams it is driven by:
+ * the Customer's configurator (BuildSpecificationUseCase) and the Importer's webhook/cron
+ * (UpdateCatalogUseCase). The tests therefore enter through the inbound ports (use cases),
+ * and verify the postconditions where sales does: in the physical SQL database and on the event
+ * bus (RabbitTemplate). The Importer (Blackbox) is stubbed at the ACL port level.
  */
 @SpringBootTest
 class CatalogContextAcceptanceTest {
 
-    /** Korzeń kompozycji na potrzeby testu: usługi Katalogu są czystymi POJO (bez @Service). */
+    /** Composition root for the test: the Catalog services are pure POJOs (without @Service). */
     @TestConfiguration
     static class CatalogWiring {
 
@@ -85,12 +85,12 @@ class CatalogContextAcceptanceTest {
     @Autowired private CatalogRepository catalogRepository;       // ProductCatalogDatabaseAdapter
     @Autowired private SpecificationRepository specificationRepository; // VehicleSpecificationDatabaseAdapter
 
-    @MockBean private ImporterApiPort importerApi;   // Zewnętrzny system producenta/importera (Blackbox)
-    @MockBean private RabbitTemplate rabbitTemplate; // Szyna zdarzeń
+    @MockBean private ImporterApiPort importerApi;   // The external manufacturer/importer system (Blackbox)
+    @MockBean private RabbitTemplate rabbitTemplate; // The event bus
 
-    // Cennik wg dokumentacji UC-KON-01: pakiety (A1, A2), silniki (B1, B2), skrzynie (C1, C2), kolor.
-    // Reguła producenta: silnik B2 nie może być wybrany ze skrzynią C1 (EXCLUDES),
-    // a silnik B2 wymaga skrzyni C2 (REQUIRES — weryfikacja kompletności w kroku 6).
+    // Price list per the UC-KON-01 documentation: packages (A1, A2), engines (B1, B2), gearboxes (C1, C2), color.
+    // Manufacturer rule: engine B2 cannot be selected with gearbox C1 (EXCLUDES),
+    // and engine B2 requires gearbox C2 (REQUIRES — completeness check in step 6).
     private ProductCatalog createPublishedCatalog() {
         ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
         catalog.addOption(new CatalogOption(new OptionCode("PAKIET_A1"), Money.of(15000, "PLN")));
@@ -109,37 +109,37 @@ class CatalogContextAcceptanceTest {
     }
 
     // ===================================================================================
-    // UC-KON-01: Opracowanie i zatwierdzenie specyfikacji pojazdu — scenariusz główny
+    // UC-KON-01: Preparing and finalizing the vehicle specification — main scenario
     // ===================================================================================
     @Test
     void uc01_shouldBuildAndApproveVehicleSpecification() {
-        // Warunek wstępny: sesja konfiguratora otwarta nad opublikowanym cennikiem
+        // Precondition: a configurator session opened over a published price list
         ProductCatalog catalog = createPublishedCatalog();
         String catalogId = catalog.getCatalogId().value();
 
-        // Kroki 1-3: Klient wybiera pakiet, silnik, skrzynię i kolor
+        // Steps 1-3: the Customer selects a package, engine, gearbox and color
         SpecificationId specId = buildSpecificationUseCase.startSpecification(catalogId);
         buildSpecificationUseCase.addOption(specId.value(), catalogId, "PAKIET_A1");
         buildSpecificationUseCase.addOption(specId.value(), catalogId, "SILNIK_B1");
         buildSpecificationUseCase.addOption(specId.value(), catalogId, "SKRZYNIA_C1");
         buildSpecificationUseCase.addOption(specId.value(), catalogId, "KOLOR_CZARNY");
 
-        // Kroki 5-7: Klient zatwierdza, system weryfikuje kompletność i zapisuje
+        // Steps 5-7: the Customer finalizes, the system verifies completeness and saves
         buildSpecificationUseCase.finalizeSpecification(specId.value());
 
-        // Warunek końcowy: zatwierdzona specyfikacja w lokalnej bazie konfiguratora
+        // Postcondition: the finalized specification in the local configurator database
         VehicleSpecification saved = specificationRepository.findById(specId).orElseThrow();
         assertThat(saved.state()).isEqualTo(SpecificationState.FINAL);
         assertThat(saved.getSelectedOptions()).hasSize(4);
         assertThat(saved.getTotalPrice().amount()).isEqualByComparingTo("46000"); // 15000+20000+8000+3000
 
-        // Warunek końcowy: system emituje zdarzenie SpecificationCompleted na szynę
+        // Postcondition: the system emits the SpecificationCompleted event onto the bus
         verify(rabbitTemplate).convertAndSend(
                 anyString(), eq("specification.completed"), any(SpecificationCompletedEvent.class));
     }
 
     // ===================================================================================
-    // UC-KON-01, A1: Niedozwolona kombinacja (silnik B2 ze skrzynią C1)
+    // UC-KON-01, A1: a disallowed combination (engine B2 with gearbox C1)
     // ===================================================================================
     @Test
     void uc01_a1_shouldBlockForbiddenCombinationAndEmitNoEvent() {
@@ -149,40 +149,40 @@ class CatalogContextAcceptanceTest {
         SpecificationId specId = buildSpecificationUseCase.startSpecification(catalogId);
         buildSpecificationUseCase.addOption(specId.value(), catalogId, "SKRZYNIA_C1");
 
-        // Krok 4: system na bieżąco wykrywa kombinację zablokowaną przez producenta
+        // Step 4: the system detects on the fly a combination blocked by the manufacturer
         assertThatThrownBy(() ->
                 buildSpecificationUseCase.addOption(specId.value(), catalogId, "SILNIK_B2"))
                 .isInstanceOf(RuleViolationException.class);
 
-        // System prosi o zmianę silnika/skrzyni/pakietu — wadliwa opcja nie weszła do bazy
+        // The system asks to change the engine/gearbox/package — the faulty option did not enter the database
         VehicleSpecification saved = specificationRepository.findById(specId).orElseThrow();
         assertThat(saved.state()).isEqualTo(SpecificationState.IN_PROGRESS);
         assertThat(saved.getSelectedOptions()).containsExactly(new OptionCode("SKRZYNIA_C1"));
 
-        // Kontekst nie emituje zdarzenia końcowego
+        // The context does not emit the final event
         verify(rabbitTemplate, never()).convertAndSend(
                 anyString(), eq("specification.completed"), any(SpecificationCompletedEvent.class));
     }
 
     // ===================================================================================
-    // UC-KON-01, krok 6: weryfikacja ostatecznej kompletności blokuje zatwierdzenie
+    // UC-KON-01, step 6: the final completeness check blocks finalization
     // ===================================================================================
     @Test
     void uc01_shouldRejectApprovalOfIncompleteConfiguration() {
         ProductCatalog catalog = createPublishedCatalog();
         String catalogId = catalog.getCatalogId().value();
 
-        // Klient wybrał silnik B2 ze skrzynią C2... ale usunął skrzynię — wybór niekompletny
+        // The Customer selected engine B2 with gearbox C2... but removed the gearbox — the selection is incomplete
         SpecificationId specId = buildSpecificationUseCase.startSpecification(catalogId);
         buildSpecificationUseCase.addOption(specId.value(), catalogId, "PAKIET_A1");
         buildSpecificationUseCase.addOption(specId.value(), catalogId, "SILNIK_B2");
 
-        // Krok 6: kompletność (SILNIK_B2 wymaga SKRZYNIA_C2) blokuje zatwierdzenie
+        // Step 6: completeness (SILNIK_B2 requires SKRZYNIA_C2) blocks finalization
         assertThatThrownBy(() ->
                 buildSpecificationUseCase.finalizeSpecification(specId.value()))
                 .isInstanceOf(RuleViolationException.class);
 
-        // Specyfikacja pozostaje niezatwierdzona, bez zdarzenia końcowego
+        // The specification remains unfinalized, without the final event
         VehicleSpecification saved = specificationRepository.findById(specId).orElseThrow();
         assertThat(saved.state()).isEqualTo(SpecificationState.IN_PROGRESS);
         verify(rabbitTemplate, never()).convertAndSend(
@@ -190,73 +190,73 @@ class CatalogContextAcceptanceTest {
     }
 
     // ===================================================================================
-    // UC-KON-01, A2: Przerwanie sesji — konfiguracja zapisana jako wersja robocza
+    // UC-KON-01, A2: Session interruption — the configuration saved as a draft version
     // ===================================================================================
     @Test
     void uc01_a2_shouldKeepAbandonedConfigurationAsDraft() {
         ProductCatalog catalog = createPublishedCatalog();
 
-        // Klient otwiera konfigurator i opuszcza go przed wyborem opcji
+        // The Customer opens the configurator and leaves it before selecting options
         SpecificationId specId = buildSpecificationUseCase.startSpecification(catalog.getCatalogId().value());
 
-        // System zapisał konfigurację jako wersję roboczą (DRAFT) w lokalnej bazie
+        // The system saved the configuration as a draft version (DRAFT) in the local database
         VehicleSpecification draft = specificationRepository.findById(specId).orElseThrow();
         assertThat(draft.state()).isEqualTo(SpecificationState.DRAFT);
         assertThat(draft.getSelectedOptions()).isEmpty();
     }
 
     // ===================================================================================
-    // UC-KON-02: Automatyczna aktualizacja cennika i katalogu — scenariusz główny
+    // UC-KON-02: Automatic update of the price list and catalog — main scenario
     // ===================================================================================
     @Test
     void uc02_shouldUpdateCatalogArchiveOldVersionAndEmitCatalogUpdated() {
-        // Warunek wstępny: w bazie aktywna poprzednia wersja cennika
+        // Precondition: a previous price list version is active in the database
         ProductCatalog previous = ProductCatalog.createActive("MY_2025");
         catalogRepository.save(previous);
 
-        // Krok 1-2: Importer (Blackbox) udostępnia nowy pakiet danych; ACL tłumaczy go na model lokalny
+        // Steps 1-2: the Importer (Blackbox) provides a new data package; the ACL translates it into the local model
         when(importerApi.fetchCurrentOptions("MY_2026")).thenReturn(List.of(
                 new CatalogOption(new OptionCode("PAKIET_A1"), Money.of(15500, "PLN")),
                 new CatalogOption(new OptionCode("SILNIK_B1"), Money.of(21000, "PLN"))));
 
-        // Sygnał z webhooka/szyny uruchamia aktualizację
+        // A signal from the webhook/bus triggers the update
         CatalogId newCatalogId = updateCatalogUseCase.publishNewCatalogVersion(
                 "MY_2026", previous.getCatalogId().value());
 
-        // Krok 4: nowy katalog zapisany w lokalnej bazie, poprzedni oznaczony jako archiwalny
+        // Step 4: the new catalog saved in the local database, the previous one marked as archived
         ProductCatalog newCatalog = catalogRepository.findById(newCatalogId).orElseThrow();
         assertThat(newCatalog.state()).isEqualTo(CatalogState.ACTIVE);
         assertThat(newCatalog.getOptions()).hasSize(2);
         ProductCatalog archived = catalogRepository.findById(previous.getCatalogId()).orElseThrow();
         assertThat(archived.state()).isEqualTo(CatalogState.ARCHIVED);
 
-        // Krok 5: kontekst emituje na szynę danych zdarzenie CatalogUpdated
+        // Step 5: the context emits the CatalogUpdated event onto the data bus
         verify(rabbitTemplate).convertAndSend(
                 anyString(), eq("catalog.updated"), any(CatalogUpdatedEvent.class));
     }
 
     // ===================================================================================
-    // UC-KON-02, A1: Błąd walidacji lub translacji danych — pakiet odrzucony
+    // UC-KON-02, A1: a validation or data translation error — the package is rejected
     // ===================================================================================
     @Test
     void uc02_a1_shouldRejectInvalidPackageAndEmitCatalogUpdateFailed() {
-        // W kroku 2 warstwa translacji (ACL) wykrywa błąd krytyczny (np. brak cen, zły format)
+        // In step 2 the translation layer (ACL) detects a critical error (e.g. missing prices, wrong format)
         when(importerApi.fetchCurrentOptions("MY_2026"))
-                .thenThrow(new IllegalArgumentException("Brak cen w pakiecie katalogowym"));
+                .thenThrow(new IllegalArgumentException("No prices in the catalog package"));
 
         int catalogsBefore = catalogRepository.findAll().size();
 
-        // System przerywa aktualizację i odrzuca pakiet
+        // The system aborts the update and rejects the package
         assertThatThrownBy(() -> updateCatalogUseCase.publishNewCatalogVersion("MY_2026", null))
                 .isInstanceOf(IllegalStateException.class);
 
-        // ...emitując techniczne zdarzenie o błędzie integracji (CatalogUpdateFailed)
+        // ...emitting a technical integration-error event (CatalogUpdateFailed)
         verify(rabbitTemplate).convertAndSend(
                 anyString(), eq("catalog.update_failed"), any(CatalogUpdateFailedEvent.class));
         verify(rabbitTemplate, never()).convertAndSend(
                 anyString(), eq("catalog.updated"), any(CatalogUpdatedEvent.class));
 
-        // Lokalna baza pozostaje nietknięta — żaden katalog nie przybył
+        // The local database stays untouched — no catalog arrived
         assertThat(catalogRepository.findAll()).hasSize(catalogsBefore);
     }
 }

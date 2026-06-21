@@ -4,9 +4,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 
 /**
- * Pomocnik infrastruktury (warstwa sterowana): pozwala wiernie odtworzyć niemutowalne agregaty
- * domenowe z encji JPA BEZ modyfikowania kodu kontekstów (brak setterów/konstruktorów odtwarzających
- * w domenie). Refleksja jest tu świadomą decyzją adaptera persystencji — domena zostaje czysta.
+ * An infrastructure helper (driven layer): allows faithfully reconstituting the immutable domain
+ * aggregates from JPA entities WITHOUT modifying the context code (no setters/reconstituting constructors
+ * in the domain). Reflection here is a deliberate decision of the persistence adapter — the domain stays clean.
  */
 public final class DomainReflection {
 

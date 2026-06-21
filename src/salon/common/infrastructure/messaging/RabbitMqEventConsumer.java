@@ -9,13 +9,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * PRAWDZIWY konsument zdarzeń z RabbitMQ (NIE mock).
+ * A REAL RabbitMQ event consumer (NOT a mock).
  *
- * Deklaruje kolejkę kontekstu, wiąże ją do exchange dla każdego zarejestrowanego typu zdarzenia
- * i nasłuchuje. Po odebraniu wiadomości: parsuje JSON, odczytuje pole "type" i woła handler.
+ * Declares the context's queue, binds it to the exchange for each registered event type
+ * and listens. After receiving a message: it parses the JSON, reads the "type" field and calls the handler.
  *
- * Deduplikacja (idempotencyjność, sekcja 3.4.2) jest tutaj świadomie POMINIĘTA — należy do
- * subskrybenta (konkretnego listenera danego kontekstu), dokładnie jak w SettlementEventListener.
+ * Deduplication (idempotency, section 3.4.2) is deliberately OMITTED here — it belongs to
+ * the subscriber (the specific listener of a given context), exactly as in SettlementEventListener.
  */
 public class RabbitMqEventConsumer {
 
@@ -34,7 +34,7 @@ public class RabbitMqEventConsumer {
         this.queueName = queueName;
     }
 
-    // Rejestrujemy zainteresowanie danym typem zdarzenia (np. "PaymentRegisteredEvent").
+    // We register interest in a given event type (e.g. "PaymentRegisteredEvent").
     public void register(String eventType, RabbitMqMessageHandler handler) {
         if (eventType == null || eventType.isBlank()) {
             throw new IllegalArgumentException("eventType must not be blank.");
@@ -49,7 +49,7 @@ public class RabbitMqEventConsumer {
         Channel channel = this.connection.channel();
         try {
             channel.queueDeclare(this.queueName, true, false, false, null);
-            // Wiążemy kolejkę do exchange dla każdego typu, który nas interesuje.
+            // We bind the queue to the exchange for each type we are interested in.
             for (Map.Entry<String, RabbitMqMessageHandler> entry : this.handlers.entrySet()) {
                 channel.queueBind(this.queueName, RabbitMqConfig.EXCHANGE, entry.getKey());
             }

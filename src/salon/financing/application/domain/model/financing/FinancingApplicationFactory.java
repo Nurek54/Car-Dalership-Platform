@@ -3,10 +3,10 @@ package salon.financing.application.domain.model.financing;
 import salon.common.model.Money;
 
 /**
- * FABRYKA (Rysunek 42) — powoluje poprawny agregat {@link FinancingApplication} w stanie DRAFT,
- * nadajac mu nowy identyfikator wniosku ({@link ApplicationId}). Dane nabywcy i kwota finansowania
- * (cena koncowa oferty) dociagane sa przez warstwe aplikacji z Kontekstu Sprzedazy (SalesIntegration)
- * i przekazywane tu jako typy lokalne Finansowania. Operacja atomowa — nigdy nie zwraca niespojnego obiektu.
+ * FACTORY (Figure 42) — creates a valid {@link FinancingApplication} aggregate in the DRAFT state,
+ * assigning it a new application identifier ({@link ApplicationId}). The buyer data and the financing amount
+ * (the offer's final price) are fetched by the application layer from the Sales Context (SalesIntegration)
+ * and passed here as Financing-local types. An atomic operation — it never returns an inconsistent object.
  */
 public class FinancingApplicationFactory {
 

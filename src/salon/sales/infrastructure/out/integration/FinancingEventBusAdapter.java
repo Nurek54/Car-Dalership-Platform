@@ -11,11 +11,11 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Adapter wyjściowy portu {@link FinancingIntegrationPort} (UC-CRM-03, krok 5).
+ * Outbound adapter of the {@link FinancingIntegrationPort} port (UC-CRM-03, step 5).
  *
- * Realizuje zapytanie o zdolność kredytową/leasingową przez magistralę zdarzeń:
- * publikuje FinancingRequestedEvent, który (zgodnie z kanwą Finansowania) konsumuje
- * Kontekst Finansowania, uruchamiając UC-FIN-01 (złożenie wniosku przez ACL banku).
+ * It implements the credit/leasing capacity query through the event bus:
+ * it publishes FinancingRequestedEvent, which (per the Financing canvas) is consumed by
+ * the Financing Context, triggering UC-FIN-01 (submitting the application through the bank ACL).
  */
 public class FinancingEventBusAdapter implements FinancingIntegrationPort {
 

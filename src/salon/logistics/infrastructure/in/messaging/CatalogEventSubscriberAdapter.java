@@ -5,11 +5,11 @@ import salon.logistics.application.port.out.CatalogIntegration;
 import java.util.List;
 
 /**
- * ADAPTER WEJŚCIOWY (Rysunek 37: EventListener) – subskrybent zdarzeń Kontekstu Katalogu.
+ * INBOUND ADAPTER (Figure 37: EventListener) – subscriber of the Catalog Context events.
  *
- * SpecificationCompleted niesie kody wyposażenia (event-carried state transfer): adapter zapisuje
- * je do lokalnej kopii danych Katalogu (port {@link CatalogIntegration}), dzięki czemu UC-INW-01/02
- * nie wymagają synchronicznego odpytywania Katalogu. ACL: typy Katalogu tłumaczone są na prosty
+ * SpecificationCompleted carries the equipment codes (event-carried state transfer): the adapter writes
+ * them into the local copy of the Catalog data (the {@link CatalogIntegration} port), so that UC-INW-01/02
+ * do not require synchronous querying of the Catalog. ACL: the Catalog types are translated into a simple
  * model (String, List&lt;String&gt;).
  */
 public class CatalogEventSubscriberAdapter {
@@ -31,7 +31,7 @@ public class CatalogEventSubscriberAdapter {
         this.catalogIntegration.saveSpecification(event.specificationId(), optionCodes);
     }
 
-    /** Lokalna (ACL) reprezentacja zdarzenia SpecificationCompleted z Katalogu. */
+    /** Local (ACL) representation of the SpecificationCompleted event from the Catalog. */
     public record SpecificationCompleted(String specificationId, List<String> optionCodes) {
     }
 }

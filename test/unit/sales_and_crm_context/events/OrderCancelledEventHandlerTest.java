@@ -22,11 +22,11 @@ class OrderCancelledEventHandlerTest {
 
     @Test
     void shouldPassCancellationReasonToBillingContext() {
-        // Zamówienie zostaje anulowane przez brak wpłaty
+        // The order is cancelled due to a missing payment
         OrderCancelledEvent event = new OrderCancelledEvent(
                 UUID.randomUUID(),
                 "ORD-300",
-                "Brak wpłaty zadatku w terminie",
+                "No deposit payment within the deadline",
                 Instant.now()
         );
 

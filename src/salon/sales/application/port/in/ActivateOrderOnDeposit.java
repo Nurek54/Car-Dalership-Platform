@@ -1,8 +1,8 @@
 package salon.sales.application.port.in;
 
 /**
- * Port wejściowy wyzwalany zdarzeniem z Rozliczeń (PaymentRegisteredEvent / WplataZaksiegowana).
- * To realizacja kroku 5 UC-SPR-02: zaksięgowanie zadatku odblokowuje realizację zamówienia.
+ * Inbound port triggered by an event from Billing (PaymentRegisteredEvent / PaymentPosted).
+ * This implements step 5 of UC-SPR-02: posting the deposit unblocks the order fulfillment.
  */
 public interface ActivateOrderOnDeposit {
     void activateOnDeposit(String orderId);

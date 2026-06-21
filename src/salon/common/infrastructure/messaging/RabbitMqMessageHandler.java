@@ -3,8 +3,8 @@ package salon.common.infrastructure.messaging;
 import java.util.Map;
 
 /**
- * Kontrakt obsługi pojedynczego, sparsowanego zdarzenia przyjętego z kolejki.
- * Konkretny kontekst rejestruje handler dla typu zdarzenia, którym jest zainteresowany.
+ * Contract for handling a single, parsed event received from the queue.
+ * A concrete context registers a handler for the event type it is interested in.
  */
 public interface RabbitMqMessageHandler {
     void handle(Map<String, String> event);

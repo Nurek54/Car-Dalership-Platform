@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Model trwałego magazynu dla agregatu VehicleSpecification (DTO infrastruktury).
+ * Persistent-storage model for the VehicleSpecification aggregate (infrastructure DTO).
  */
 public record VehicleSpecificationRecord(String id,
                                          String catalogId,

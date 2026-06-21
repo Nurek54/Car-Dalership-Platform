@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-INW-01: wolny pojazd z placu został twardo zarezerwowany (blokada na VIN) dla zamówienia.
+ * UC-INW-01: a free vehicle from the yard was hard-reserved (a lock on the VIN) for the order.
  */
 public record VehicleReservedFromStockEvent(String orderId, String vin,
                                             UUID eventId, Instant occurredOn) implements DomainEvent {

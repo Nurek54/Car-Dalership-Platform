@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "InitiateConfiguratorSession" (UC-CRM-01) — Sprzedaż inicjuje sesję konfiguratora dla klienta.
- * Zdarzenie nasłuchuje Kontekst Katalogu, który otwiera interfejs konfiguratora pojazdów.
+ * "InitiateConfiguratorSession" (UC-CRM-01) — Sales initiates a configurator session for the customer.
+ * The event is listened to by the Catalog Context, which opens the vehicle configurator interface.
  */
 public record ConfiguratorSessionInitiatedEvent(UUID eventId,
                                                 String sessionId,

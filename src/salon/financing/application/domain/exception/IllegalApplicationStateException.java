@@ -1,7 +1,7 @@
 package salon.financing.application.domain.exception;
 
 /**
- * Naruszenie maszyny stanów agregatu
+ * Violation of the aggregate's state machine
  * {@link salon.financing.application.domain.model.financing.FinancingApplication}.
  */
 public class IllegalApplicationStateException extends RuntimeException {

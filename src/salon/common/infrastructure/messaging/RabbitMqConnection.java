@@ -8,8 +8,8 @@ import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Cienka obudowa na połączenie z RabbitMQ (klient com.rabbitmq:amqp-client).
- * Tworzy połączenie + kanał i deklaruje nasz exchange. Jeden obiekt na proces.
+ * A thin wrapper around the RabbitMQ connection (the com.rabbitmq:amqp-client client).
+ * Creates a connection + channel and declares our exchange. One object per process.
  */
 public class RabbitMqConnection implements AutoCloseable {
 
@@ -30,7 +30,7 @@ public class RabbitMqConnection implements AutoCloseable {
         try {
             this.connection = factory.newConnection();
             this.channel = this.connection.createChannel();
-            // Topic exchange — pozwala bindować po wzorcu routing key.
+            // Topic exchange — allows binding by routing-key pattern.
             this.channel.exchangeDeclare(RabbitMqConfig.EXCHANGE, "topic", true);
         } catch (IOException | TimeoutException e) {
             throw new IllegalStateException("Cannot connect to RabbitMQ at "

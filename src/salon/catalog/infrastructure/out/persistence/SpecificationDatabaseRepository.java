@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 /**
- * ADAPTER WYJŚCIOWY (utrwalania) – implementacja portu
+ * OUTBOUND ADAPTER (persistence) – implementation of the port
  * {@link VehicleSpecificationRepository} („SpecificationDatabaseRepository” → DBAdapter).
  */
 @Repository

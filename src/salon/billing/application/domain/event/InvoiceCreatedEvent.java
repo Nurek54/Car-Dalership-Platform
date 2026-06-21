@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-FIR-02: utworzono i wystawiono fakturę końcową dla zamówienia. Płynie do Sprzedaży i CRM.
+ * UC-FIR-02: the final invoice for the order was created and issued. Flows to Sales and CRM.
  *
- * Zapis faktu (czas przeszły dokonany), zgodny z językiem wszechobecnym Kontekstu Fakturowania.
- * Niesie minimalny zbiór informacji (orderId) — dane wrażliwe dociągają subskrybenci przez ACL.
+ * Record of a fact (past perfect tense), consistent with the ubiquitous language of the Billing Context.
+ * Carries a minimal set of information (orderId) — sensitive data is fetched by subscribers via ACL.
  */
 public record InvoiceCreatedEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
 

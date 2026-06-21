@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "ZamowienieGotoweDoOdbioru" (UC-CRM-04) — pojazd jest gotowy fizycznie i finansowo.
- * Sygnał do wygenerowania powiadomienia dla Handlowca, który umawia termin odbioru z klientem.
+ * "OrderReadyForHandover" (UC-CRM-04) — the vehicle is ready physically and financially.
+ * A signal to generate a notification for the Salesperson, who schedules the pickup date with the customer.
  */
 public record OrderReadyForHandoverEvent(UUID eventId,
                                          String orderId,

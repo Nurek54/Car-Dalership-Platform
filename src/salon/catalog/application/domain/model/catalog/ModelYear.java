@@ -1,7 +1,7 @@
 package salon.catalog.application.domain.model.catalog;
 
 /**
- * Obiekt wartości – rocznik modelowy, dla którego obowiązuje katalog/cennik.
+ * Value object – the model year for which the catalog/price list applies.
  */
 public final class ModelYear {
 

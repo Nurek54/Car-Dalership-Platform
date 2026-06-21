@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** UC-CRM-01: Uruchomienie sesji konfiguratora dla klienta. */
+/** UC-CRM-01: Starting a configurator session for the customer. */
 @ExtendWith(MockitoExtension.class)
 class ConfiguratorSessionAppServiceTest {
 
@@ -26,29 +26,29 @@ class ConfiguratorSessionAppServiceTest {
 
     @Test
     void shouldEmitConfiguratorSessionInitiatedEventAndReturnSessionId() {
-        // Posiadamy w bazie zarejestrowanego klienta
+        // We have a registered customer in the database
         StartConfiguratorSessionCommand command = new StartConfiguratorSessionCommand("CUST-1", "SALES-7");
         when(customerRepository.existsById("CUST-1")).thenReturn(true);
 
-        // Kiedy andlowiec uruchamia sesję konfiguratora dla tego klienta
+        // When the salesperson starts a configurator session for this customer
         String sessionId = configuratorAppService.startConfiguratorSession(command);
 
-        // To wypuszcza w świat zdarzenie, że sesja się rozpoczęła
+        // It broadcasts an event that the session has started
         verify(eventPublisher).publish(any(ConfiguratorSessionInitiatedEvent.class));
     }
 
     @Test
     void shouldFailToStartSessionWhenCustomerDoesNotExist() {
-        // Ktoś próbuje uruchomić sesję dla nieistniejącego ID klienta
+        // Someone tries to start a session for a non-existent customer ID
         StartConfiguratorSessionCommand command = new StartConfiguratorSessionCommand("UNKNOWN-CUST", "SALES-7");
         when(customerRepository.existsById("UNKNOWN-CUST")).thenReturn(false);
 
-        // Serwis aplikacyjny przerywa proces i rzuca błąd
+        // The application service aborts the process and throws an error
         assertThatThrownBy(() -> configuratorAppService.startConfiguratorSession(command))
                 .isInstanceOf(CustomerNotFoundException.class)
                 .hasMessageContaining("Customer with ID UNKNOWN-CUST not found");
 
-        // Sprawdzamy czy żadne fałszywe zdarzenie nie wyciekło do innych systemów
+        // We check that no false event leaked to other systems
         verify(eventPublisher, never()).publish(any());
     }
 }

@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-FIR-03: pierwsza wpłata (zadatek) po prośbie o zadatek została zaksięgowana. Płynie do Inwentarza (zlecenie produkcji — UC-INW-02).
+ * UC-FIR-03: the first payment (deposit) after the deposit request has been posted. Flows to Inventory (production order — UC-INW-02).
  *
- * Zapis faktu (czas przeszły dokonany), zgodny z językiem wszechobecnym Kontekstu Fakturowania.
- * Niesie minimalny zbiór informacji (orderId) — dane wrażliwe dociągają subskrybenci przez ACL.
+ * Record of a fact (past perfect tense), consistent with the ubiquitous language of the Billing Context.
+ * Carries a minimal set of information (orderId) — sensitive data is fetched by subscribers via ACL.
  */
 public record AdvancePaymentRegisteredEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
 

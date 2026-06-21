@@ -12,8 +12,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ADAPTER WYJŚCIOWY (Rysunek 37: DBAdapter) – implementacja {@link VehicleDatabaseRepository}
- * w pamięci. Lokalna baza pojazdów na placu; klucz naturalny = VIN.
+ * OUTBOUND ADAPTER (Figure 37: DBAdapter) – implementation of {@link VehicleDatabaseRepository}
+ * in memory. The local database of vehicles in the yard; natural key = VIN.
  */
 public class InMemoryInventoryRepository implements VehicleDatabaseRepository {
 

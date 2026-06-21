@@ -1,6 +1,6 @@
 package salon.sales.application.domain.exception;
 
-/** Brak oferty o wskazanym identyfikatorze w systemie CRM. */
+/** No offer with the indicated identifier in the CRM system. */
 public class OfferNotFoundException extends RuntimeException {
 
     private final String offerId;

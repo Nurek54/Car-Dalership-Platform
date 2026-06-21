@@ -23,7 +23,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** UC-KON-02: Automatyczna aktualizacja cennika i katalogu */
+/** UC-KON-02: Automatic update of the price list and catalog */
 @ExtendWith(MockitoExtension.class)
 class CatalogAppServiceTest {
 
@@ -40,12 +40,12 @@ class CatalogAppServiceTest {
 
     @Test
     void shouldPublishNewCatalogVersionAndEmitCatalogUpdatedEvent() {
-        // Importer odpowiada poprawnym pakietem opcji z cenami
+        // The Importer responds with a valid package of options with prices
         when(importerApi.fetchCurrentOptions("MY_2026")).thenReturn(importerPackage());
 
         CatalogId newCatalogId = catalogAppService.publishNewCatalogVersion("MY_2026", null);
 
-        // Nowy, aktywny cennik z opcjami od Importera trafia do repozytorium
+        // A new, active price list with options from the Importer goes to the repository
         ArgumentCaptor<ProductCatalog> captor = ArgumentCaptor.forClass(ProductCatalog.class);
         verify(catalogRepository).save(captor.capture());
         ProductCatalog saved = captor.getValue();
@@ -53,27 +53,27 @@ class CatalogAppServiceTest {
         assertThat(saved.state()).isEqualTo(CatalogState.ACTIVE);
         assertThat(saved.getOptions()).hasSize(2);
 
-        // Propagacja zmian: zdarzenie CatalogUpdated wychodzi w świat
+        // Change propagation: the CatalogUpdated event goes out into the world
         verify(eventPublisher).publish(any(CatalogUpdatedEvent.class));
     }
 
     @Test
     void shouldArchivePreviousCatalogWhenPublishingNewVersion() {
-        // W systemie istnieje poprzednia, aktywna wersja cennika
+        // A previous, active price list version exists in the system
         ProductCatalog previous = ProductCatalog.createActive("MY_2025");
         when(catalogRepository.findById(previous.getCatalogId())).thenReturn(Optional.of(previous));
         when(importerApi.fetchCurrentOptions("MY_2026")).thenReturn(importerPackage());
 
         catalogAppService.publishNewCatalogVersion("MY_2026", previous.getCatalogId().value());
 
-        // Stara wersja zostaje zarchiwizowana (niemutowalność starych wersji) i zapisana
+        // The old version is archived (immutability of old versions) and saved
         assertThat(previous.state()).isEqualTo(CatalogState.ARCHIVED);
         verify(catalogRepository, times(2)).save(any(ProductCatalog.class)); // stary + nowy
     }
 
     @Test
     void shouldAbortUpdateAndEmitFailureEventWhenImporterPackageIsInvalid() {
-        // Scenariusz A1: błąd translacji/walidacji pakietu po stronie ACL
+        // Scenario A1: a package translation/validation error on the ACL side
         when(importerApi.fetchCurrentOptions("MY_2026"))
                 .thenThrow(new IllegalArgumentException("Niepoprawny format pakietu Importera"));
 
@@ -82,16 +82,16 @@ class CatalogAppServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Catalog update failed");
 
-        // Sygnał o błędzie integracji (CatalogUpdateFailed) wychodzi w świat
+        // The integration-error signal (CatalogUpdateFailed) goes out into the world
         verify(eventPublisher).publish(any(CatalogUpdateFailedEvent.class));
 
-        // Żaden wadliwy cennik nie zostaje zapisany
+        // No faulty price list is saved
         verify(catalogRepository, never()).save(any());
     }
 
     @Test
     void shouldRejectEmptyImporterPackage() {
-        // Importer zwraca pusty pakiet (brak opcji/cen) — walidacja logiczna go odrzuca
+        // The Importer returns an empty package (no options/prices) — logical validation rejects it
         when(importerApi.fetchCurrentOptions("MY_2026")).thenReturn(List.of());
 
         assertThatThrownBy(() -> catalogAppService.publishNewCatalogVersion("MY_2026", null))

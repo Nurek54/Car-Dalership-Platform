@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "ZamowienieAnulowane" — klient zrezygnował z zamówienia (z podanym powodem).
- * Nasłuchują: Kontekst Rozliczeń (rozliczenie zadatku) oraz Inwentarz (zwolnienie blokady).
+ * "OrderCancelled" — the customer cancelled the order (with a given reason).
+ * Listeners: the Billing Context (deposit settlement) and Inventory (lock release).
  */
 public record OrderCancelledEvent(UUID eventId,
                                   String orderId,

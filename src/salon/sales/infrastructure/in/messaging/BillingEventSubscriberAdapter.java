@@ -6,13 +6,13 @@ import salon.billing.application.domain.event.PaymentRegisteredEvent;
 import salon.sales.application.port.in.ActivateOrderOnDeposit;
 
 /**
- * Adapter sterujący (driving) — subskrybent zdarzeń Kontekstu Fakturowania i Rozliczeń
- * w Kontekście Sprzedaży (komunikacja wg kanwy: AdvancePaymentRequested, InvoiceCreated,
- * PaymentRegistered płyną do Sprzedaży i CRM).
+ * Driving adapter — subscriber of the Billing and Settlement Context events
+ * in the Sales Context (communication per the canvas: AdvancePaymentRequested, InvoiceCreated,
+ * PaymentRegistered flow to Sales and CRM).
  *
- * PaymentRegistered (pierwsza zaksięgowana wpłata/zadatek) aktywuje zamówienie
- * (UC-CRM-03 cz.2, Rys. 19/20 PDF). Pozostałe zdarzenia służą informowaniu Handlowca
- * o postępie rozliczeń.
+ * PaymentRegistered (the first posted payment/deposit) activates the order
+ * (UC-CRM-03 part 2, Fig. 19/20 PDF). The remaining events serve to inform the Salesperson
+ * about the settlement progress.
  */
 public class BillingEventSubscriberAdapter {
 
@@ -25,32 +25,32 @@ public class BillingEventSubscriberAdapter {
         this.activateOrder = activateOrder;
     }
 
-    /** Zaksięgowano wpłatę klienta — aktywacja zamówienia (idempotentna po stronie usługi). */
+    /** A customer payment was posted — order activation (idempotent on the service side). */
     public void handlePaymentRegistered(PaymentRegisteredEvent event) {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
         if (event.orderId() == null || event.orderId().isBlank()) {
-            throw new IllegalArgumentException("Identyfikator zamówienia (orderId) jest wymagany");
+            throw new IllegalArgumentException("The order identifier (orderId) is required");
         }
         activateOrder.activateOnDeposit(event.orderId());
     }
 
-    /** Rozliczenia poprosiły klienta o zadatek — informacja dla Handlowca (bez zmiany stanu). */
+    /** Billing asked the customer for a deposit — information for the Salesperson (no state change). */
     public void handleAdvancePaymentRequested(AdvancePaymentRequestedEvent event) {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
-        System.out.println("[BillingEventSubscriberAdapter] Klient zamówienia " + event.orderId()
-                + " został poproszony o wpłatę zadatku.");
+        System.out.println("[BillingEventSubscriberAdapter] The customer of order " + event.orderId()
+                + " was asked to pay the deposit.");
     }
 
-    /** Wystawiono fakturę końcową — informacja dla Handlowca (bez zmiany stanu). */
+    /** The final invoice was issued — information for the Salesperson (no state change). */
     public void handleInvoiceCreated(InvoiceCreatedEvent event) {
         if (event == null) {
             throw new IllegalArgumentException("event must not be null.");
         }
-        System.out.println("[BillingEventSubscriberAdapter] Wystawiono fakturę dla zamówienia "
+        System.out.println("[BillingEventSubscriberAdapter] An invoice was issued for order "
                 + event.orderId() + ".");
     }
 }

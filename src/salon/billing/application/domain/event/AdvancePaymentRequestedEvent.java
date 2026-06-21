@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-FIR-01: wysłano prośbę o zadatek — klient został poproszony o wpłatę. Płynie do Sprzedaży i CRM (informacja dla Handlowca).
+ * UC-FIR-01: a deposit request was sent — the customer was asked to pay. Flows to Sales and CRM (information for the Salesperson).
  *
- * Zapis faktu (czas przeszły dokonany), zgodny z językiem wszechobecnym Kontekstu Fakturowania.
- * Niesie minimalny zbiór informacji (orderId) — dane wrażliwe dociągają subskrybenci przez ACL.
+ * Record of a fact (past perfect tense), consistent with the ubiquitous language of the Billing Context.
+ * Carries a minimal set of information (orderId) — sensitive data is fetched by subscribers via ACL.
  */
 public record AdvancePaymentRequestedEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
 

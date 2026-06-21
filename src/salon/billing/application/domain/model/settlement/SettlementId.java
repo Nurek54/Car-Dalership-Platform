@@ -3,8 +3,8 @@ package salon.billing.application.domain.model.settlement;
 import java.util.UUID;
 
 /**
- * Obiekt wartości (Diagram klas — Settlement): globalna tożsamość agregatu Rozliczenia.
- * Niemutowalny, porównywalny po wartości (rekord). Tworzony przez {@link SettlementFactory}.
+ * Value object (Class diagram — Settlement): global identity of the Settlement aggregate.
+ * Immutable, compared by value (record). Created by {@link SettlementFactory}.
  */
 public record SettlementId(String value) {
 

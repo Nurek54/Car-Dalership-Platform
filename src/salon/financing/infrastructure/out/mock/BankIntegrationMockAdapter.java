@@ -3,17 +3,17 @@ package salon.financing.infrastructure.out.mock;
 import salon.financing.application.port.out.BankIntegrationAcl;
 
 /**
- * ADAPTER WYJŚCIOWY (ACL, Rysunek 42: BankService) – atrapa integracji z systemem bankowym.
+ * OUTBOUND ADAPTER (ACL, Figure 42: BankService) – a mock integration with the bank system.
  *
- * Symuluje asynchroniczne złożenie wniosku: bank jest jedynym decydentem, a decyzja wraca
- * później osobnym zdarzeniem (UC-FIN-02). Wariant rzucający wyjątek odpowiadałby A2
- * (natychmiastowe odrzucenie walidacyjne po stronie banku).
+ * Simulates asynchronous application submission: the bank is the sole decision-maker, and the decision returns
+ * later as a separate event (UC-FIN-02). A variant throwing an exception would correspond to A2
+ * (an immediate validation rejection on the bank side).
  */
 public class BankIntegrationMockAdapter implements BankIntegrationAcl {
 
     @Override
     public void submitFinancingApplication(String orderId) {
-        System.out.println("[BankIntegrationMockAdapter] Wniosek o finansowanie dla zamówienia "
-                + orderId + " wysłany do banku — oczekiwanie na asynchroniczną decyzję.");
+        System.out.println("[BankIntegrationMockAdapter] Financing application for order "
+                + orderId + " sent to the bank — awaiting the asynchronous decision.");
     }
 }

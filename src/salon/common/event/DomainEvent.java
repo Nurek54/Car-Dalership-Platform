@@ -4,10 +4,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Wspólny interfejs (marker) dla wszystkich zdarzeń domenowych w systemie.
+ * A common (marker) interface for all domain events in the system.
  *
- * eventId służy do DEDUPLIKACJI po stronie Subskrybenta (sekcja 3.4.2) — każde zdarzenie,
- * które fizycznie przechodzi przez kolejkę, musi mieć unikalny identyfikator.
+ * eventId is used for DEDUPLICATION on the Subscriber side (section 3.4.2) — every event
+ * that physically passes through the queue must have a unique identifier.
  */
 public interface DomainEvent {
     UUID eventId();

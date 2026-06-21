@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-INW-05: saldo zamówienia rozliczone — pojazd zmienił status na "Gotowy do wydania".
+ * UC-INW-05: the order balance was settled — the vehicle changed status to "Ready for handover".
  */
 public record VehicleReadyForHandoverEvent(String orderId, String vin,
                                            UUID eventId, Instant occurredOn) implements DomainEvent {

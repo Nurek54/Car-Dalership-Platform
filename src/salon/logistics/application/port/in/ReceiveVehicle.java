@@ -1,10 +1,10 @@
 package salon.logistics.application.port.in;
 
 /**
- * PORT WEJŚCIOWY (Rysunek 37) – „ReceiveVehicle”.
+ * INBOUND PORT (Figure 37) – "ReceiveVehicle".
  *
- * UC-INW-03: przyjęcie fizycznego pojazdu na plac (skan VIN przy zjeździe z lawety)
- * i sparowanie go z oczekującym zamówieniem.
+ * UC-INW-03: receiving a physical vehicle into the yard (VIN scan on unloading from the transporter)
+ * and matching it with the pending order.
  */
 public interface ReceiveVehicle {
 

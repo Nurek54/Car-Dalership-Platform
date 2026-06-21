@@ -5,10 +5,10 @@ import salon.catalog.application.domain.model.shared.OptionCode;
 import java.util.Objects;
 
 /**
- * Obiekt wartości – reguła zależności między dwiema opcjami wyposażenia.
+ * Value object – a dependency rule between two equipment options.
  *
- * Przykład EXCLUDES: source=B2 (silnik), target=C1 (skrzynia) – tej kombinacji
- * nie wolno zatwierdzić (UC-KON-01, scenariusz alternatywny A1).
+ * EXCLUDES example: source=B2 (engine), target=C1 (gearbox) – this combination
+ * must not be finalized (UC-KON-01, alternative scenario A1).
  */
 public final class CatalogRule {
 
@@ -21,7 +21,7 @@ public final class CatalogRule {
         this.targetCode = Objects.requireNonNull(targetCode, "targetCode");
         this.type = Objects.requireNonNull(type, "type");
         if (sourceCode.equals(targetCode)) {
-            throw new IllegalArgumentException("Reguła nie może wiązać opcji z samą sobą: " + sourceCode);
+            throw new IllegalArgumentException("A rule cannot bind an option to itself: " + sourceCode);
         }
     }
 

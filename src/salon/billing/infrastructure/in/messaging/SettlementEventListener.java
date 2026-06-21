@@ -9,11 +9,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ADAPTER WEJSCIOWY (Rys. 48 — EventListener) — subskrybent inicjalizacji salda.
+ * INBOUND ADAPTER (Fig. 48 — EventListener) — subscriber for balance initialization.
  *
- * Mapuje {@link OrderReadyForSettlementEvent} z magistrali na port wejsciowy {@link ProcessPayment}
- * (initializeSettlement). Realizuje DEDUPLIKACJE (sekcja 3.4.2) — to odpowiedzialnosc subskrybenta,
- * nie konsumenta kolejki: powtorzone zdarzenie o tym samym eventId jest przetwarzane tylko raz.
+ * Maps {@link OrderReadyForSettlementEvent} from the bus to the inbound port {@link ProcessPayment}
+ * (initializeSettlement). It performs DEDUPLICATION (section 3.4.2) — this is the subscriber's responsibility,
+ * not the queue consumer: a repeated event with the same eventId is processed only once.
  */
 public class SettlementEventListener {
 

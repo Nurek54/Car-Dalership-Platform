@@ -5,18 +5,18 @@ import salon.logistics.application.domain.exception.FactoryOrderFailedException;
 import java.util.List;
 
 /**
- * PORT WYJŚCIOWY (Rysunek 37) – „ImporterACL”.
+ * OUTBOUND PORT (Figure 37) – "ImporterACL".
  *
- * Warstwa zapobiegająca uszkodzeniu (ACL) integracji z systemem fabryki/importera:
- * adapter tłumaczy lokalne żądanie produkcji na format zewnętrznego API i zwraca nadany
- * numer VIN. Niepowodzenie zgłasza jako {@link FactoryOrderFailedException} (UC-INW-02 / A1).
+ * Anti-corruption layer (ACL) for the integration with the factory/importer system:
+ * the adapter translates the local production request into the external API format and returns the assigned
+ * VIN. It reports failure as {@link FactoryOrderFailedException} (UC-INW-02 / A1).
  */
 public interface ImporterACL {
 
     /**
-     * Składa zlecenie produkcji i zwraca nadany przez fabrykę numer VIN.
+     * Places the production order and returns the VIN assigned by the factory.
      *
-     * @throws FactoryOrderFailedException gdy fabryka odrzuci zlecenie / wystąpi błąd integracji
+     * @throws FactoryOrderFailedException when the factory rejects the order / an integration error occurs
      */
     String placeFactoryOrder(String orderId, List<String> optionCodes);
 }

@@ -9,9 +9,9 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ADAPTER WYJŚCIOWY (Rysunek 42: DBAdapter) – implementacja
- * {@link FinancingApplicationDatabaseRepository} w pamięci. Indeks po identyfikatorze zamówienia,
- * bo decyzja banku (UC-FIN-02) odnosi się do zamówienia.
+ * OUTBOUND ADAPTER (Figure 42: DBAdapter) – implementation of
+ * {@link FinancingApplicationDatabaseRepository} in memory. Indexed by order identifier,
+ * because the bank decision (UC-FIN-02) relates to the order.
  */
 public class InMemoryFinancingRepository implements FinancingApplicationDatabaseRepository {
 

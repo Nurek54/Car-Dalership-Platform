@@ -18,14 +18,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class VehicleReadyForHandoverEventHandlerTest {
 
-    // Tutaj portem docelowym jest AppService,
-    // ponieważ reagujemy na zdarzenie z zewnątrz, aktualizując stan Agregatu
+    // Here the target port is the AppService,
+    // because we react to an external event, updating the Aggregate state
     @Mock private SalesService salesAppService;
     @InjectMocks private VehicleReadyForHandoverEventHandler eventHandler;
 
     @Test
     void shouldMarkOrderAsReadyWhenVehicleIsPhysicallyReady() {
-        // System logistyczny zgłasza gotowość pojazdu
+        // The logistics system reports the vehicle's readiness
         VehicleReadyForHandoverEvent event = new VehicleReadyForHandoverEvent(
                 UUID.randomUUID(),
                 "VEH-999-VIN",
@@ -33,10 +33,10 @@ class VehicleReadyForHandoverEventHandlerTest {
                 Instant.now()
         );
 
-        // CRM odbiera to zdarzenie ze świata
+        // CRM receives this event from the outside world
         eventHandler.handle(event);
 
-        // Zlecamy zmianę statusu zamówienia
+        // We instruct the change of the order status
         verify(salesAppService).markOrderAsReadyForHandover(new OrderId("ORD-700"));
     }
 }

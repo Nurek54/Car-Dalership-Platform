@@ -7,10 +7,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "ZadeklarowanoPrzelew" (UC-CRM-03, krok 5) — klient wybrał płatność przelewem.
- * Niesie zadeklarowaną kwotę kontraktu; nasłuchują: Kontekst Rozliczeń (proforma
- * z danymi do przelewu — handler BankTransferDeclaredEventHandler) oraz Inwentarz
- * (UC-INW-01 — weryfikacja dostępności i rezerwacja pojazdu).
+ * "BankTransferDeclared" (UC-CRM-03, step 5) — the customer chose payment by bank transfer.
+ * Carries the declared contract amount; listeners: the Billing Context (proforma
+ * with transfer details — the BankTransferDeclaredEventHandler) and Inventory
+ * (UC-INW-01 — availability check and vehicle reservation).
  */
 public record BankTransferDeclaredEvent(UUID eventId,
                                         String orderId,

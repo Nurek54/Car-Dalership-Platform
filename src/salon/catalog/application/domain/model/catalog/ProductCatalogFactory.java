@@ -8,20 +8,20 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Fabryka agregatu ProductCatalog.
+ * Factory of the ProductCatalog aggregate.
  *
- * Tworzenie poprawnego egzemplarza nie jest odpowiedzialnością agregatu ani klienta.
- * Fabryka hermetyzuje budowę, zapewnia niezmienniki i jest atomowa: albo zwróci
- * poprawny katalog, albo rzuci wyjątek – nigdy nie zwraca obiektu niepoprawnego.
+ * Creating a valid instance is not the responsibility of the aggregate or the client.
+ * The factory encapsulates construction, guarantees the invariants and is atomic: it either returns
+ * a valid catalog or throws an exception – it never returns an invalid object.
  *
- * Położenie: warstwa dziedziny (fabryka wyraża pojęcie dziedziny – budowę cennika).
+ * Location: the domain layer (the factory expresses a domain concept – building the price list).
  */
 public class ProductCatalogFactory {
 
     /**
-     * Tworzy nowy, AKTYWNY katalog w wersji 1 z nowym, globalnym identyfikatorem.
-     * Sprawdza niezmienniki: niepusty zbiór opcji, unikatowe kody, reguły wskazujące
-     * wyłącznie na opcje istniejące w katalogu.
+     * Creates a new, ACTIVE catalog at version 1 with a new, global identifier.
+     * Checks the invariants: a non-empty set of options, unique codes, rules pointing
+     * only to options that exist in the catalog.
      */
     public ProductCatalog createNew(ModelYear modelYear,
                                     List<CatalogOption> options,
@@ -37,7 +37,7 @@ public class ProductCatalogFactory {
     }
 
     /**
-     * Tworzy AKTYWNY katalog jako kolejną wersję (UC-KON-02 – nowy cennik zastępuje bieżący).
+     * Creates an ACTIVE catalog as the next version (UC-KON-02 – the new price list replaces the current one).
      */
     public ProductCatalog createNextVersion(ModelYear modelYear,
                                             int newVersion,
@@ -54,8 +54,8 @@ public class ProductCatalogFactory {
     }
 
     /**
-     * Odtworzenie agregatu z trwałego magazynu (używane przez adapter repozytorium).
-     * Nie waliduje reguł biznesowych – dane pochodzą z zaufanego źródła.
+     * Reconstitutes the aggregate from persistent storage (used by the repository adapter).
+     * Does not validate business rules – the data comes from a trusted source.
      */
     public ProductCatalog reconstitute(CatalogId id,
                                        ModelYear modelYear,
@@ -68,23 +68,23 @@ public class ProductCatalogFactory {
 
     private void validate(List<CatalogOption> options, List<CatalogRule> rules) {
         if (options == null || options.isEmpty()) {
-            throw new CatalogValidationException("Katalog musi zawierać co najmniej jedną opcję");
+            throw new CatalogValidationException("The catalog must contain at least one option");
         }
         Set<OptionCode> codes = new HashSet<>();
         for (CatalogOption option : options) {
             if (!codes.add(option.code())) {
-                throw new CatalogValidationException("Zduplikowany kod opcji: " + option.code());
+                throw new CatalogValidationException("Duplicate option code: " + option.code());
             }
         }
         if (rules != null) {
             for (CatalogRule rule : rules) {
                 if (!codes.contains(rule.sourceCode())) {
                     throw new CatalogValidationException(
-                            "Reguła odwołuje się do nieistniejącej opcji: " + rule.sourceCode());
+                            "The rule references a non-existent option: " + rule.sourceCode());
                 }
                 if (!codes.contains(rule.targetCode())) {
                     throw new CatalogValidationException(
-                            "Reguła odwołuje się do nieistniejącej opcji: " + rule.targetCode());
+                            "The rule references a non-existent option: " + rule.targetCode());
                 }
             }
         }

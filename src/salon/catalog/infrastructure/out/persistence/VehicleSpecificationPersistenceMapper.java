@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Mapowanie dwukierunkowe między agregatem VehicleSpecification a rekordem magazynu.
+ * Bidirectional mapping between the VehicleSpecification aggregate and the storage record.
  */
 @Component
 public class VehicleSpecificationPersistenceMapper {

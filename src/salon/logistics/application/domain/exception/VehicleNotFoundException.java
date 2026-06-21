@@ -1,7 +1,7 @@
 package salon.logistics.application.domain.exception;
 
 /**
- * Brak egzemplarza pojazdu spełniającego kryteria (np. brak rezerwacji dla zamówienia).
+ * No vehicle instance matching the criteria (e.g. no reservation for the order).
  */
 public class VehicleNotFoundException extends RuntimeException {
 

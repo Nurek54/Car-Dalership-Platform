@@ -1,9 +1,9 @@
 package salon.logistics.application.domain.model.vehicle;
 
 /**
- * Obiekt wartości: rozłączne odwołanie do specyfikacji pojazdu z Kontekstu Katalogu.
- * Inwentarz nie zna modelu Katalogu — przechowuje wyłącznie identyfikator i (lokalnie)
- * kody wyposażenia dostarczone zdarzeniem (event-carried state transfer).
+ * Value object: a disjoint reference to a vehicle specification from the Catalog Context.
+ * Inventory does not know the Catalog model — it stores only the identifier and (locally)
+ * the equipment codes delivered by an event (event-carried state transfer).
  */
 public record SpecificationId(String value) {
 

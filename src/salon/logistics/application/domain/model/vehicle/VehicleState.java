@@ -1,16 +1,16 @@
 package salon.logistics.application.domain.model.vehicle;
 
 /**
- * Stan cyklu życia egzemplarza pojazdu w Inwentarzu (model strukturalny, Rysunek 38).
+ * The life-cycle state of a vehicle instance in Inventory (structural model, Figure 38).
  *
- * ON_STOCK ("Wolny") – dostępny na placu, bez rezerwacji;
- * IN_PRODUCTION ("W produkcji") – zlecony w fabryce, jeszcze nie na placu (UC-INW-02);
- * RESERVED ("Zarezerwowany") – twarda blokada na VIN dla konkretnego zamówienia;
- * READY_FOR_HANDOVER ("Gotowy do wydania") – saldo rozliczone, oczekuje na odbiór (UC-INW-05);
- * HANDED_OVER ("Wydany") – wyksięgowany z aktywnego stanu magazynowego (UC-INW-06).
+ * ON_STOCK ("Free") – available in the yard, without a reservation;
+ * IN_PRODUCTION ("In production") – ordered from the factory, not yet in the yard (UC-INW-02);
+ * RESERVED ("Reserved") – a hard lock on the VIN for a specific order;
+ * READY_FOR_HANDOVER ("Ready for handover") – balance settled, awaiting pickup (UC-INW-05);
+ * HANDED_OVER ("Handed over") – removed from the active stock (UC-INW-06).
  *
- * READY_FOR_HANDOVER wynika wprost z przypadków użycia UC-INW-05/06 (PDF); diagram klas
- * przedstawia stany w wersji uproszczonej.
+ * READY_FOR_HANDOVER follows directly from the use cases UC-INW-05/06 (PDF); the class diagram
+ * presents the states in a simplified version.
  */
 public enum VehicleState {
     ON_STOCK,

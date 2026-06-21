@@ -1,9 +1,9 @@
 package salon.logistics.application.domain.exception;
 
 /**
- * Błąd integracji z systemem fabryki/importera podczas składania zlecenia produkcji
- * (UC-INW-02 / A1) — sygnalizowany przez adapter ACL, tłumaczony przez usługę aplikacji
- * na zdarzenie FactoryOrderFailedEvent.
+ * An integration error with the factory/importer system while placing the production order
+ * (UC-INW-02 / A1) — signaled by the ACL adapter, translated by the application service
+ * into the FactoryOrderFailedEvent event.
  */
 public class FactoryOrderFailedException extends RuntimeException {
 

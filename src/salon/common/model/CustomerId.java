@@ -1,9 +1,9 @@
 package salon.common.model;
 
 /**
- * Tożsamość klienta we Wspólnym Rdzeniu (Shared Kernel) — odpowiednik
- * kontekstowego salon.sales.domain.model.customer.CustomerId, używany tam,
- * gdzie identyfikator klienta przekracza granice kontekstów.
+ * Customer identity in the Shared Kernel — the counterpart of
+ * the context-specific salon.sales.domain.model.customer.CustomerId, used where
+ * the customer identifier crosses context boundaries.
  */
 public record CustomerId(String value) {
 

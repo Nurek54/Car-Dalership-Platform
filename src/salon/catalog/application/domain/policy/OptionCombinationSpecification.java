@@ -9,12 +9,12 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Specyfikacja sprawdzająca poprawność kombinacji wybranych opcji względem reguł
- * wykluczających (EXCLUDES) i wymagających (REQUIRES) z katalogu.
+ * A specification that checks the validity of the selected option combination against the
+ * exclusion (EXCLUDES) and requirement (REQUIRES) rules from the catalog.
  *
- * Obiekt wartości – niezmienny, bez skutków ubocznych. Zastosowanie: WALIDACJA
- * (czy zbiór wybranych opcji spełnia reguły). Polityka państwa (PDF / Kanwa):
- * system NIE weryfikuje opcji wzajemnie, tylko na poziomie głównych kombinacji.
+ * Value object – immutable, without side effects. Purpose: VALIDATION
+ * (whether the set of selected options satisfies the rules). Policy (PDF / Canvas):
+ * the system does NOT verify options against each other, only at the level of the main combinations.
  */
 public final class OptionCombinationSpecification implements Specification<Set<OptionCode>> {
 
@@ -30,8 +30,8 @@ public final class OptionCombinationSpecification implements Specification<Set<O
     }
 
     /**
-     * Zwraca opis naruszonych reguł (pusta lista = kombinacja dozwolona).
-     * Operacja-zapytanie, bez modyfikacji stanu.
+     * Returns a description of the violated rules (an empty list = the combination is allowed).
+     * A query operation, without modifying state.
      */
     public List<String> violations(Set<OptionCode> pickedOptions) {
         List<String> violations = new ArrayList<>();
@@ -43,10 +43,10 @@ public final class OptionCombinationSpecification implements Specification<Set<O
             boolean targetPicked = pickedOptions.contains(rule.targetCode());
 
             if (rule.type() == RuleType.EXCLUDES && targetPicked) {
-                violations.add("Opcja " + rule.sourceCode() + " wyklucza opcję " + rule.targetCode());
+                violations.add("Option " + rule.sourceCode() + " excludes option " + rule.targetCode());
             }
             if (rule.type() == RuleType.REQUIRES && !targetPicked) {
-                violations.add("Opcja " + rule.sourceCode() + " wymaga opcji " + rule.targetCode());
+                violations.add("Option " + rule.sourceCode() + " requires option " + rule.targetCode());
             }
         }
         return violations;

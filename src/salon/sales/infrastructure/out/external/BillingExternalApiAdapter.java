@@ -12,10 +12,10 @@ import salon.common.model.Money;
 import java.util.Map;
 
 /**
- * Adapter wyjściowy (ExternalApiAdapter) portu {@link BillingIntegration} —
- * klient HTTP do modułu Fakturowania i Rozliczeń (PDF rozdz. 3.1.1).
+ * Outbound adapter (ExternalApiAdapter) of the {@link BillingIntegration} port —
+ * an HTTP client to the Billing and Settlement module (PDF chapter 3.1.1).
  *
- * Krótki timeout (2 s) chroni proces sprzedaży przed zawieszonym systemem księgowym:
+ * A short timeout (2 s) protects the sales process from a hung accounting system:
  * po jego przekroczeniu adapter rzuca ExternalServiceUnavailableException.
  */
 @Component

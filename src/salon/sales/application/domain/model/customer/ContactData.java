@@ -1,6 +1,6 @@
 package salon.sales.application.domain.model.customer;
 
-/** Obiekt wartości: dane kontaktowe klienta (e-mail + telefon). Niemutowalny. */
+/** Value object: the customer's contact details (e-mail + phone). Immutable. */
 public record ContactData(String email, String phone) {
 
     public ContactData {

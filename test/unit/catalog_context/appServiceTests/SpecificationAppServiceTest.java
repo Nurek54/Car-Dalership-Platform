@@ -27,7 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-/** UC-KON-01: Budowa specyfikacji pojazdu w konfiguratorze */
+/** UC-KON-01: Building the vehicle specification in the configurator */
 @ExtendWith(MockitoExtension.class)
 class SpecificationAppServiceTest {
 
@@ -38,17 +38,17 @@ class SpecificationAppServiceTest {
 
     @Test
     void shouldStartNewSpecificationAndSaveIt() {
-        // Handlowiec otwiera nową konfigurację dla aktywnego cennika
+        // The Salesperson opens a new configuration for the active price list
         SpecificationId id = specificationAppService.startSpecification("CAT-1");
 
-        // Świeża specyfikacja (DRAFT) trafia do repozytorium, a wołający dostaje jej identyfikator
+        // A fresh specification (DRAFT) goes to the repository, and the caller gets its identifier
         assertThat(id).isNotNull();
         verify(specificationRepository).save(any(VehicleSpecification.class));
     }
 
     @Test
     void shouldDelegateOptionValidationToDomainServiceAndSave() {
-        // Istniejąca specyfikacja w repozytorium
+        // An existing specification in the repository
         VehicleSpecification specification =
                 new VehicleSpecification(new SpecificationId("SPEC-1"), new CatalogId("CAT-1"));
         when(specificationRepository.findById(new SpecificationId("SPEC-1")))
@@ -56,14 +56,14 @@ class SpecificationAppServiceTest {
 
         specificationAppService.addOption("SPEC-1", "CAT-1", "LED_LIGHTS");
 
-        // Aplikacja jest cienka: walidację reguł wykonuje serwis dziedzinowy (Fail-fast)
+        // The application is thin: rule validation is performed by the domain service (Fail-fast)
         verify(ruleValidation).validateAndAddOption(eq(specification), eq(new OptionCode("LED_LIGHTS")));
         verify(specificationRepository).save(specification);
     }
 
     @Test
     void shouldNotSaveWhenRuleValidationFails() {
-        // Specyfikacja istnieje, ale dobierana opcja łamie regułę wykluczenia
+        // The specification exists, but the option being added breaks an exclusion rule
         VehicleSpecification specification =
                 new VehicleSpecification(new SpecificationId("SPEC-2"), new CatalogId("CAT-1"));
         when(specificationRepository.findById(new SpecificationId("SPEC-2")))
@@ -71,17 +71,17 @@ class SpecificationAppServiceTest {
         doThrow(new RuleViolationException("Option A is mutually exclusive with B"))
                 .when(ruleValidation).validateAndAddOption(any(), any());
 
-        // Wyjątek dziedzinowy wypływa do wołającego
+        // The domain exception propagates to the caller
         assertThatThrownBy(() -> specificationAppService.addOption("SPEC-2", "CAT-1", "A"))
                 .isInstanceOf(RuleViolationException.class);
 
-        // Niespójna konfiguracja nie zostaje utrwalona
+        // The inconsistent configuration is not persisted
         verify(specificationRepository, never()).save(any());
     }
 
     @Test
     void shouldFailWhenSpecificationDoesNotExist() {
-        // Brak specyfikacji o podanym identyfikatorze
+        // No specification with the given identifier
         when(specificationRepository.findById(new SpecificationId("SPEC-404")))
                 .thenReturn(Optional.empty());
 
@@ -94,7 +94,7 @@ class SpecificationAppServiceTest {
 
     @Test
     void shouldFinalizeSpecificationAndPublishCompletedEvent() {
-        // Specyfikacja z jedną wybraną opcją (warunek finalizacji)
+        // A specification with one selected option (a finalization precondition)
         ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
         catalog.addOption(new CatalogOption(new OptionCode("LED_LIGHTS"), Money.of(4500, "PLN")));
         VehicleSpecification specification =
@@ -105,7 +105,7 @@ class SpecificationAppServiceTest {
 
         specificationAppService.finalizeSpecification("SPEC-3");
 
-        // Serwis dziedzinowy ocenia kompletność (REQUIRES), zapis i publikacja zdarzenia
+        // The domain service assesses completeness (REQUIRES), then saving and event publication
         verify(ruleValidation).assertComplete(specification);
         verify(specificationRepository).save(specification);
         verify(eventPublisher).publish(any(SpecificationCompletedEvent.class));
@@ -113,7 +113,7 @@ class SpecificationAppServiceTest {
 
     @Test
     void shouldBlockFinalizationWhenConfigurationIsIncomplete() {
-        // Kompletność konfiguracji nie jest spełniona (reguła REQUIRES)
+        // The configuration completeness is not satisfied (the REQUIRES rule)
         VehicleSpecification specification =
                 new VehicleSpecification(new SpecificationId("SPEC-4"), new CatalogId("CAT-1"));
         when(specificationRepository.findById(new SpecificationId("SPEC-4")))
@@ -124,7 +124,7 @@ class SpecificationAppServiceTest {
         assertThatThrownBy(() -> specificationAppService.finalizeSpecification("SPEC-4"))
                 .isInstanceOf(RuleViolationException.class);
 
-        // Finalizacja przerwana: brak zapisu i brak zdarzenia
+        // Finalization aborted: no save and no event
         verify(specificationRepository, never()).save(any());
         verifyNoInteractions(eventPublisher);
     }

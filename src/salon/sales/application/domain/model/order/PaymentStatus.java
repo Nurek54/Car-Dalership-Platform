@@ -1,8 +1,8 @@
 package salon.sales.application.domain.model.order;
 
-/** Status opłacenia zamówienia (synchronizowany ze zdarzeń Kontekstu Rozliczeń). */
+/** The order's payment status (synchronized from the Billing Context events). */
 public enum PaymentStatus {
-    UNPAID,   // brak zaksięgowanych wpłat
-    PARTIAL,  // wpłata częściowa (np. zadatek)
-    PAID      // saldo w pełni pokryte (SettlementCompleted)
+    UNPAID,   // no posted payments
+    PARTIAL,  // a partial payment (e.g. a deposit)
+    PAID      // the balance is fully covered (SettlementCompleted)
 }

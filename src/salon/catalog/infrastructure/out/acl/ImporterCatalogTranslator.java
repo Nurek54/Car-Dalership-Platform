@@ -14,12 +14,12 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Translator warstwy zapobiegającej uszkodzeniu (ACL).
+ * Anti-corruption layer (ACL) translator.
  *
- * Tłumaczy obcy model {@link ExternalCatalogPackage} na obiekty wartości modelu
- * lokalnego. Dane z kontekstu „na górze” modelujemy jako obiekty wartości (PDF, rozdz. 3).
- * Błąd niezgodności formatu zgłaszany jest jako {@link CatalogValidationException}
- * (UC-KON-02 / A1 – błąd translacji danych).
+ * Translates the foreign model {@link ExternalCatalogPackage} into value objects of the
+ * local model. Data from the "upstream" context is modeled as value objects (PDF, chapter 3).
+ * A format-mismatch error is reported as {@link CatalogValidationException}
+ * (UC-KON-02 / A1 – data translation error).
  */
 @Component
 public class ImporterCatalogTranslator {
@@ -41,12 +41,12 @@ public class ImporterCatalogTranslator {
             throw e;
         } catch (RuntimeException e) {
             throw new CatalogValidationException(
-                    "Niezgodny format pakietu katalogowego: " + e.getMessage(), e);
+                    "Incompatible catalog package format: " + e.getMessage(), e);
         }
     }
 
     private CatalogOption toOption(ExternalCatalogPackage.ExternalItem item) {
-        // Dostawca podaje cenę w jednostkach podrzędnych (grosze) – przeliczenie na kwotę główną.
+        // The vendor provides the price in minor units (cents) – conversion to the major amount.
         BigDecimal price = BigDecimal.valueOf(item.priceMinorUnits(), 2);
         return new CatalogOption(OptionCode.of(item.featureCode()), Money.of(price, item.currencyIso()));
     }

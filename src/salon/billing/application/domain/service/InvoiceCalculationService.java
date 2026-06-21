@@ -6,18 +6,18 @@ import salon.common.model.Money;
 import java.math.BigDecimal;
 
 /**
- * USLUGA DZIEDZINY (Rys. 48 — InvoiceCalculationService).
+ * DOMAIN SERVICE (Fig. 48 — InvoiceCalculationService).
  *
- * Bezstanowa, realizuje obliczenia biznesowe na podstawie agregatu Rozliczenia, ktorych nie wykonuje
- * sam agregat: kwote zadatku (UC-FIR-01) i kwote pozostala do zaplaty na fakturze koncowej
- * (UC-FIR-02). Zwraca obiekt wartosci Money, nie ujawniajac wnetrza agregatu klientom.
+ * Stateless, performs business calculations based on the Settlement aggregate that are not performed by
+ * the aggregate itself: the deposit amount (UC-FIR-01) and the amount remaining due on the final invoice
+ * (UC-FIR-02). Returns a Money value object without exposing the aggregate internals to clients.
  */
 public class InvoiceCalculationService {
 
-    /** Domyslna stawka zadatku = 10% wartosci kontraktu (UC-FIR-01). */
+    /** Default deposit rate = 10% of the contract value (UC-FIR-01). */
     private static final BigDecimal ADVANCE_RATE = new BigDecimal("0.10");
 
-    /** UC-FIR-01, krok 2: kwota zadatku = 10% wartosci zamowienia. */
+    /** UC-FIR-01, step 2: deposit amount = 10% of the order value. */
     public Money calculateAdvanceAmount(Settlement settlement) {
         if (settlement == null) {
             throw new IllegalArgumentException("settlement must not be null.");
@@ -26,7 +26,7 @@ public class InvoiceCalculationService {
         return Money.of(total.getAmount().multiply(ADVANCE_RATE), total.currency());
     }
 
-    /** UC-FIR-02, krok 2: kwota faktury koncowej = saldo pozostale (po uwzglednieniu zadatku). */
+    /** UC-FIR-02, step 2: final invoice amount = remaining balance (after accounting for the deposit). */
     public Money calculateFinalInvoiceAmount(Settlement settlement) {
         if (settlement == null) {
             throw new IllegalArgumentException("settlement must not be null.");

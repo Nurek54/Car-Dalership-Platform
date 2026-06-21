@@ -1,8 +1,8 @@
 package salon.financing.application.domain.model.financing;
 
 /**
- * Obiekt wartości (Rysunek 43) – dane nabywcy potrzebne do wniosku bankowego.
- * Wypełniane przez ACL na podstawie migawki z Kontekstu Sprzedaży (CustomerSnapshotDto).
+ * Value object (Figure 43) – buyer data needed for the bank application.
+ * Populated by the ACL based on a snapshot from the Sales Context (CustomerSnapshotDto).
  */
 public record BuyerDetails(String name, String nip) {
 

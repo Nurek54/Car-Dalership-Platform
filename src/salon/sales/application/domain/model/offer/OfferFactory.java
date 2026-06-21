@@ -5,12 +5,12 @@ import salon.common.model.Money;
 import salon.common.model.SpecificationId;
 
 /**
- * Fabryka agregatu Offer (węzeł "OfferFactory" w docs/Architecture/SalesArchitecture.md:
+ * Factory of the Offer aggregate (the "OfferFactory" node in docs/Architecture/SalesArchitecture.md:
  * AppSvc --> OfferFactory -. creates .-> Offer).
  *
- * Odpowiada za poprawne utworzenie nowej oferty: nadaje tożsamość {@link OfferId}
- * i weryfikuje dane wejściowe (cena bazowa z cennika musi być ściśle dodatnia),
- * zdejmując ten obowiązek z warstwy aplikacji.
+ * Responsible for the correct creation of a new offer: it assigns the identity {@link OfferId}
+ * and validates the input (the base price from the price list must be strictly positive),
+ * taking this duty off the application layer.
  */
 public class OfferFactory {
 

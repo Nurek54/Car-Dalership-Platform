@@ -1,5 +1,5 @@
 package salon.sales.infrastructure.in.web;
 
-/** DTO wejściowe anulowania zamówienia: powód rezygnacji klienta. */
+/** Input DTO for order cancellation: the customer's cancellation reason. */
 public record CancelOrderRequest(String reason) {
 }

@@ -3,13 +3,13 @@ package salon.billing.application.port.in;
 import salon.billing.application.command.GenerateInvoiceCommand;
 
 /**
- * PORT WEJSCIOWY (Rys. 48 — GenerateInvoice) — UC-FIR-02: Stworzenie faktury koncowej.
+ * INBOUND PORT (Fig. 48 — GenerateInvoice) — UC-FIR-02: Creating the final invoice.
  *
- * Wyzwalany zdarzeniem VehicleReservedFromStock. Wystawia fakture na kwote pozostala do zaplaty,
- * generuje PDF, powiadamia klienta i emituje InvoiceCreated.
+ * Triggered by the VehicleReservedFromStock event. Issues an invoice for the amount remaining due,
+ * generates the PDF, notifies the customer and emits InvoiceCreated.
  */
 public interface GenerateInvoice {
 
-    /** @return identyfikator wystawionej faktury. */
+    /** @return identifier of the issued invoice. */
     String generateInvoice(GenerateInvoiceCommand command);
 }

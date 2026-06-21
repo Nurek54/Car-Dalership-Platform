@@ -15,10 +15,10 @@ import salon.sales.application.domain.model.offer.OfferId;
 import java.util.Map;
 
 /**
- * Adapter sterujący (driving) — REST API ofert Sprzedaży i CRM.
+ * Driving adapter — REST API for Sales and CRM offers.
  *
- * UC-CRM-03: akceptacja oferty przez klienta i utworzenie zamówienia.
- * Wyjątki domenowe mapowane są na kody HTTP (404 — brak oferty, 409 — konflikt stanu).
+ * UC-CRM-03: the customer's acceptance of the offer and order creation.
+ * Domain exceptions are mapped to HTTP codes (404 — no offer, 409 — state conflict).
  */
 @RestController
 @RequestMapping("/api/sales/offers")
@@ -33,28 +33,28 @@ public class OfferRestApiAdapter {
         this.salesAppService = salesAppService;
     }
 
-    /** UC-CRM-03, krok 1-3: klient akceptuje ofertę — powstaje zamówienie. */
+    /** UC-CRM-03, steps 1-3: the customer accepts the offer — an order is created. */
     @PostMapping("/{offerId}/accept")
     public ResponseEntity<Map<String, String>> acceptOffer(@PathVariable String offerId) {
         String orderId = salesAppService.acceptOfferAndCreateOrder(new OfferId(offerId));
         return ResponseEntity.ok(Map.of("orderId", orderId == null ? "" : orderId));
     }
 
-    /** UC-CRM-03, A1: klient odrzuca ofertę. */
+    /** UC-CRM-03, A1: the customer rejects the offer. */
     @PostMapping("/{offerId}/reject")
     public ResponseEntity<Void> rejectOffer(@PathVariable String offerId) {
         salesAppService.rejectOffer(new OfferId(offerId));
         return ResponseEntity.ok().build();
     }
 
-    // Brak oferty -> 404 Not Found z czytelnym komunikatem dla front-endu.
+    // No offer -> 404 Not Found with a readable message for the front-end.
     @ExceptionHandler(OfferNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleNotFound(OfferNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("message", "Offer " + ex.offerId() + " not found in the system"));
     }
 
-    // Akceptacja wygasłej oferty -> 409 Conflict (konflikt ze stanem zasobu).
+    // Accepting an expired offer -> 409 Conflict (conflict with the resource state).
     @ExceptionHandler(OfferExpiredException.class)
     public ResponseEntity<Map<String, String>> handleExpired(OfferExpiredException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", ex.getMessage()));

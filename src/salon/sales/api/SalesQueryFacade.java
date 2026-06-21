@@ -3,30 +3,30 @@ package salon.sales.api;
 import salon.common.model.OrderId;
 
 /**
- * Publiczne API (fasada) Kontekstu Sprzedaży i CRM dla zapytań synchronicznych
- * z innych kontekstów. Jedyny — obok zdarzeń domenowych — legalny punkt wejścia
- * do kontekstu Sprzedaży; ukrywa repozytoria, agregaty i nawigację
- * zamówienie -> oferta -> klient.
+ * Public API (facade) of the Sales and CRM Context for synchronous queries
+ * from other contexts. The only — besides domain events — legal entry point
+ * into the Sales context; it hides the repositories, aggregates and navigation
+ * order -> offer -> customer.
  *
- * W środowisku rozproszonym kontrakt ten mapuje się 1:1 na endpoint REST
- * modułu CRM.
+ * In a distributed environment this contract maps 1:1 to the REST endpoint
+ * of the CRM module.
  */
 public interface SalesQueryFacade {
 
     /**
-     * Zwraca migawkę danych nabywcy dla wskazanego zamówienia.
+     * Returns a snapshot of the buyer data for the indicated order.
      *
-     * @throws IllegalArgumentException gdy orderId jest null
-     * @throws IllegalStateException    gdy zamówienie, oferta lub klient nie istnieją
+     * @throws IllegalArgumentException when orderId is null
+     * @throws IllegalStateException    when the order, offer or customer does not exist
      */
     CustomerSnapshotDto findBuyerForOrder(OrderId orderId);
 
     /**
-     * Zwraca migawkę oferty źródłowej (m.in. cenę końcową) dla wskazanego zamówienia.
+     * Returns a snapshot of the source offer (including the final price) for the indicated order.
      *
-     * @throws IllegalArgumentException gdy orderId jest null
-     * @throws IllegalStateException    gdy zamówienie lub oferta nie istnieją,
-     *                                  albo oferta nie ma jeszcze ceny końcowej
+     * @throws IllegalArgumentException when orderId is null
+     * @throws IllegalStateException    when the order or the offer does not exist,
+     *                                  or the offer does not yet have a final price
      */
     OfferSnapshotDto findOfferForOrder(OrderId orderId);
 }

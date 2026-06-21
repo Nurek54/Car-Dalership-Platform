@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "ZamowienieZrealizowane" (UC-CRM-05) — zamówienie osiągnęło końcowy,
- * niemutowalny stan COMPLETED (protokół wydania podpisany).
+ * "OrderCompleted" (UC-CRM-05) — the order reached its final,
+ * immutable COMPLETED state (the handover protocol was signed).
  */
 public record OrderCompletedEvent(UUID eventId,
                                   String orderId,

@@ -25,7 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
-/** UC-CRM-03: Zatwierdzenie oferty i utworzenie zamówienia */
+/** UC-CRM-03: Offer acceptance and order creation */
 @ExtendWith(MockitoExtension.class)
 class AcceptOfferAppServiceTest {
 
@@ -38,26 +38,26 @@ class AcceptOfferAppServiceTest {
 
     @Test
     void shouldAcceptOfferAndSaveOrder() {
-        // W bazie znajduje się opublikowana oferta
+        // A published offer is in the database
         OfferId offerId = new OfferId("O-100");
         Offer offer = new Offer(offerId, new CustomerId("C-1"), new SpecificationId("S-1"), Money.of(150000, "PLN"));
         offer.publishOffer();
         when(offerRepository.findById(offerId)).thenReturn(Optional.of(offer));
 
-        // Klika przycisk akceptacji i utworzenia zamówienia (wywołanie serwisu)
+        // They click the accept-and-create-order button (a service call)
         salesAppService.acceptOfferAndCreateOrder(offerId);
 
-        // Zapisujemy zmieniony stan oferty (jako ACCEPTED)
+        // We save the changed offer state (as ACCEPTED)
         verify(offerRepository).save(offer);
-        // Zapisujemy nowo powstałe zamówienie do bazy
+        // We save the newly created order to the database
         verify(orderRepository).save(any(Order.class));
-        // Publikujemy zdarzenia domenowe na zewnątrz
+        // We publish the domain events outward
         verify(eventPublisher).publishAll(anyList());
     }
 
     @Test
     void shouldRollbackAndNotPublishEventsWhenDatabaseFails() {
-        // Repozytorium zamówień ulega awarii podczas próby zapisu
+        // The order repository fails during the save attempt
         OfferId offerId = new OfferId("O-101");
         Offer offer = new Offer(offerId, new CustomerId("C-1"), new SpecificationId("S-1"));
         offer.publishOffer();
@@ -65,26 +65,26 @@ class AcceptOfferAppServiceTest {
 
         doThrow(new DatabaseException("Connection lost")).when(orderRepository).save(any(Order.class));
 
-        // Cały Use Case rzuca błąd, przerywając transakcję
+        // The whole Use Case throws an error, aborting the transaction
         assertThatThrownBy(() -> salesAppService.acceptOfferAndCreateOrder(offerId))
                 .isInstanceOf(DatabaseException.class);
 
-        // Nie wysyłamy zdarzeń domenowych
+        // We do not send domain events
         verify(eventPublisher, never()).publishAll(anyList());
     }
 
     @Test
     void shouldThrowExceptionWhenOfferNotFound() {
-        // Użytkownik przesyła złe ID oferty
+        // The user submits a wrong offer ID
         OfferId fakeId = new OfferId("O-999-UNKNOWN");
         when(offerRepository.findById(fakeId)).thenReturn(Optional.empty());
 
-        // Serwis zatrzymuje proces na samym początku
+        // The service stops the process at the very beginning
         assertThatThrownBy(() -> salesAppService.acceptOfferAndCreateOrder(fakeId))
                 .isInstanceOf(OfferNotFoundException.class)
                 .hasMessageContaining("Offer with ID O-999-UNKNOWN not found in the system");
 
-        // Sprawdzamy, czy nic nie zostało nadpisane w żadnej bazie ani wysłane
+        // We check that nothing was overwritten in any database or sent
         verify(offerRepository, never()).save(any());
         verify(orderRepository, never()).save(any());
         verify(eventPublisher, never()).publishAll(any());

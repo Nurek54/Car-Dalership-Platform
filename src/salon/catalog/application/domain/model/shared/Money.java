@@ -5,10 +5,10 @@ import java.util.Currency;
 import java.util.Objects;
 
 /**
- * Obiekt wartości – kwota pieniężna (cena katalogowa / cena całkowita specyfikacji).
+ * Value object – a monetary amount (catalog price / total specification price).
  *
- * Niezmienny, porównywalny przez wartość, operacje bez skutków ubocznych
- * (zwracają nowy egzemplarz zamiast modyfikować bieżący – „jest wymienny”).
+ * Immutable, compared by value, operations without side effects
+ * (they return a new instance instead of modifying the current one – "it is replaceable").
  */
 public final class Money {
 
@@ -17,13 +17,13 @@ public final class Money {
 
     private Money(BigDecimal amount, Currency currency) {
         if (amount == null) {
-            throw new IllegalArgumentException("Kwota nie może być null");
+            throw new IllegalArgumentException("Amount cannot be null");
         }
         if (currency == null) {
-            throw new IllegalArgumentException("Waluta nie może być null");
+            throw new IllegalArgumentException("Currency cannot be null");
         }
         if (amount.signum() < 0) {
-            throw new IllegalArgumentException("Kwota nie może być ujemna: " + amount);
+            throw new IllegalArgumentException("Amount cannot be negative: " + amount);
         }
         this.amount = amount.stripTrailingZeros();
         this.currency = currency;
@@ -37,7 +37,7 @@ public final class Money {
         return new Money(BigDecimal.ZERO, Currency.getInstance(currencyCode));
     }
 
-    /** Operacja-zapytanie bez skutków ubocznych – zwraca nowy obiekt wartości. */
+    /** Query operation without side effects – returns a new value object. */
     public Money add(Money other) {
         requireSameCurrency(other);
         return new Money(this.amount.add(other.amount), this.currency);

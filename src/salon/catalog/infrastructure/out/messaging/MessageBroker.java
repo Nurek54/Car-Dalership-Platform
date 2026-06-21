@@ -1,15 +1,15 @@
 package salon.catalog.infrastructure.out.messaging;
 
 /**
- * Techniczna granica brokera komunikatów („RabbitMq” z diagramu) – cienki kontrakt
- * do middleware przekazywania komunikatów (push). Konkretny klient (Spring AMQP /
- * RabbitMQ) leży poza kontekstem i jest dostarczany przez infrastrukturę wdrożeniową.
+ * Technical boundary of the message broker ("RabbitMq" from the diagram) – a thin contract
+ * to the message-passing middleware (push). The concrete client (Spring AMQP /
+ * RabbitMQ) lies outside the context and is provided by the deployment infrastructure.
  */
 public interface MessageBroker {
 
     /**
-     * @param routingKey klucz/temat docelowy (np. nazwa zdarzenia)
-     * @param payload    zserializowana treść komunikatu
+     * @param routingKey the destination key/topic (e.g. the event name)
+     * @param payload    the serialized message body
      */
     void send(String routingKey, String payload);
 }

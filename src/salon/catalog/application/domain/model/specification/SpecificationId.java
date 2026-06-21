@@ -4,14 +4,14 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Obiekt wartości – globalnie unikatowa tożsamość agregatu VehicleSpecification.
+ * Value object – globally unique identity of the VehicleSpecification aggregate.
  */
 public final class SpecificationId {
 
     private final UUID value;
 
     private SpecificationId(UUID value) {
-        this.value = Objects.requireNonNull(value, "SpecificationId nie może być null");
+        this.value = Objects.requireNonNull(value, "SpecificationId cannot be null");
     }
 
     public static SpecificationId generate() {

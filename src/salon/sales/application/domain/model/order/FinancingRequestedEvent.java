@@ -7,9 +7,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "ZawnioskowanoOFinansowanie" (UC-CRM-03, krok 5) — klient zadeklarował kredyt/leasing.
- * Zdarzenie rejestrowane przez agregat Order przy declarePaymentMethod(FINANCING);
- * jego odpowiednik integracyjny publikuje warstwa aplikacji (salon.sales.domain.event).
+ * "FinancingRequested" (UC-CRM-03, step 5) — the customer declared credit/leasing.
+ * The event is recorded by the Order aggregate on declarePaymentMethod(FINANCING);
+ * its integration counterpart is published by the application layer (salon.sales.domain.event).
  */
 public record FinancingRequestedEvent(UUID eventId,
                                       OrderId orderId,

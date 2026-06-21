@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.*;
 
 class VehicleSpecificationTest {
 
-    // Cennik testowy: dwie opcje płatne + reguła wzajemnego wykluczenia (UC-KON-01)
+    // Test price list: two paid options + a mutual-exclusion rule (UC-KON-01)
     private ProductCatalog createCatalogWithExclusion() {
         ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
         catalog.addOption(new CatalogOption(new OptionCode("PANORAMIC_ROOF"), Money.of(8000, "PLN")));
@@ -33,15 +33,15 @@ class VehicleSpecificationTest {
         ProductCatalog catalog = createCatalogWithExclusion();
         VehicleSpecification specification = createSpecification(catalog);
 
-        // Nowa konfiguracja startuje jako DRAFT bez wyceny
+        // A new configuration starts as DRAFT without pricing
         assertThat(specification.state()).isEqualTo(SpecificationState.DRAFT);
         assertThat(specification.getTotalPrice()).isNull();
 
-        // Klient dobiera dwie opcje z cennika
+        // The customer selects two options from the price list
         specification.addOption(new OptionCode("LED_LIGHTS"), catalog);
         specification.addOption(new OptionCode("PANORAMIC_ROOF"), catalog);
 
-        // Konfiguracja przechodzi w IN_PROGRESS, a cena sumuje się z cen bazowych
+        // The configuration transitions to IN_PROGRESS, and the price sums up from the base prices
         assertThat(specification.state()).isEqualTo(SpecificationState.IN_PROGRESS);
         assertThat(specification.getTotalPrice()).isEqualTo(Money.of(12500, "PLN"));
         assertThat(specification.getSelectedOptions())
@@ -53,7 +53,7 @@ class VehicleSpecificationTest {
         ProductCatalog catalog = createCatalogWithExclusion();
         VehicleSpecification specification = createSpecification(catalog);
 
-        // Opcja spoza cennika -> odmowa od ręki
+        // An option not in the price list -> immediate refusal
         assertThatThrownBy(() -> specification.addOption(new OptionCode("V12_ENGINE"), catalog))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not available in the catalog");
@@ -67,12 +67,12 @@ class VehicleSpecificationTest {
         // Najpierw wybrano relingi dachowe
         specification.addOption(new OptionCode("ROOF_RAILS"), catalog);
 
-        // Dach panoramiczny wyklucza się z relingami -> Walidacja Technologiczna (Fail-fast)
+        // A panoramic roof is mutually exclusive with the roof rails -> Technological Validation (Fail-fast)
         assertThatThrownBy(() -> specification.addOption(new OptionCode("PANORAMIC_ROOF"), catalog))
                 .isInstanceOf(RuleViolationException.class)
                 .hasMessageContaining("mutually exclusive");
 
-        // Konfiguracja pozostaje nienaruszona (wadliwa opcja nie weszła)
+        // The configuration stays intact (the faulty option did not enter)
         assertThat(specification.getSelectedOptions()).containsExactly(new OptionCode("ROOF_RAILS"));
     }
 
@@ -81,7 +81,7 @@ class VehicleSpecificationTest {
         ProductCatalog catalog = createCatalogWithExclusion();
         VehicleSpecification specification = createSpecification(catalog);
 
-        // Reguła działa też "od drugiej strony": najpierw źródło reguły, potem cel
+        // The rule works "from the other side" too: first the rule source, then the target
         specification.addOption(new OptionCode("PANORAMIC_ROOF"), catalog);
 
         assertThatThrownBy(() -> specification.addOption(new OptionCode("ROOF_RAILS"), catalog))
@@ -97,10 +97,10 @@ class VehicleSpecificationTest {
         specification.addOption(new OptionCode("LED_LIGHTS"), catalog);
         assertThat(specification.state()).isEqualTo(SpecificationState.IN_PROGRESS);
 
-        // Klient rezygnuje z jedynej wybranej opcji
+        // The customer removes the only selected option
         specification.removeOption(new OptionCode("LED_LIGHTS"));
 
-        // Pusta konfiguracja wraca do DRAFT
+        // An empty configuration returns to DRAFT
         assertThat(specification.state()).isEqualTo(SpecificationState.DRAFT);
         assertThat(specification.getSelectedOptions()).isEmpty();
     }
@@ -111,10 +111,10 @@ class VehicleSpecificationTest {
         VehicleSpecification specification = createSpecification(catalog);
         specification.addOption(new OptionCode("LED_LIGHTS"), catalog);
 
-        // Zamknięcie konfiguracji (UC-KON-01)
+        // Closing the configuration (UC-KON-01)
         specification.finalizeSpecification();
 
-        // Stan FINAL + zdarzenie SpecyfikacjaSkompletowana odłożone w agregacie
+        // The FINAL state + the SpecificationCompleted event recorded in the aggregate
         assertThat(specification.state()).isEqualTo(SpecificationState.FINAL);
         assertThat(specification.getDomainEvents())
                 .hasSize(1)
@@ -132,7 +132,7 @@ class VehicleSpecificationTest {
         ProductCatalog catalog = createCatalogWithExclusion();
         VehicleSpecification specification = createSpecification(catalog);
 
-        // Pustej konfiguracji nie wolno sfinalizować
+        // An empty configuration must not be finalized
         assertThatThrownBy(specification::finalizeSpecification)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("at least one option");
@@ -145,7 +145,7 @@ class VehicleSpecificationTest {
         specification.addOption(new OptionCode("LED_LIGHTS"), catalog);
         specification.finalizeSpecification();
 
-        // Sfinalizowana specyfikacja jest niemutowalna — ani dodanie, ani usunięcie opcji
+        // A finalized specification is immutable — neither adding nor removing an option
         assertThatThrownBy(() -> specification.addOption(new OptionCode("PANORAMIC_ROOF"), catalog))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("finalized");

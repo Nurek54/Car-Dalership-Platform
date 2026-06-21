@@ -5,13 +5,13 @@ import salon.catalog.application.dto.ImportedCatalogData;
 import org.springframework.stereotype.Component;
 
 /**
- * ADAPTER WYJŚCIOWY (ACL) – implementacja portu {@link CatalogImporterPort}
+ * OUTBOUND ADAPTER (ACL) – implementation of the {@link CatalogImporterPort} port
  * („ImporterACL” → ImporterService z diagramu).
  *
- * Łączy techniczny klient zewnętrzny ({@link ImporterServiceClient}) z translatorem
- * modeli ({@link ImporterCatalogTranslator}). Dzięki temu kontekst Katalogu otrzymuje
- * wyłącznie dane w modelu lokalnym i pozostaje odporny na zmiany formatu dostawcy
- * (warstwa zapobiegająca uszkodzeniu).
+ * Combines the technical external client ({@link ImporterServiceClient}) with the model
+ * translator ({@link ImporterCatalogTranslator}). Thanks to this the Catalog context receives
+ * only data in the local model and stays resilient to changes in the vendor format
+ * (anti-corruption layer).
  */
 @Component
 public class ImporterAclAdapter implements CatalogImporterPort {

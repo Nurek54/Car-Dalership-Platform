@@ -2,7 +2,7 @@ package salon.sales.application.domain.model.offer;
 
 import java.math.BigDecimal;
 
-// Value Object: żądany rabat wyrażony procentowo (np. 4.00 = 4%).
+// Value Object: the requested discount expressed as a percentage (e.g. 4.00 = 4%).
 public record Discount(BigDecimal percentage) {
 
     public Discount {

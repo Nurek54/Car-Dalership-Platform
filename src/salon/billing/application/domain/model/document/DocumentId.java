@@ -3,7 +3,7 @@ package salon.billing.application.domain.model.document;
 import java.util.UUID;
 
 /**
- * Obiekt wartości (Diagram klas — AccountingDocument): tożsamość agregatu Dokumentu Księgowego.
+ * Value object (Class diagram — AccountingDocument): identity of the Accounting Document aggregate.
  */
 public record DocumentId(String value) {
 

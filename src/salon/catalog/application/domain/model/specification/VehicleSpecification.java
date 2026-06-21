@@ -13,17 +13,17 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * KORZEŃ AGREGATU – koszyk konfiguracyjny użytkownika (specyfikacja pojazdu).
+ * AGGREGATE ROOT – the user's configuration basket (vehicle specification).
  *
- * Odwołuje się do agregatu ProductCatalog WYŁĄCZNIE przez {@link CatalogId}
- * (Reguła 3 – odwołania przez identyfikator, nie przez referencję). ProductCatalog
- * jest przekazywany jako argument poleceń tylko po to, by odczytać ceny i sprawdzić
- * niezmienniki w jednej transakcji – nie jest trzymany jako pole.
+ * References the ProductCatalog aggregate ONLY through {@link CatalogId}
+ * (Rule 3 – references by identifier, not by reference). ProductCatalog
+ * is passed as a command argument only to read prices and check
+ * the invariants in a single transaction – it is not held as a field.
  *
- * Niezmienniki:
- *  - można dobierać tylko opcje istniejące w katalogu,
- *  - cena całkowita = suma cen bazowych wybranych opcji,
- *  - po zatwierdzeniu (FINAL) specyfikacja jest niezmienna.
+ * Invariants:
+ *  - only options that exist in the catalog can be selected,
+ *  - the total price = the sum of the base prices of the selected options,
+ *  - after finalization (FINAL) the specification is immutable.
  */
 public class VehicleSpecification {
 
@@ -33,7 +33,7 @@ public class VehicleSpecification {
     private SpecificationState state;
     private final Set<OptionCode> optionsPicked;
 
-    /** Konstruktor pakietowy – wywoływany przez {@code VehicleSpecificationFactory}. */
+    /** Package-private constructor – invoked by {@code VehicleSpecificationFactory}. */
     VehicleSpecification(SpecificationId id,
                          CatalogId catalogId,
                          Money totalPrice,
@@ -47,24 +47,24 @@ public class VehicleSpecification {
     }
 
     /**
-     * Polecenie stanowe: dobiera opcję do specyfikacji (UC-KON-01, kroki 2–3).
-     * Sprawdza niezmiennik „opcja musi pochodzić z katalogu” i przelicza cenę całkowitą.
-     * Reguły wykluczające/wymagające (EXCLUDES/REQUIRES) waliduje RuleValidationService
-     * przed wywołaniem tego polecenia – walidacja całego stanu nie jest odpowiedzialnością encji.
+     * Stateful command: adds an option to the specification (UC-KON-01, steps 2–3).
+     * Checks the invariant "the option must come from the catalog" and recomputes the total price.
+     * Exclusion/requirement rules (EXCLUDES/REQUIRES) are validated by RuleValidationService
+     * before this command is invoked – validating the whole state is not the entity's responsibility.
      */
     public void addOption(OptionCode code, ProductCatalog catalog) {
         ensureNotFinal();
         requireSameCatalog(catalog);
         if (!catalog.containsOption(code)) {
             throw new IllegalArgumentException(
-                    "Opcja " + code + " nie należy do katalogu " + catalogId);
+                    "Option " + code + " does not belong to catalog " + catalogId);
         }
         optionsPicked.add(code);
         recalculateTotalPrice(catalog);
         markInProgress();
     }
 
-    /** Polecenie stanowe: usuwa wcześniej dobraną opcję i przelicza cenę. */
+    /** Stateful command: removes a previously added option and recomputes the price. */
     public void removeOption(OptionCode code, ProductCatalog catalog) {
         ensureNotFinal();
         requireSameCatalog(catalog);
@@ -74,14 +74,14 @@ public class VehicleSpecification {
     }
 
     /**
-     * Polecenie stanowe: zatwierdza specyfikację (UC-KON-01, krok 6–7).
-     * Weryfikuje ostateczną kompletność (co najmniej jedna opcja) i przełącza stan na FINAL.
-     * Spójność reguł powinna zostać potwierdzona przez RuleValidationService przed finalizacją.
+     * Stateful command: finalizes the specification (UC-KON-01, steps 6–7).
+     * Verifies final completeness (at least one option) and switches the state to FINAL.
+     * Rule consistency should be confirmed by RuleValidationService before finalization.
      */
     public void finalizeSpecification() {
         ensureNotFinal();
         if (optionsPicked.isEmpty()) {
-            throw new IllegalStateException("Nie można zatwierdzić pustej specyfikacji " + id);
+            throw new IllegalStateException("Cannot finalize an empty specification " + id);
         }
         this.state = SpecificationState.FINAL;
     }
@@ -96,7 +96,7 @@ public class VehicleSpecification {
 
     private void ensureNotFinal() {
         if (state == SpecificationState.FINAL) {
-            throw new IllegalStateException("Specyfikacja " + id + " jest już zatwierdzona (FINAL)");
+            throw new IllegalStateException("Specification " + id + " is already finalized (FINAL)");
         }
     }
 
@@ -109,7 +109,7 @@ public class VehicleSpecification {
     private void requireSameCatalog(ProductCatalog catalog) {
         if (!catalog.id().equals(catalogId)) {
             throw new IllegalArgumentException(
-                    "Katalog " + catalog.id() + " nie odpowiada specyfikacji opartej o " + catalogId);
+                    "Catalog " + catalog.id() + " does not match the specification based on " + catalogId);
         }
     }
 
@@ -133,7 +133,7 @@ public class VehicleSpecification {
         return Collections.unmodifiableList(new ArrayList<>(optionsPicked));
     }
 
-    /** Zwraca kopię zbioru wybranych opcji (dla RuleValidationService / specyfikacji). */
+    /** Returns a copy of the set of selected options (for RuleValidationService / specification). */
     public Set<OptionCode> pickedAsSet() {
         return new LinkedHashSet<>(optionsPicked);
     }

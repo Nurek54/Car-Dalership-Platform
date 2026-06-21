@@ -11,35 +11,35 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Aggregate Root: oferta handlowa / proforma (UC-CRM-02, UC-CRM-03).
+ * Aggregate Root: a commercial offer / proforma (UC-CRM-02, UC-CRM-03).
  *
- * Model zgodny z docs/Agregate/Sales/customer-offer-order.md oraz PDF (rozdz. 3.3.4):
+ * Model consistent with docs/Agregate/Sales/customer-offer-order.md and the PDF (chapter 3.3.4):
  *   pola:    id, customerId, specificationId, basePrice, finalPrice, validityDate, state
  *   metody:  applyDiscount(Discount), publishOffer(), accept(), reject()
- *   stany:   DRAFT -> PUBLISHED -> ACCEPTED | REJECTED (stany terminalne)
+ *   states:  DRAFT -> PUBLISHED -> ACCEPTED | REJECTED (terminal states)
  *
- * Hermetyzacja decyzji cenowych: applyDiscount zamyka politykę rabatową wewnątrz agregatu,
- * a konstruktor pilnuje, by cena bazowa była ściśle dodatnia (reguła danych oferty).
- * Reguły ważności i konwersji również należą do agregatu (NIE do warstwy aplikacji):
- *   - accept() odrzuca ofertę po terminie ważności (OfferExpiredException),
- *   - po REJECTED/ACCEPTED oferta jest niemutowalna (OfferImmutableException),
- *   - toSnapshot() można zbudować wyłącznie z oferty ACCEPTED.
+ * Encapsulation of pricing decisions: applyDiscount encloses the discount policy inside the aggregate,
+ * and the constructor ensures the base price is strictly positive (the offer data rule).
+ * The validity and conversion rules also belong to the aggregate (NOT to the application layer):
+ *   - accept() rejects an offer past its validity date (OfferExpiredException),
+ *   - after REJECTED/ACCEPTED the offer is immutable (OfferImmutableException),
+ *   - toSnapshot() can be built only from an ACCEPTED offer.
  */
 public class Offer {
 
-    /** Maksymalny rabat dopuszczalny polityką salonu (w %), pilnowany przez agregat. */
+    /** The maximum discount allowed by the dealership policy (in %), enforced by the aggregate. */
     private static final BigDecimal MAX_DISCOUNT_PERCENTAGE = new BigDecimal("20");
 
     private final OfferId id;
     private final CustomerId customerId;
     private final SpecificationId specificationId;
 
-    private Money basePrice;          // może być null na etapie roboczym
-    private Discount appliedDiscount; // null, dopóki nie przyznano rabatu
-    private Money finalPrice;         // liczona z basePrice i rabatu
+    private Money basePrice;          // may be null at the draft stage
+    private Discount appliedDiscount; // null until a discount is granted
+    private Money finalPrice;         // computed from basePrice and the discount
     private LocalDate validityDate;
     private OfferState state;
-    private Long version;             // znacznik wersji dla blokady optymistycznej (infrastruktura)
+    private Long version;             // version marker for optimistic locking (infrastructure)
 
     public Offer(OfferId id, CustomerId customerId, SpecificationId specificationId) {
         if (id == null) {
@@ -57,12 +57,12 @@ public class Offer {
         this.basePrice = null;
         this.appliedDiscount = null;
         this.finalPrice = null;
-        this.validityDate = LocalDate.now().plusDays(14); // oferta ważna 14 dni
+        this.validityDate = LocalDate.now().plusDays(14); // the offer is valid for 14 days
         this.state = OfferState.DRAFT;
         this.version = null;
     }
 
-    /** Wariant z ceną bazową (wycena specyfikacji z Katalogu) — cena musi być ściśle dodatnia. */
+    /** Variant with a base price (specification pricing from the Catalog) — the price must be strictly positive. */
     public Offer(OfferId id, CustomerId customerId, SpecificationId specificationId, Money basePrice) {
         this(id, customerId, specificationId);
         if (basePrice == null) {
@@ -75,12 +75,12 @@ public class Offer {
         recomputeFinalPrice();
     }
 
-    /** Wariant dla tożsamości klienta współdzielonej przez Shared Kernel. */
+    /** Variant for a customer identity shared through the Shared Kernel. */
     public Offer(OfferId id, salon.common.model.CustomerId customerId, SpecificationId specificationId, Money basePrice) {
         this(id, new CustomerId(customerId.value()), specificationId, basePrice);
     }
 
-    // Cenę bazową można ustawić na etapie roboczym (np. po wycenie ze specyfikacji).
+    // The base price can be set at the draft stage (e.g. after pricing from the specification).
     public void changeBasePrice(Money basePrice) {
         if (basePrice == null) {
             throw new IllegalArgumentException("basePrice must not be null.");
@@ -96,8 +96,8 @@ public class Offer {
     }
 
     /**
-     * Przyznanie rabatu (UC-CRM-02). Polityka rabatowa jest zamknięta w agregacie:
-     * rabat musi mieścić się w granicach dopuszczalnych przez salon.
+     * Granting a discount (UC-CRM-02). The discount policy is enclosed in the aggregate:
+     * the discount must stay within the limits allowed by the dealership.
      */
     public void applyDiscount(Discount discount) {
         if (discount == null) {
@@ -115,7 +115,7 @@ public class Offer {
         recomputeFinalPrice();
     }
 
-    // UC-CRM-02, krok 4: wygenerowanie dokumentu proforma i prezentacja klientowi.
+    // UC-CRM-02, step 4: generating the proforma document and presenting it to the customer.
     public void publishOffer() {
         if (this.state != OfferState.DRAFT) {
             throw new InvalidOfferStateException("Only a DRAFT offer can be published.");
@@ -124,13 +124,13 @@ public class Offer {
     }
 
     /**
-     * UC-CRM-03, krok 1-2: klient akceptuje warunki oferty.
-     * Reguły w agregacie: tylko PUBLISHED można zaakceptować, stany terminalne są
-     * niemutowalne, a oferta po terminie ważności jest odrzucana.
+     * UC-CRM-03, steps 1-2: the customer accepts the offer terms.
+     * Rules in the aggregate: only a PUBLISHED offer can be accepted, terminal states are
+     * immutable, and an offer past its validity date is rejected.
      */
     public void accept() {
         if (this.state == OfferState.REJECTED) {
-            // Odrzucona oferta to zamknięty rozdział — klient musi dostać nową.
+            // A rejected offer is a closed chapter — the customer must get a new one.
             throw new OfferImmutableException(
                     "Cannot change state of a REJECTED offer. "
                             + "Cannot accept an offer that is already REJECTED.");
@@ -144,8 +144,8 @@ public class Offer {
         this.state = OfferState.ACCEPTED;
     }
 
-    // UC-CRM-03, scenariusz A1: klient odrzuca ofertę — stan terminalny, nic nie jest emitowane.
-    // Odrzucić można zarówno zaprezentowaną (PUBLISHED), jak i roboczą (DRAFT) ofertę.
+    // UC-CRM-03, scenario A1: the customer rejects the offer — a terminal state, nothing is emitted.
+    // Both a presented (PUBLISHED) and a draft (DRAFT) offer can be rejected.
     public void reject() {
         if (this.state == OfferState.ACCEPTED || this.state == OfferState.REJECTED) {
             throw new OfferImmutableException(
@@ -162,7 +162,7 @@ public class Offer {
             this.finalPrice = this.basePrice;
             return;
         }
-        // finalPrice = basePrice * (1 - rabat/100)
+        // finalPrice = basePrice * (1 - discount/100)
         BigDecimal factor = BigDecimal.ONE.subtract(
                 this.appliedDiscount.percentage().movePointLeft(2));
         BigDecimal value = this.basePrice.amount().multiply(factor);
@@ -170,9 +170,9 @@ public class Offer {
     }
 
     /**
-     * Niemutowalna migawka oferty dla {@code OrderFactory} (UC-CRM-03).
-     * Reguła konwersji siedzi w agregacie: zamówienie może powstać WYŁĄCZNIE
-     * z oferty zaakceptowanej przez klienta.
+     * Immutable snapshot of the offer for {@code OrderFactory} (UC-CRM-03).
+     * The conversion rule sits in the aggregate: an order can be created ONLY
+     * from an offer accepted by the customer.
      */
     public OfferSnapshot toSnapshot() {
         if (this.state != OfferState.ACCEPTED) {

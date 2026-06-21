@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-INW-04: automatyczne zdjęcie blokady po przekroczeniu terminu płatności —
- * pojazd wraca na plac do ponownej sprzedaży.
+ * UC-INW-04: automatic removal of the lock after the payment deadline is exceeded —
+ * the vehicle returns to the yard for resale.
  */
 public record VehicleReservationCancelledEvent(String orderId, String vin,
                                                UUID eventId, Instant occurredOn) implements DomainEvent {

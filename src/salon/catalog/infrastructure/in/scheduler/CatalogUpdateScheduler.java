@@ -5,11 +5,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * ADAPTER WEJŚCIOWY (zadanie cykliczne) – „CronJob” z diagramu.
+ * INBOUND ADAPTER (periodic task) – "CronJob" from the diagram.
  *
- * Okresowo wyzwala automatyczną aktualizację cennika i katalogu (UC-KON-02) przez
- * port wejściowy {@link UpdateCatalog}. Adapter nie zawiera logiki biznesowej –
- * jedynie inicjuje przypadek użycia.
+ * Periodically triggers the automatic update of the price list and catalog (UC-KON-02) via
+ * the inbound port {@link UpdateCatalog}. The adapter contains no business logic –
+ * it only initiates the use case.
  */
 @Component
 public class CatalogUpdateScheduler {

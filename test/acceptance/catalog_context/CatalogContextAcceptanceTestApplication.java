@@ -10,8 +10,8 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 
 /**
- * Kotwica konfiguracji Springa dla testów akceptacyjnych Kontekstu Katalogu i Konfiguratora
- * (pełny kontekst @SpringBootTest).
+ * Spring configuration anchor for the acceptance tests of the Catalog and Configurator Context
+ * (full context @SpringBootTest).
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration

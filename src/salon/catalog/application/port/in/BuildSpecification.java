@@ -7,26 +7,26 @@ import salon.catalog.application.command.RemoveOptionCommand;
 import salon.catalog.application.dto.SpecificationView;
 
 /**
- * PORT WEJŚCIOWY (kontrakt) – „BuildSpecification” z diagramu portów i adapterów.
+ * INBOUND PORT (contract) – "BuildSpecification" from the ports-and-adapters diagram.
  *
- * Publikuje usługi świadczone przez kontekst dla aktorów inicjujących UC-KON-01
- * (zdarzenie InitiateConfiguratorSession z CRM oraz interfejs użytkownika).
- * Należy do warstwy aplikacji; implementowany przez usługę aplikacji.
+ * Exposes the services provided by the context for the actors initiating UC-KON-01
+ * (the InitiateConfiguratorSession event from CRM and the user interface).
+ * Belongs to the application layer; implemented by the application service.
  *
- * Zgodnie z zasadą segregacji interfejsów (I z SOLID) port ma jedno przeznaczenie:
- * opracowanie i zatwierdzenie specyfikacji pojazdu.
+ * In line with the Interface Segregation Principle (the I in SOLID) the port has one purpose:
+ * preparing and finalizing the vehicle specification.
  */
 public interface BuildSpecification {
 
-    /** Krok 1: otwarcie sesji konfiguratora dla aktywnego katalogu danego rocznika. */
+    /** Step 1: opening a configurator session for the active catalog of a given model year. */
     SpecificationView initiate(InitiateConfiguratorSessionCommand command);
 
-    /** Kroki 2–4: dobranie opcji z bieżącą weryfikacją reguł wykluczających. */
+    /** Steps 2–4: adding an option with on-the-fly verification of exclusion rules. */
     SpecificationView addOption(AddOptionCommand command);
 
-    /** Zmiana wyboru: usunięcie wcześniej dobranej opcji. */
+    /** Changing the selection: removing a previously added option. */
     SpecificationView removeOption(RemoveOptionCommand command);
 
-    /** Kroki 5–7: zatwierdzenie i emisja zdarzenia SpecificationCompleted. */
+    /** Steps 5–7: finalization and emission of the SpecificationCompleted event. */
     SpecificationView finalizeSpecification(FinalizeSpecificationCommand command);
 }

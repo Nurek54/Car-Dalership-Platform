@@ -12,45 +12,45 @@ import salon.catalog.application.domain.policy.OptionCombinationSpecification;
 import java.util.List;
 
 /**
- * USŁUGA DZIEDZINY (bezstanowa) – walidacja reguł wykluczających/wymagających.
+ * DOMAIN SERVICE (stateless) – validation of exclusion/requirement rules.
  *
- * Walidacja nie jest odpowiedzialnością encji (PDF, rozdz. 3) – wymaga dostępu do
- * całego stanu (wybrane opcje + reguły katalogu), więc realizuje ją osobna usługa
- * dziedziny w oparciu o wzorzec Specyfikacja. Zgłasza wyjątek dopiero po sprawdzeniu
+ * Validation is not the entity's responsibility (PDF, chapter 3) – it requires access to
+ * the whole state (selected options + catalog rules), so it is performed by a separate domain
+ * service based on the Specification pattern. It throws an exception only after checking
  * wszystkiego.
  *
- * Klasa nie ma stanu, jedyna odpowiedzialność, nie używa repozytoriów.
+ * The class has no state, a single responsibility, and uses no repositories.
  */
 public class RuleValidationService {
 
     /**
-     * Weryfikacja prostych reguł wykluczających „na bieżąco” (UC-KON-01, krok 4).
-     * Rzuca {@link CombinationNotAllowedException}, gdy kombinacja jest zablokowana (A1).
+     * Verification of simple exclusion rules "on the fly" (UC-KON-01, step 4).
+     * Throws {@link CombinationNotAllowedException} when the combination is blocked (A1).
      */
     public void validateSelection(VehicleSpecification specification, ProductCatalog catalog) {
         OptionCombinationSpecification spec = new OptionCombinationSpecification(catalog.rules());
         List<String> violations = spec.violations(specification.pickedAsSet());
         if (!violations.isEmpty()) {
             throw new CombinationNotAllowedException(
-                    "Niedozwolona kombinacja opcji: " + String.join("; ", violations));
+                    "Disallowed option combination: " + String.join("; ", violations));
         }
     }
 
     /**
-     * Weryfikacja ostatecznej kompletności i spójności przed zatwierdzeniem
-     * (UC-KON-01, krok 6). Sprawdza wszystkie reguły REQUIRES/EXCLUDES.
+     * Verification of final completeness and consistency before finalization
+     * (UC-KON-01, step 6). Checks all REQUIRES/EXCLUDES rules.
      */
     public void validateComplete(VehicleSpecification specification, ProductCatalog catalog) {
         if (specification.optionsPicked().isEmpty()) {
-            throw new CombinationNotAllowedException("Specyfikacja nie zawiera żadnej opcji");
+            throw new CombinationNotAllowedException("The specification does not contain any option");
         }
         validateSelection(specification, catalog);
     }
 
     /**
-     * Walidacja logiczna katalogu (UC-KON-02, krok 3): brak reguł sprzecznych –
-     * ta sama para opcji nie może być jednocześnie REQUIRES i EXCLUDES.
-     * Walidację strukturalną (unikalność kodów, istnienie opcji) wykonuje fabryka.
+     * Logical validation of the catalog (UC-KON-02, step 3): no conflicting rules –
+     * the same pair of options cannot be both REQUIRES and EXCLUDES.
+     * Structural validation (uniqueness of codes, existence of options) is performed by the factory.
      */
     public void validateCatalogConsistency(ProductCatalog catalog) {
         List<CatalogRule> rules = catalog.rules();
@@ -62,8 +62,8 @@ public class RuleValidationService {
                 boolean samePair = pairMatches(rule, other);
                 if (samePair && rule.type() != other.type()) {
                     throw new CatalogValidationException(
-                            "Sprzeczne reguły dla pary " + rule.sourceCode() + "/" + rule.targetCode()
-                                    + ": " + RuleType.REQUIRES + " oraz " + RuleType.EXCLUDES);
+                            "Conflicting rules for the pair " + rule.sourceCode() + "/" + rule.targetCode()
+                                    + ": " + RuleType.REQUIRES + " and " + RuleType.EXCLUDES);
                 }
             }
         }

@@ -20,11 +20,11 @@ import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 /**
- * Adapter sterujący (driving) — REST API zamówień Sprzedaży i CRM.
+ * Driving adapter — REST API for Sales and CRM orders.
  *
- * UC-CRM-04: umówienie odbioru pojazdu (schedule-handover).
- * UC-CRM-05: rejestracja fizycznego wydania pojazdu ("przycisk potwierdzenia wydania").
- * Anulowanie: rezygnacja klienta z zamówienia (z powodem).
+ * UC-CRM-04: scheduling the vehicle handover (schedule-handover).
+ * UC-CRM-05: registering the physical vehicle handover ("the handover confirmation button").
+ * Cancellation: the customer's withdrawal from the order (with a reason).
  */
 @RestController
 @RequestMapping("/api/sales/orders")
@@ -39,7 +39,7 @@ public class OrderRestApiAdapter {
         this.salesAppService = salesAppService;
     }
 
-    /** UC-CRM-04, krok 4-5: Handlowiec wprowadza uzgodniony termin odbioru. */
+    /** UC-CRM-04, steps 4-5: the Salesperson enters the agreed pickup date. */
     @PostMapping("/{orderId}/schedule-handover")
     public ResponseEntity<Void> scheduleHandover(@PathVariable String orderId,
                                                  @Valid @RequestBody ScheduleHandoverRequest request) {
@@ -48,14 +48,14 @@ public class OrderRestApiAdapter {
         return ResponseEntity.ok().build();
     }
 
-    /** UC-CRM-05, krok 2-4: Handlowiec potwierdza fizyczne wydanie pojazdu. */
+    /** UC-CRM-05, steps 2-4: the Salesperson confirms the physical vehicle handover. */
     @PostMapping("/{orderId}/handover")
     public ResponseEntity<Void> confirmHandover(@PathVariable String orderId) {
         salesAppService.confirmHandover(new OrderId(orderId));
         return ResponseEntity.ok().build();
     }
 
-    /** Anulowanie zamówienia (rezygnacja klienta) — z powodem dla Rozliczeń. */
+    /** Cancelling the order (customer cancellation) — with a reason for Billing. */
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<Void> cancelOrder(@PathVariable String orderId,
                                             @RequestBody CancelOrderRequest request) {
@@ -63,26 +63,26 @@ public class OrderRestApiAdapter {
         return ResponseEntity.ok().build();
     }
 
-    // Brak zamówienia -> 404 Not Found.
+    // No order -> 404 Not Found.
     @ExceptionHandler(OrderNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleNotFound(OrderNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", ex.getMessage()));
     }
 
-    // Walidacja wejścia (puste/błędne pola) -> 400 Bad Request, zanim żądanie trafi do domeny.
+    // Input validation (empty/invalid fields) -> 400 Bad Request, before the request reaches the domain.
     @ExceptionHandler({MethodArgumentNotValidException.class, DateTimeParseException.class})
     public ResponseEntity<Map<String, String>> handleInvalidInput(Exception ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", "Invalid input parameters"));
     }
 
-    // Błędne parametry biznesowe (np. data z przeszłości) -> 400 Bad Request.
+    // Invalid business parameters (e.g. a date in the past) -> 400 Bad Request.
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
 
-    // Nieprawidłowy stan zamówienia -> 409 Conflict.
+    // Incorrect order state -> 409 Conflict.
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));

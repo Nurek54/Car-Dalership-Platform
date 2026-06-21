@@ -4,18 +4,18 @@ import salon.common.model.Money;
 import salon.financing.application.domain.model.financing.BuyerDetails;
 
 /**
- * PORT WYJSCIOWY (Rysunek 42 — SalesIntegration, ACL) — synchroniczne zapytania (Query)
- * do Kontekstu Sprzedazy i CRM o dane potrzebne do wniosku finansowego (UC-FIN-01):
- * dane nabywcy oraz cene koncowa oferty zrodlowej zamowienia.
+ * OUTBOUND PORT (Figure 42 — SalesIntegration, ACL) — synchronous queries (Query)
+ * the Sales and CRM Context for the data needed for the financing application (UC-FIN-01):
+ * the buyer data and the final price of the order's source offer.
  *
- * Kontrakt wyrazony w typie lokalnym Finansowania (BuyerDetails) i Wspolnym Jadrze (Money);
- * zamowienie identyfikowane lancuchem (rozlaczny model), tlumaczonym w adapterze (ACL).
+ * The contract is expressed in the Financing-local type (BuyerDetails) and the Shared Kernel (Money);
+ * the order identified by a string (a disjoint model), translated in the adapter (ACL).
  */
 public interface SalesIntegration {
 
-    /** Dane nabywcy dla zamowienia (do oceny zdolnosci po stronie banku). */
+    /** Buyer data for the order (for the bank's creditworthiness assessment). */
     BuyerDetails buyerDetails(String orderId);
 
-    /** Cena koncowa oferty zrodlowej zamowienia — kwota wnioskowanego finansowania. */
+    /** Final price of the order's source offer — the amount of financing requested. */
     Money offerFinalPrice(String orderId);
 }

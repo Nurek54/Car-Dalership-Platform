@@ -4,12 +4,12 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * PORT WYJŚCIOWY (Rysunek 37) – „CatalogIntegration”.
+ * OUTBOUND PORT (Figure 37) – "CatalogIntegration".
  *
- * Dostęp do danych specyfikacji z Kontekstu Katalogu. W wariancie zdarzeniowym (zgodnie
- * z założeniami kanwy: event-carried state transfer) adapter utrzymuje lokalną kopię:
- * specyfikacja -> kody wyposażenia oraz zamówienie -> specyfikacja, zasilaną zdarzeniami,
- * dzięki czemu UC-INW-01/02 nie wymagają synchronicznego odpytywania Katalogu.
+ * Access to specification data from the Catalog Context. In the event-driven variant (in line
+ * with the canvas assumptions: event-carried state transfer) the adapter keeps a local copy:
+ * specification -> equipment codes and order -> specification, fed by events,
+ * so that UC-INW-01/02 do not require synchronous querying of the Catalog.
  */
 public interface CatalogIntegration {
 

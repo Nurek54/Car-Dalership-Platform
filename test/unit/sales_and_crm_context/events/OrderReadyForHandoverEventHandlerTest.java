@@ -22,7 +22,7 @@ class OrderReadyForHandoverEventHandlerTest {
 
     @Test
     void shouldNotifySalespersonToScheduleHandover() {
-        // Zamówienie spełniło wszystkie wymogi i jest gotowe do odbioru
+        // The order met all requirements and is ready for handover
         OrderReadyForHandoverEvent event = new OrderReadyForHandoverEvent(
                 UUID.randomUUID(),
                 "ORD-800",
@@ -31,10 +31,10 @@ class OrderReadyForHandoverEventHandlerTest {
 
         eventHandler.handle(event);
 
-        // System wysyła ppowiadomienie do handlowca, aby zadzwonił do klienta
+        // The system sends a notification to the salesperson to call the customer
         verify(notificationPort).sendAlertToSalesperson(
                 "ORD-800",
-                "Zamówienie jest gotowe do wydania. Skontaktuj się z klientem, aby umówić termin."
+                "The order is ready for handover. Contact the customer to schedule a date."
         );
     }
 }

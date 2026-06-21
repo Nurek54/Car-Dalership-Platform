@@ -3,13 +3,13 @@ package salon.billing.application.port.in;
 import salon.billing.application.command.GenerateAdvanceCommand;
 
 /**
- * PORT WEJSCIOWY (Rys. 48 — GenerateAdvance) — UC-FIR-01: Wyslanie prosby o zadatek.
+ * INBOUND PORT (Fig. 48 — GenerateAdvance) — UC-FIR-01: Sending the deposit request.
  *
- * Wyzwalany zdarzeniem VehicleIsNotOnStock (brak pojazdu na placu). Przygotowuje dane do przelewu,
- * powiadamia klienta i emituje AdvancePaymentRequested.
+ * Triggered by the VehicleIsNotOnStock event (no vehicle in the yard). Prepares the transfer data,
+ * notifies the customer and emits AdvancePaymentRequested.
  */
 public interface GenerateAdvance {
 
-    /** @return identyfikator wygenerowanego dokumentu (prosby o zadatek). */
+    /** @return identifier of the generated document (the deposit request). */
     String generateAdvance(GenerateAdvanceCommand command);
 }

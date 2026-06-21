@@ -5,9 +5,9 @@ import salon.common.model.Money;
 import salon.common.model.OrderId;
 
 /**
- * Port wyjściowy (driven) do Kontekstu Finansowania —
- * węzeł "FinancingIntegrationPort" w docs/Architecture/SalesArchitecture.md
- * (PDF rozdz. 3.3.3: zapytania o zdolność kredytową/leasingową).
+ * Outbound port (driven) to the Financing Context —
+ * the "FinancingIntegrationPort" node in docs/Architecture/SalesArchitecture.md
+ * (PDF chapter 3.3.3: queries about credit/leasing capacity).
  */
 public interface FinancingIntegrationPort {
 

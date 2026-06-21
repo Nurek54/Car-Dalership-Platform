@@ -4,8 +4,8 @@ import salon.sales.application.port.out.CatalogIntegration;
 import salon.sales.application.domain.event.ConfiguratorSessionInitiatedEvent;
 
 /**
- * Handler zdarzenia ConfiguratorSessionInitiated (UC-CRM-01):
- * zleca Kontekstowi Katalogu otwarcie interfejsu konfiguratora dla sesji klienta.
+ * Handler of the ConfiguratorSessionInitiated event (UC-CRM-01):
+ * it instructs the Catalog Context to open the configurator interface for the customer's session.
  */
 public class ConfiguratorSessionInitiatedEventHandler {
 

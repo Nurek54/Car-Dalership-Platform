@@ -3,9 +3,9 @@ package salon.catalog.application.port.out;
 import salon.catalog.application.domain.model.event.DomainEvent;
 
 /**
- * PORT WYJŚCIOWY – publikacja zdarzeń dziedziny na zewnątrz kontekstu
- * („EventPublisher” → RabbitMQ). Realizuje komunikację między odległymi kontekstami
- * (metoda push przez middleware) oraz spójność ostateczną (Reguła 4 agregatów).
+ * OUTBOUND PORT – publishing domain events outside the context
+ * ("EventPublisher" → RabbitMQ). Implements communication between remote contexts
+ * (push method via middleware) and eventual consistency (Aggregate Rule 4).
  */
 public interface EventPublisher {
 

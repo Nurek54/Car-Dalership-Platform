@@ -10,8 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Adapter wyjściowy (in-memory) portu CustomerDatabaseRepository — do dem i uruchomień bez bazy.
- * Klient nie ma jeszcze adaptera JPA, więc rejestr działa w pamięci procesu.
+ * Outbound adapter (in-memory) of the CustomerDatabaseRepository port — for demos and runs without a database.
+ * The Customer does not yet have a JPA adapter, so the registry runs in the process memory.
  */
 @Component
 public class InMemoryCustomerRepository implements CustomerDatabaseRepository {

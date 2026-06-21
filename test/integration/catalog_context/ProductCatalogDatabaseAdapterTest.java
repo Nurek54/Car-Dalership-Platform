@@ -21,7 +21,7 @@ class ProductCatalogDatabaseAdapterTest {
 
     @Test
     void shouldSaveAndLoadCatalogWithOptionsAndRulesFromSqlDatabase() {
-        // Aktywny cennik z opcjami i regułą wykluczenia
+        // An active price list with options and an exclusion rule
         ProductCatalog catalog = ProductCatalog.createActive("MY_2026");
         catalog.addOption(new CatalogOption(new OptionCode("LED_LIGHTS"), Money.of(4500, "PLN")));
         catalog.addOption(new CatalogOption(new OptionCode("PANORAMIC_ROOF"), Money.of(8000, "PLN")));
@@ -32,7 +32,7 @@ class ProductCatalogDatabaseAdapterTest {
         databaseAdapter.save(catalog);
         Optional<ProductCatalog> loaded = databaseAdapter.findById(catalog.getCatalogId());
 
-        // Agregat zostaje odtworzony z bazy w komplecie: nagłówek + opcje + reguły
+        // The aggregate is reconstituted from the database in full: header + options + rules
         assertThat(loaded).isPresent();
         ProductCatalog reloaded = loaded.get();
         assertThat(reloaded.getModelYear()).isEqualTo(new ModelYear("MY_2026"));
@@ -47,7 +47,7 @@ class ProductCatalogDatabaseAdapterTest {
                     assertThat(rule.type()).isEqualTo(RuleType.EXCLUDES);
                 });
 
-        // Cena bazowa opcji wraca z bazy bez utraty wartości
+        // The option's base price comes back from the database without loss of value
         assertThat(reloaded.findOption(new OptionCode("LED_LIGHTS")))
                 .isPresent()
                 .hasValueSatisfying(option -> {
@@ -58,17 +58,17 @@ class ProductCatalogDatabaseAdapterTest {
 
     @Test
     void shouldPreserveArchivedStateAcrossReload() {
-        // Cennik zostaje zarchiwizowany (wydanie nowej wersji, UC-KON-02) i zapisany
+        // The price list is archived (release of a new version, UC-KON-02) and saved
         ProductCatalog catalog = ProductCatalog.createActive("MY_2025");
         catalog.addOption(new CatalogOption(new OptionCode("TOW_HOOK"), Money.of(2000, "PLN")));
         catalog.archive();
         databaseAdapter.save(catalog);
 
-        // Po odczycie z bazy stan ARCHIVED jest zachowany...
+        // After reading from the database the ARCHIVED state is preserved...
         ProductCatalog reloaded = databaseAdapter.findById(catalog.getCatalogId()).orElseThrow();
         assertThat(reloaded.state()).isEqualTo(CatalogState.ARCHIVED);
 
-        // ...a odtworzony agregat nadal egzekwuje "zamrożenie" starej wersji
+        // ...and the reconstituted aggregate still enforces the "freezing" of the old version
         assertThatThrownBy(() -> reloaded.addOption(
                 new CatalogOption(new OptionCode("LED_LIGHTS"), Money.of(4500, "PLN"))))
                 .isInstanceOf(IllegalStateException.class);
@@ -76,14 +76,14 @@ class ProductCatalogDatabaseAdapterTest {
 
     @Test
     void shouldReturnAllPersistedCatalogVersions() {
-        // Dwie wersje cennika: stara zarchiwizowana i nowa aktywna
+        // Two price list versions: the old archived one and the new active one
         ProductCatalog oldVersion = ProductCatalog.createActive("MY_2025");
         oldVersion.archive();
         ProductCatalog newVersion = ProductCatalog.createActive("MY_2026");
         databaseAdapter.save(oldVersion);
         databaseAdapter.save(newVersion);
 
-        // findAll zwraca komplet wersji z bazy
+        // findAll returns the full set of versions from the database
         assertThat(databaseAdapter.findAll())
                 .extracting(ProductCatalog::getCatalogId)
                 .contains(oldVersion.getCatalogId(), newVersion.getCatalogId());

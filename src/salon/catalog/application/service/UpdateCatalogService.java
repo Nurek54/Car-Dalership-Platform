@@ -21,12 +21,12 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * USŁUGA APLIKACJI (fasada przypadku użycia UC-KON-02) – realizacja portu
- * wejściowego {@link UpdateCatalog}.
+ * APPLICATION SERVICE (use-case facade for UC-KON-02) – implementation of the inbound
+ * port {@link UpdateCatalog}.
  *
- * Orkiestracja: pobranie pakietu przez ACL → zbudowanie agregatu fabryką → walidacja
- * logiczna (usługa dziedziny) → archiwizacja bieżącego i zapis nowego katalogu w
- * jednej transakcji → emisja CatalogUpdated. W razie błędu walidacji/translacji
+ * Orchestration: fetch the package via the ACL → build the aggregate with the factory → logical
+ * validation (domain service) → archive the current and save the new catalog in
+ * a single transaction → emit CatalogUpdated. On a validation/translation error
  * (scenariusz A1) odrzucenie pakietu i emisja CatalogUpdateFailed.
  */
 @Service
@@ -59,37 +59,37 @@ public class UpdateCatalogService implements UpdateCatalog {
     @Transactional
     public void update() {
         try {
-            // Krok 1–2: pobranie i translacja pakietu (ACL realizuje tłumaczenie formatu).
+            // Steps 1–2: fetching and translating the package (the ACL performs the format translation).
             ImportedCatalogData data = catalogImporter.fetchLatestCatalog();
 
-            // Krok 4 (przygotowanie): ustalenie kolejnej wersji względem bieżącego aktywnego katalogu.
+            // Step 4 (preparation): determining the next version relative to the current active catalog.
             Optional<ProductCatalog> current = catalogRepository.findActiveByModelYear(data.modelYear());
             int nextVersion = current.map(c -> c.version() + 1).orElse(1);
 
-            // Budowa agregatu fabryką – walidacja strukturalna (ceny, unikalność, istnienie opcji).
+            // Building the aggregate with the factory – structural validation (prices, uniqueness, existence of options).
             ProductCatalog newCatalog = catalogFactory.createNextVersion(
                     data.modelYear(), nextVersion, data.options(), data.rules());
 
-            // Krok 3: walidacja logiczna spójności reguł (usługa dziedziny).
+            // Step 3: logical validation of rule consistency (domain service).
             ruleValidationService.validateCatalogConsistency(newCatalog);
 
-            // Krok 4: zapis nowego katalogu; poprzedni oznaczany jako archiwalny.
+            // Step 4: saving the new catalog; the previous one is marked as archived.
             current.ifPresent(c -> {
                 c.archive();
                 catalogRepository.save(c);
             });
             catalogRepository.save(newCatalog);
 
-            // Krok 5: emisja zdarzenia na szynę danych.
+            // Step 5: emitting the event on the data bus.
             eventPublisher.publish(new CatalogUpdated(
                     newCatalog.id(), newCatalog.modelYear(), newCatalog.version(), Instant.now(clock)));
 
-            log.info("Katalog zaktualizowany: {} (rocznik {}, wersja {})",
+            log.info("Catalog updated: {} (model year {}, version {})",
                     newCatalog.id(), newCatalog.modelYear(), newCatalog.version());
 
         } catch (CatalogValidationException | IllegalArgumentException e) {
-            // Scenariusz A1: błąd krytyczny – odrzucenie pakietu, log dla wsparcia IT.
-            log.error("Aktualizacja katalogu przerwana: {}", e.getMessage(), e);
+            // Scenario A1: critical error – the package is rejected, logged for IT support.
+            log.error("Catalog update aborted: {}", e.getMessage(), e);
             eventPublisher.publish(new CatalogUpdateFailed(e.getMessage(), Instant.now(clock)));
         }
     }

@@ -8,10 +8,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * ADAPTER WYJSCIOWY (Rys. 48 — RabbitMq) — atrapa portu {@link EventPublisher} dzialajaca w procesie.
+ * OUTBOUND ADAPTER (Fig. 48 — RabbitMq) — a mock of the {@link EventPublisher} port running in-process.
  *
- * Zamiast publikowac na broker, zbiera zdarzenia w pamieci (i wypisuje na konsole). Uzywana w demach
- * i testach jednostkowych do weryfikacji, jakie zdarzenia wyemitowal kontekst.
+ * Instead of publishing to a broker, it collects events in memory (and prints to the console). Used in demos
+ * and unit tests to verify which events the context emitted.
  */
 public class InProcessEventPublisherAdapter implements EventPublisher {
 

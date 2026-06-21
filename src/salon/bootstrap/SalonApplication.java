@@ -6,20 +6,20 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
- * Korzeń kompozycji / punkt startowy Springa.
+ * Composition root / Spring entry point.
  *
- * Po przeniesieniu adapterów do warstw infrastruktury poszczególnych kontekstów
- * (salon.{kontekst}.infrastructure.*) cała aplikacja żyje już w pakiecie "salon".
- * Ten składnik leży w salon.bootstrap (Composition Root), który jest celowo wyłączony
- * z reguł ArchUnit (patrz HexagonalArchitectureTest.DoNotIncludeBootstrap).
+ * After moving the adapters into the infrastructure layers of the individual contexts
+ * (salon.{context}.infrastructure.*) the whole application now lives in the "salon" package.
+ * This component resides in salon.bootstrap (Composition Root), which is intentionally excluded
+ * from the ArchUnit rules (see HexagonalArchitectureTest.DoNotIncludeBootstrap).
  *
- * Ponieważ "salon.bootstrap" NIE jest pakietem nadrzędnym dla encji/repozytoriów
- * (leżą w salon.*.infrastructure.persistence), skanowanie JPA wskazujemy jawnie:
- *  - @EntityScan("salon")          — wykrywa @Entity w całym drzewie salon.*,
- *  - @EnableJpaRepositories("salon") — wykrywa repozytoria Spring Data,
- *  - scanBasePackages = "salon"    — component-scan adapterów (@Component/@RestController itd.).
+ * Because "salon.bootstrap" is NOT a parent package for entities/repositories
+ * (they reside in salon.*.infrastructure.persistence), we specify the JPA scan explicitly:
+ *  - @EntityScan("salon")          — detects @Entity across the whole salon.* tree,
+ *  - @EnableJpaRepositories("salon") — detects Spring Data repositories,
+ *  - scanBasePackages = "salon"    — component-scan of adapters (@Component/@RestController etc.).
  *
- * Kod kontekstów (domena/aplikacja) pozostaje nietknięty — to wyłącznie spinacz infrastruktury.
+ * The context code (domain/application) stays untouched — this is purely an infrastructure connector.
  */
 @SpringBootApplication(scanBasePackages = "salon")
 @EntityScan("salon")

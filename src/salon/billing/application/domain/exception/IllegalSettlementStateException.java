@@ -1,8 +1,8 @@
 package salon.billing.application.domain.exception;
 
 /**
- * Proba operacji niedozwolonej w biezacym stanie agregatu (np. wplata na saldo SETTLED,
- * wystawienie dokumentu spoza stanu DRAFT) — naruszenie niezmiennika maszyny stanow.
+ * Attempt at an operation not allowed in the current aggregate state (e.g. a payment on a SETTLED balance,
+ * issuing a document from outside the DRAFT state) — violation of the state-machine invariant.
  */
 public class IllegalSettlementStateException extends RuntimeException {
 

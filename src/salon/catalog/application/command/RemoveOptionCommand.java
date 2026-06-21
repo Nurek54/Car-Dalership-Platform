@@ -1,18 +1,18 @@
 package salon.catalog.application.command;
 
 /**
- * Polecenie usunięcia wcześniej dobranej opcji ze specyfikacji.
+ * Command to remove a previously added option from the specification.
  *
- * Należy do warstwy aplikacji (kontrakt portu wejściowego BuildSpecification).
+ * Belongs to the application layer (the BuildSpecification inbound port contract).
  */
 public record RemoveOptionCommand(String specificationId, String optionCode) {
 
     public RemoveOptionCommand {
         if (specificationId == null || specificationId.isBlank()) {
-            throw new IllegalArgumentException("specificationId jest wymagany");
+            throw new IllegalArgumentException("specificationId is required");
         }
         if (optionCode == null || optionCode.isBlank()) {
-            throw new IllegalArgumentException("optionCode jest wymagany");
+            throw new IllegalArgumentException("optionCode is required");
         }
     }
 }

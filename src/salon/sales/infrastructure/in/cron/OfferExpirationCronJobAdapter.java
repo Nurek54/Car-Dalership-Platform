@@ -4,11 +4,11 @@ import org.springframework.stereotype.Component;
 import salon.sales.application.service.SalesService;
 
 /**
- * Adapter sterujący (driving) — zadanie cykliczne wygaszania przeterminowanych ofert.
+ * Driving adapter — periodic task for expiring overdue offers.
  *
- * W kodzie produkcyjnym metoda ma nad sobą np. @Scheduled(cron = "0 0 3 * * ?") (nocą).
- * Adapter deleguje do warstwy aplikacji i sam łapie wyjątki, żeby awaria pojedynczego
- * uruchomienia nie zatrzymała całego Spring Schedulera (cron odpali się ponownie).
+ * In production code the method is annotated, e.g. @Scheduled(cron = "0 0 3 * * ?") (at night).
+ * The adapter delegates to the application layer and catches exceptions itself, so that a single
+ * run's failure does not stop the whole Spring Scheduler (the cron will fire again).
  */
 @Component
 public class OfferExpirationCronJobAdapter {
@@ -22,13 +22,13 @@ public class OfferExpirationCronJobAdapter {
         this.salesAppService = salesAppService;
     }
 
-    // Wyzwalane przez harmonogram: przeterminowane oferty wypadają z aktywnego obiegu.
+    // Triggered by the schedule: expired offers drop out of the active flow.
     public void expireOldOffersJob() {
         try {
             salesAppService.expireOutdatedOffers();
         } catch (Exception e) {
-            // Połykamy i logujemy — inaczej wyjątek ubije wątek Spring Schedulera.
-            System.err.println("[OfferExpirationCronJobAdapter] Wygaszanie ofert nie powiodło się: "
+            // We swallow and log — otherwise the exception would kill the Spring Scheduler thread.
+            System.err.println("[OfferExpirationCronJobAdapter] Expiring offers failed: "
                     + e.getMessage());
         }
     }

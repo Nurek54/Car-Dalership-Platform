@@ -1,7 +1,7 @@
 package salon.financing.application.domain.exception;
 
 /**
- * Brak wniosku o finansowanie dla wskazanego zamówienia (np. decyzja banku dla nieznanego wniosku).
+ * No financing application for the indicated order (e.g. a bank decision for an unknown application).
  */
 public class FinancingApplicationNotFoundException extends RuntimeException {
 

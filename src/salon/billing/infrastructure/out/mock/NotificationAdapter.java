@@ -6,21 +6,21 @@ import salon.common.model.Money;
 import salon.common.model.OrderId;
 
 /**
- * ADAPTER WYJSCIOWY (Rys. 48 — NotificationGenerator) — atrapa portu {@link NotificationGeneration}
- * uzywana w uruchomieniu produkcyjnym (Composition Root). Symuluje wysylke e-mail do klienta.
+ * OUTBOUND ADAPTER (Fig. 48 — NotificationGenerator) — a mock of the {@link NotificationGeneration} port
+ * used in the production run (Composition Root). Simulates sending an e-mail to the customer.
  */
 public class NotificationAdapter implements NotificationGeneration {
 
     @Override
     public void notifyInvoiceIssued(AccountingDocument document, byte[] pdf) {
-        System.out.println("[NotificationAdapter] E-mail do nabywcy zamowienia "
+        System.out.println("[NotificationAdapter] E-mail to the buyer of order "
                 + document.orderId().value() + ": dokument " + document.id().value()
-                + " (termin platnosci " + document.dueDate() + ").");
+                + " (due date " + document.dueDate() + ").");
     }
 
     @Override
     public void notifyPaymentReminder(OrderId orderId, Money outstanding) {
-        System.out.println("[NotificationAdapter] Przypomnienie dla zamowienia " + orderId.value()
+        System.out.println("[NotificationAdapter] Reminder for order " + orderId.value()
                 + ": do zaplaty " + outstanding.getAmount().toPlainString() + " " + outstanding.currency() + ".");
     }
 }

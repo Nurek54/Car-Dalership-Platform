@@ -1,8 +1,8 @@
 package salon.financing.application.domain.model.financing;
 
 /**
- * Obiekt wartości: rozłączne odwołanie do klienta z Kontekstu Sprzedaży i CRM (Rysunek 43).
- * Finansowanie ma własny model identyfikatora klienta (każdy Bounded Context definiuje swój).
+ * Value object: a disjoint reference to a customer from the Sales and CRM Context (Figure 43).
+ * Financing has its own customer-identifier model (each Bounded Context defines its own).
  */
 public record CustomerId(String value) {
 

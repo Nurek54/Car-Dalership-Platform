@@ -3,11 +3,11 @@ package salon.sales.application.port.in;
 import salon.common.model.OrderId;
 
 /**
- * Port wejściowy dla UC-CRM-05 (rejestracja fizycznego wydania pojazdu) —
- * węzeł "ReleaseVehicle" w docs/Architecture/SalesArchitecture.md (PDF rozdz. 3.3.3).
+ * Inbound port for UC-CRM-05 (registering the physical vehicle handover) —
+ * the "ReleaseVehicle" node in docs/Architecture/SalesArchitecture.md (PDF chapter 3.3.3).
  *
- * Zamyka transakcję (zamówienie -> "Zrealizowane"), wysyła komendę ReleaseVehicle
- * do Kontekstu Inwentarza i zleca Rozliczeniom domknięcie salda.
+ * Closes the transaction (order -> "Completed"), sends the ReleaseVehicle command
+ * to the Inventory Context and instructs Billing to close the balance.
  */
 public interface ReleaseVehicle {
 

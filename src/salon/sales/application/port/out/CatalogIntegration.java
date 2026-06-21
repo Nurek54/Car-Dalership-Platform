@@ -1,8 +1,8 @@
 package salon.sales.application.port.out;
 
 /**
- * Port wyjściowy (driven) do Kontekstu Katalogu i Konfiguratora.
- * UC-CRM-01: otwarcie interfejsu konfiguratora dla zainicjowanej sesji.
+ * Outbound port (driven) to the Catalog and Configurator Context.
+ * UC-CRM-01: opening the configurator interface for the initiated session.
  */
 public interface CatalogIntegration {
 

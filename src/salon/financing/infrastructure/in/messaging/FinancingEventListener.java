@@ -3,13 +3,13 @@ package salon.financing.infrastructure.in.messaging;
 import salon.financing.application.port.in.ProcessFinancing;
 
 /**
- * ADAPTER WEJŚCIOWY (Rysunek 42: EventListener) – subskrybent zdarzeń Kontekstu Finansowania.
+ * INBOUND ADAPTER (Figure 42: EventListener) – subscriber of the Financing Context events.
  *
- * Mapuje zdarzenia z magistrali na port wejściowy {@link ProcessFinancing}:
- *  - FinancingRequested (z CRM)              -> UC-FIN-01 (złożenie wniosku),
- *  - FinancingDecisionReceivedFromBank (ACL) -> UC-FIN-02 (przetworzenie decyzji).
+ * Maps events from the bus to the inbound port {@link ProcessFinancing}:
+ *  - FinancingRequested (from CRM)           -> UC-FIN-01 (application submission),
+ *  - FinancingDecisionReceivedFromBank (ACL) -> UC-FIN-02 (processing the decision).
  *
- * ACL: komunikaty zewnętrzne reprezentujemy jako lokalne rekordy i tłumaczymy na wywołanie portu.
+ * ACL: we represent external messages as local records and translate them into a port call.
  */
 public class FinancingEventListener {
 
@@ -36,11 +36,11 @@ public class FinancingEventListener {
         this.processFinancing.processBankDecision(event.orderId(), event.approved());
     }
 
-    /** Lokalna (ACL) reprezentacja zdarzenia FinancingRequested z Kontekstu Sprzedaży i CRM. */
+    /** Local (ACL) representation of the FinancingRequested event from the Sales and CRM Context. */
     public record FinancingRequested(String orderId, String customerId) {
     }
 
-    /** Lokalna (ACL) reprezentacja asynchronicznej decyzji z adaptera bankowego. */
+    /** Local (ACL) representation of the asynchronous decision from the bank adapter. */
     public record FinancingDecisionReceivedFromBank(String orderId, boolean approved) {
     }
 }

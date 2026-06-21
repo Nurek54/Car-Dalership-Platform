@@ -8,16 +8,16 @@ import salon.common.event.DomainEvent;
 import java.util.List;
 
 /**
- * Adapter wyjściowy (EventBusAdapter) — fizyczny publikator Zdarzeń Dziedziny na RabbitMQ
- * (PDF rozdz. 3.1.1: "EventBusAdapter: fizyczny publikator zdarzeń, np. RabbitTemplate").
+ * Outbound adapter (EventBusAdapter) — the physical publisher of Domain Events to RabbitMQ
+ * (PDF chapter 3.1.1: "EventBusAdapter: the physical event publisher, e.g. RabbitTemplate").
  *
- * Routing key wyprowadzany z nazwy zdarzenia (np. OrderPlacedEvent -> "order.placed").
- * Błąd brokera jest przepuszczany w górę, aby usługa aplikacyjna mogła wycofać transakcję.
+ * The routing key is derived from the event name (e.g. OrderPlacedEvent -> "order.placed").
+ * A broker error is propagated upward so the application service can roll back the transaction.
  */
 @Component
 public class SalesEventBusAdapter implements EventPublisher {
 
-    /** Wspólna wymiana zdarzeń Kontekstu Sprzedaży (kanwa: Outbound Communication). */
+    /** The shared event exchange of the Sales Context (canvas: Outbound Communication). */
     public static final String EXCHANGE = "sales.events.exchange";
 
     private final RabbitTemplate rabbitTemplate;
@@ -47,7 +47,7 @@ public class SalesEventBusAdapter implements EventPublisher {
         }
     }
 
-    /** Mapowanie nazw zdarzeń na etykiety komunikatów (routing keys). */
+    /** Mapping of event names to message labels (routing keys). */
     static String routingKeyFor(DomainEvent event) {
         String name = event.getClass().getSimpleName();
         switch (name) {
@@ -61,7 +61,7 @@ public class SalesEventBusAdapter implements EventPublisher {
             case "BankTransferDeclaredEvent":    return "bank_transfer.declared";
             case "FinancingRequestedEvent":      return "financing.requested";
             default:
-                // Konwencja zapasowa: OrderXyzEvent -> "order.xyz" (pierwszy człon + snake_case reszty)
+                // Fallback convention: OrderXyzEvent -> "order.xyz" (first segment + snake_case of the rest)
                 String base = name.endsWith("Event") ? name.substring(0, name.length() - 5) : name;
                 String snake = base.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase();
                 int cut = snake.indexOf('_');

@@ -3,12 +3,12 @@ package salon.billing.application.port.out;
 import salon.billing.application.domain.model.document.BuyerDetails;
 
 /**
- * PORT WYJSCIOWY (Rys. 48 — SalesIntegration, ACL) — synchroniczne zapytanie (Query) do Kontekstu
- * Sprzedazy i CRM o dane nabywcy potrzebne na fakturze (UC-FIR-01/02).
+ * OUTBOUND PORT (Fig. 48 — SalesIntegration, ACL) — a synchronous query (Query) to the Context
+ * Sales and CRM for the buyer data needed on the invoice (UC-FIR-01/02).
  *
- * Zdarzenie wyzwalajace niesie tylko orderId (zgodnosc z RODO) — dane nabywcy dociaga ten port po
- * orderId. Kontrakt wyrazony w typie lokalnym Fakturowania (BuyerDetails), tlumaczonym z migawki
- * Sprzedazy przez adapter (Warstwa Zapobiegajaca Uszkodzeniu).
+ * The triggering event carries only orderId (GDPR compliance) — this port fetches the buyer data by
+ * orderId. The contract is expressed in the Billing-local type (BuyerDetails), translated from the snapshot
+ * of Sales through an adapter (Anti-Corruption Layer).
  */
 public interface SalesIntegration {
 

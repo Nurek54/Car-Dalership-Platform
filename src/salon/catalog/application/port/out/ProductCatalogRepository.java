@@ -7,14 +7,14 @@ import salon.catalog.application.domain.model.catalog.ProductCatalog;
 import java.util.Optional;
 
 /**
- * PORT WYJŚCIOWY – repozytorium agregatu ProductCatalog („CatalogDatabaseRepository”).
+ * OUTBOUND PORT – repository of the ProductCatalog aggregate ("CatalogDatabaseRepository").
  *
- * Utrwala i globalnie udostępnia agregaty jednego typu; tworzy złudzenie
- * przechowywania wszystkich katalogów w pamięci i uniezależnia aplikację od
- * technologii magazynu. Repozytorium NIE kontroluje transakcji i NIE tworzy agregatów.
+ * Persists and globally provides aggregates of one type; it creates the illusion
+ * of keeping all catalogs in memory and decouples the application from
+ * the storage technology. The repository does NOT control transactions and does NOT create aggregates.
  *
- * Definicja portu (abstrakcja) należy do warstwy aplikacji; implementuje ją adapter
- * w warstwie infrastruktury (reguła odwrócenia zależności – D z SOLID).
+ * The port definition (abstraction) belongs to the application layer; it is implemented by an adapter
+ * in the infrastructure layer (the Dependency Inversion Principle – the D in SOLID).
  */
 public interface ProductCatalogRepository {
 
@@ -22,6 +22,6 @@ public interface ProductCatalogRepository {
 
     Optional<ProductCatalog> findById(CatalogId id);
 
-    /** Aktywny katalog dla danego rocznika modelowego (źródło cen w UC-KON-01). */
+    /** The active catalog for a given model year (the price source in UC-KON-01). */
     Optional<ProductCatalog> findActiveByModelYear(ModelYear modelYear);
 }

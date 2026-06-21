@@ -5,9 +5,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Lokalna (ACL) reprezentacja zdarzenia z Kontekstu Sprzedazy i CRM: nowe zamowienie gotowe do
- * zainicjowania salda. Niesie wartosc kontraktu (event-carried state transfer), dzieki czemu
- * Rozliczenia nie musza synchronicznie odpytywac Sprzedazy o kwote.
+ * Local (ACL) representation of an event from the Sales and CRM Context: a new order ready to
+ * initialize the balance. Carries the contract value (event-carried state transfer), so that
+ * Billing does not have to query Sales synchronously for the amount.
  *
  * eventId sluzy DEDUPLIKACJI po stronie subskrybenta (idempotencyjnosc).
  */

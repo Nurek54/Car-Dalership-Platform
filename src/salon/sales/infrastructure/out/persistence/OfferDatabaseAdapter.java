@@ -17,11 +17,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Adapter wyjściowy (DatabaseAdapter) portu OfferDatabaseRepository — mapowanie agregatu Offer
- * na model JPA. Stan i wycena odtwarzane przez DomainReflection (omijamy reguły maszyny
- * stanów przy rehydratacji); kwoty round-tripowane tekstowo (bez zmiany skali BigDecimal).
- * Wersja rekordu (@Version) wędruje z agregatem — zapis nieaktualnej kopii kończy się
- * ObjectOptimisticLockingFailureException (saveAndFlush wymusza weryfikację od razu).
+ * Outbound adapter (DatabaseAdapter) of the OfferDatabaseRepository port — mapping the Offer aggregate
+ * to the JPA model. The state and pricing are reconstituted via DomainReflection (we bypass the state-machine
+ * rules during rehydration); amounts are round-tripped as text (without changing the BigDecimal scale).
+ * The record version (@Version) travels with the aggregate — saving a stale copy ends in
+ * ObjectOptimisticLockingFailureException (saveAndFlush forces immediate verification).
  */
 @Component
 public class OfferDatabaseAdapter implements OfferDatabaseRepository {

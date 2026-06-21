@@ -1,20 +1,20 @@
 package salon.financing.application.port.out;
 
 /**
- * PORT WYJSCIOWY (driven, ACL, Rysunek 42 — BankIntegrationAcl) — integracja z systemem banku.
+ * OUTBOUND PORT (driven, ACL, Figure 42 — BankIntegrationAcl) — integration with the bank system.
  *
- * Warstwa Zapobiegajaca Uszkodzeniu izoluje jadro Finansowania od formatow API banku. Bank jest
- * jedynym decydentem kredytowym; zlozenie wniosku jest asynchroniczne, a decyzja wraca pozniej
- * osobnym zdarzeniem (UC-FIN-02).
+ * The Anti-Corruption Layer isolates the Financing core from the bank API formats. The bank is
+ * the sole credit decision-maker; submitting the application is asynchronous, and the decision returns later
+ * as a separate event (UC-FIN-02).
  */
 public interface BankIntegrationAcl {
 
-    /** UC-FIN-01: wyslanie (przetlumaczonego) wniosku o finansowanie do systemu banku. */
+    /** UC-FIN-01: sending the (translated) financing application to the bank system. */
     void submitFinancingApplication(String orderId);
 
     /**
-     * UC-CRM-03 -> UC-FIN-01: uruchomienie sprawdzania zdolnosci kredytowej dla zamowienia
-     * (alias semantyczny uzywany przez Kontekst Sprzedazy). Domyslnie deleguje do zlozenia wniosku.
+     * UC-CRM-03 -> UC-FIN-01: triggering the creditworthiness check for an order
+     * (a semantic alias used by the Sales Context). By default it delegates to submitting the application.
      */
     default void startCreditCheckProcess(String orderId) {
         submitFinancingApplication(orderId);

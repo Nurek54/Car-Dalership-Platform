@@ -8,9 +8,9 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ADAPTER WYJŚCIOWY (Rysunek 37: CatalogExternalAPI) – implementacja portu
- * {@link CatalogIntegration} w pamięci. Lokalna kopia danych Katalogu zasilana zdarzeniami:
- * specyfikacja -> kody wyposażenia oraz zamówienie -> specyfikacja.
+ * OUTBOUND ADAPTER (Figure 37: CatalogExternalAPI) – implementation of the port
+ * {@link CatalogIntegration} in memory. The local copy of the Catalog data fed by events:
+ * specification -> equipment codes and order -> specification.
  */
 public class InMemorySpecificationReadModelAdapter implements CatalogIntegration {
 

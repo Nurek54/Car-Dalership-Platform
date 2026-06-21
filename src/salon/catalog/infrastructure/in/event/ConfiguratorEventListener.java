@@ -6,14 +6,14 @@ import salon.catalog.application.port.in.BuildSpecification;
 import org.springframework.stereotype.Component;
 
 /**
- * ADAPTER WEJŚCIOWY (sterowany zdarzeniami) – „EventListener” z diagramu.
+ * INBOUND ADAPTER (event-driven) – "EventListener" from the diagram.
  *
- * Nasłuchuje zdarzenia integracyjnego InitiateConfiguratorSession (z kontekstu
- * „Sprzedaż i CRM”, mapowanie OHS) i wywołuje port wejściowy {@link BuildSpecification}.
- * Zadania adaptera: mapowanie komunikatu na model danych wejściowych usługi aplikacji
- * i wywołanie fasady przypadku użycia. Nie zawiera logiki biznesowej.
+ * Listens for the InitiateConfiguratorSession integration event (from the
+ * "Sales and CRM" context, OHS mapping) and invokes the inbound port {@link BuildSpecification}.
+ * The adapter's tasks: mapping the message to the application service's input data model
+ * and invoking the use-case facade. It contains no business logic.
  *
- * W realnej integracji metoda zostałaby oznaczona np. @RabbitListener(queues = "...").
+ * In a real integration the method would be annotated, e.g. @RabbitListener(queues = "...").
  */
 @Component
 public class ConfiguratorEventListener {
@@ -25,9 +25,9 @@ public class ConfiguratorEventListener {
     }
 
     /**
-     * Obsługa zdarzenia InitiateConfiguratorSession.
+     * Handling of the InitiateConfiguratorSession event.
      *
-     * @return widok utworzonej (roboczej) specyfikacji – identyfikator sesji dla UI
+     * @return a view of the created (working) specification – the session identifier for the UI
      */
     public SpecificationView onInitiateConfiguratorSession(InitiateConfiguratorSessionMessage message) {
         InitiateConfiguratorSessionCommand command =
@@ -35,7 +35,7 @@ public class ConfiguratorEventListener {
         return buildSpecification.initiate(command);
     }
 
-    /** Treść zdarzenia integracyjnego (minimalny zbiór informacji). */
+    /** Body of the integration event (a minimal set of information). */
     public record InitiateConfiguratorSessionMessage(int modelYear) {
     }
 }

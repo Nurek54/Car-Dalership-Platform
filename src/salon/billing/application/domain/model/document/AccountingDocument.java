@@ -7,13 +7,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 
 /**
- * KORZEŃ AGREGATU (Diagram klas — «AggregateRoot» AccountingDocument) — faktura / dokument księgowy.
+ * AGGREGATE ROOT (Class diagram — «AggregateRoot» AccountingDocument) — invoice / accounting document.
  *
- * Tworzony metodą wytwórczą {@link #createInvoice} (statyczna, zgodnie z diagramem), która gwarantuje
- * niezmienniki: kompletne dane stron, niepusty tytuł, termin płatności wyliczony z
- * {@link BuyerDetails#isCorporate()}. Korzeń odpowiada za przejścia statusu (DRAFT -> ISSUED / ERROR)
- * oraz wygenerowanie reprezentacji PDF ({@link #generatePdf()}). Odwołanie do zamówienia rozłączne
- * (wyłącznie przez {@link OrderId}).
+ * Created via the factory method {@link #createInvoice} (static, per the diagram), which guarantees
+ * the invariants: complete party data, a non-empty title, a due date computed from
+ * {@link BuyerDetails#isCorporate()}. The root is responsible for status transitions (DRAFT -> ISSUED / ERROR)
+ * and for generating the PDF representation ({@link #generatePdf()}). The reference to the order is disjoint
+ * (only through {@link OrderId}).
  */
 public class AccountingDocument {
 
@@ -47,9 +47,9 @@ public class AccountingDocument {
     }
 
     /**
-     * METODA WYTWÓRCZA (Diagram klas — createInvoice$): tworzy fakturę w stanie DRAFT.
-     * Atomowa, waliduje wszystkie nieopcjonalne elementy, nigdy nie zwraca niepoprawnego obiektu.
-     * Termin płatności (dueDate) zależny od typu nabywcy (UC-FIR-01/02).
+     * FACTORY METHOD (Class diagram — createInvoice$): creates an invoice in the DRAFT state.
+     * Atomic, validates all non-optional elements, never returns an invalid object.
+     * The due date (dueDate) depends on the buyer type (UC-FIR-01/02).
      */
     public static AccountingDocument createInvoice(OrderId orderId, BuyerDetails buyer,
                                                    SellerDetails seller, Money totalAmount,
@@ -79,37 +79,37 @@ public class AccountingDocument {
     }
 
     /**
-     * Generuje reprezentację PDF dokumentu (Diagram klas — generatePdf(): byte[]).
-     * Tu: lekka, deterministyczna serializacja treści faktury; adapter PdfGeneration może
-     * delegować do tej metody lub opakować ją bibliotecznym rendererem.
+     * Generates the PDF representation of the document (Class diagram — generatePdf(): byte[]).
+     * Here: a lightweight, deterministic serialization of the invoice content; the PdfGeneration adapter may
+     * delegate to this method or wrap it with a library renderer.
      */
     public byte[] generatePdf() {
         if (this.status == DocumentStatus.ERROR) {
             throw new IllegalStateException("Cannot render a document in ERROR state.");
         }
-        String body = "FAKTURA\n"
-                + "Tytuł: " + this.invoiceTitle + "\n"
+        String body = "INVOICE\n"
+                + "Title: " + this.invoiceTitle + "\n"
                 + "Nr dokumentu: " + this.id.value() + "\n"
-                + "Zamówienie: " + this.orderId.value() + "\n"
+                + "Order: " + this.orderId.value() + "\n"
                 + "Sprzedawca: " + this.seller.name() + " (NIP " + this.seller.nip() + ")\n"
-                + "Nabywca: " + this.buyer.name() + " (NIP " + this.buyer.nip() + ")\n"
+                + "Buyer: " + this.buyer.name() + " (tax ID " + this.buyer.nip() + ")\n"
                 + "Kwota: " + this.totalAmount.getAmount().toPlainString() + " " + this.totalAmount.currency() + "\n"
-                + "Data wystawienia: " + this.issueDate + "\n"
-                + "Termin płatności: " + this.dueDate + "\n"
-                + "Wystawił: " + this.authorizedIssuer + "\n";
+                + "Issue date: " + this.issueDate + "\n"
+                + "Due date: " + this.dueDate + "\n"
+                + "Issued by: " + this.authorizedIssuer + "\n";
         return body.getBytes(StandardCharsets.UTF_8);
     }
 
-    /** UC-FIR-02, krok 4: dokument wystawiony (PDF przypisany do zamówienia). */
+    /** UC-FIR-02, step 4: document issued (PDF assigned to the order). */
     public void markAsIssued() {
         if (this.status != DocumentStatus.DRAFT) {
             throw new salon.billing.application.domain.exception.IllegalSettlementStateException(
-                    "Wystawić można tylko dokument w stanie DRAFT (aktualny: " + this.status + ").");
+                    "Only a document in the DRAFT state can be issued (current: " + this.status + ").");
         }
         this.status = DocumentStatus.ISSUED;
     }
 
-    /** UC-FIR-02 / A1: oznaczenie błędu generowania dokumentu. */
+    /** UC-FIR-02 / A1: marking a document generation error. */
     public void markAsError() {
         this.status = DocumentStatus.ERROR;
     }

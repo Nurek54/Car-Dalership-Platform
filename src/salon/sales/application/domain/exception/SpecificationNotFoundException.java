@@ -1,6 +1,6 @@
 package salon.sales.application.domain.exception;
 
-/** Katalog nie zna wskazanej specyfikacji (UC-CRM-02 — wycena niemożliwa). */
+/** The Catalog does not know the indicated specification (UC-CRM-02 — pricing impossible). */
 public class SpecificationNotFoundException extends RuntimeException {
     public SpecificationNotFoundException(String message) {
         super(message);

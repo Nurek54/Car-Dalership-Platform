@@ -4,10 +4,10 @@ import salon.billing.application.domain.model.document.AccountingDocument;
 import salon.billing.application.port.out.PdfGeneration;
 
 /**
- * ADAPTER WYJSCIOWY (Rys. 48 — PdfGenerator) — atrapa portu {@link PdfGeneration}.
+ * OUTBOUND ADAPTER (Fig. 48 — PdfGenerator) — a mock of the {@link PdfGeneration} port.
  *
- * Deleguje do reprezentacji PDF korzenia agregatu ({@link AccountingDocument#generatePdf()});
- * realny adapter opakowalby tu bibliotekę renderujaca PDF, bez logiki biznesowej.
+ * Delegates to the PDF representation of the aggregate root ({@link AccountingDocument#generatePdf()});
+ * a real adapter would wrap a PDF-rendering library here, without business logic.
  */
 public class PdfGeneratorMockAdapter implements PdfGeneration {
 
@@ -17,7 +17,7 @@ public class PdfGeneratorMockAdapter implements PdfGeneration {
             throw new IllegalArgumentException("document must not be null.");
         }
         byte[] pdf = document.generatePdf();
-        System.out.println("[PdfGeneratorMockAdapter] Wygenerowano PDF dla dokumentu "
+        System.out.println("[PdfGeneratorMockAdapter] Generated PDF for document "
                 + document.id().value() + " (" + pdf.length + " B).");
         return pdf;
     }

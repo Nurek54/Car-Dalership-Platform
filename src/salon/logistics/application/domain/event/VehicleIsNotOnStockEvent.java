@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-INW-01 / A1: brak wolnego pojazdu o wymaganej specyfikacji na placu — rezerwacja
- * wstrzymana. Wyzwala ścieżkę zamówienia produkcji / prośby o zadatek (UC-FIR-01).
+ * UC-INW-01 / A1: no free vehicle with the required specification in the yard — the reservation
+ * is on hold. Triggers the production-order / deposit-request path (UC-FIR-01).
  */
 public record VehicleIsNotOnStockEvent(String orderId,
                                        UUID eventId, Instant occurredOn) implements DomainEvent {

@@ -1,8 +1,8 @@
 package salon.sales.application.port.out;
 
 /**
- * Port wyjściowy (driven) do systemów realizacji (Inwentarz/fabryka):
- * aktywowane zamówienie uruchamia realizację pojazdu (zlecenie produkcyjne).
+ * Outbound port (driven) to the fulfillment systems (Inventory/factory):
+ * an activated order triggers the vehicle fulfillment (a production order).
  */
 public interface ManufacturingIntegrationPort {
 

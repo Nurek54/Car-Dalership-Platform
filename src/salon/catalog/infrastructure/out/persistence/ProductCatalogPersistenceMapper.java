@@ -15,9 +15,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Mapowanie dwukierunkowe między agregatem ProductCatalog a rekordem magazynu.
- * Odtworzenie agregatu realizuje fabryka ({@code reconstitute}) – budowa egzemplarza
- * nie jest odpowiedzialnością mappera.
+ * Bidirectional mapping between the ProductCatalog aggregate and the storage record.
+ * Reconstitution of the aggregate is performed by the factory ({@code reconstitute}) – building an instance
+ * is not the mapper's responsibility.
  */
 @Component
 public class ProductCatalogPersistenceMapper {

@@ -12,8 +12,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ADAPTER WYJSCIOWY (Rys. 48 — DBAdapter) — implementacja {@link DocumentDatabaseRepository}
- * w pamieci. Indeks glowny po DocumentId; wyszukiwanie po zamowieniu przeglada wartosci.
+ * OUTBOUND ADAPTER (Fig. 48 — DBAdapter) — implementation of {@link DocumentDatabaseRepository}
+ * in memory. Primary index by DocumentId; lookup by order scans the values.
  */
 public class InMemoryDocumentRepository implements DocumentDatabaseRepository {
 

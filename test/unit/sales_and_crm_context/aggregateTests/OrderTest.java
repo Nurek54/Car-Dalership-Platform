@@ -21,13 +21,13 @@ class OrderTest {
 
     @Test
     void shouldDeclarePaymentMethodAndRegisterDomainEvent() {
-        // Zamówienie powiązane z ofertą
+        // An order linked to the offer
         Order order = createBaseOrder("ORD-001", "O-100");
 
-        // Klient wybiera finansowanie jako metodę płatności
+        // The customer chooses financing as the payment method
         order.declarePaymentMethod(PaymentMethod.FINANCING);
 
-        // Metoda płatności jest przypisana, a zdarzenie jest odłożone w agregacie
+        // The payment method is assigned, and the event is recorded in the aggregate
         assertThat(order.paymentMethod()).isEqualTo(PaymentMethod.FINANCING);
         assertThat(order.getDomainEvents())
                 .hasSize(1)
@@ -41,41 +41,41 @@ class OrderTest {
 
     @Test
     void shouldExecuteRevertWhenHandoverFails() {
-        // Zamówienie było gotowe do wydania, po czym zostało umówione i zrealizowane
+        // The order was ready for handover, then was scheduled and completed
         Order order = createBaseOrder("ORD-002", "O-101");
 
-        // Trzeba aktywować zamówienie, inaczej domena odrzuci kolejne kroki
-        order.activate(); // Stan: IN_PROGRESS
+        // The order must be activated, otherwise the domain will reject the next steps
+        order.activate(); // State: IN_PROGRESS
 
-        order.markAsReadyForHandover(); // Stan: READY_FOR_HANDOVER
-        order.scheduleHandover(LocalDate.now().plusDays(2)); // Stan: HANDOVER_SCHEDULED
+        order.markAsReadyForHandover(); // State: READY_FOR_HANDOVER
+        order.scheduleHandover(LocalDate.now().plusDays(2)); // State: HANDOVER_SCHEDULED
         order.changePaymentStatus(PaymentStatus.PAID);
-        order.confirmHandover(); // Stan: COMPLETED
+        order.confirmHandover(); // State: COMPLETED
 
         assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
 
-        // Występuje błąd w systemie inwentarza
-        // System wywołuje metodę kompensacyjną
+        // An error occurs in the inventory system
+        // The system invokes the compensating method
         order.revertToReadyForHandover();
 
-        // Zamówienie wraca do poprzedniego, bezpiecznego stanu
+        // The order returns to the previous, safe state
         assertThat(order.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);
-        assertThat(order.handoverDate()).isNull(); // Data wydania jest czyszczona
+        assertThat(order.handoverDate()).isNull(); // The handover date is cleared
     }
 
     @Test
     void shouldConfirmHandoverDirectlyFromReadyState() {
-        // Zamówienie gotowe do wydania (bez umówionej daty w kalendarzu)
+        // An order ready for handover (without a scheduled date in the calendar)
         Order order = createBaseOrder("ORD-003", "O-102");
 
         order.activate(); // Aktywacja (DRAFT -> IN_PROGRESS)
-        order.markAsReadyForHandover(); // Stan: READY_FOR_HANDOVER
-        order.changePaymentStatus(PaymentStatus.PAID); // Musi być opłacone
+        order.markAsReadyForHandover(); // State: READY_FOR_HANDOVER
+        order.changePaymentStatus(PaymentStatus.PAID); // It must be paid
 
-        // Klient odbiera auto natychmiast na miejscu
+        // The customer picks up the car immediately on the spot
         order.confirmHandover();
 
-        // Zamówienie zamyka się poprawnie omijając HANDOVER_SCHEDULED
+        // The order closes correctly, bypassing HANDOVER_SCHEDULED
         assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
     }
 }

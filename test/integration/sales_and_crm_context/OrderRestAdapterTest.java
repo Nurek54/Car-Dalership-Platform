@@ -26,7 +26,7 @@ class OrderRestAdapterTest {
     void shouldAcceptScheduleHandoverRequestAndReturn200Ok() throws Exception {
         String jsonPayload = "{ \"handoverDate\": \"2026-06-20\" }";
 
-        // Kontroler poprawnie to przetwarza i zwraca 200 OK
+        // The controller processes it correctly and returns 200 OK
         mockMvc.perform(post("/api/sales/orders/ORD-123/schedule-handover")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonPayload))
@@ -35,10 +35,10 @@ class OrderRestAdapterTest {
 
     @Test
     void shouldReturn400BadRequestWhenDateIsInvalidOrMissing() throws Exception {
-        // JSON bez wymaganej daty
+        // JSON without the required date
         String invalidJson = "{ \"handoverDate\": \"\" }";
 
-        // Walidacja odrzuca żądanie zanim trafi do domeny
+        // Validation rejects the request before it reaches the domain
         mockMvc.perform(post("/api/sales/orders/ORD-123/schedule-handover")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
@@ -48,7 +48,7 @@ class OrderRestAdapterTest {
 
     @Test
     void shouldReturn404NotFoundWhenOrderDoesNotExist() throws Exception {
-        // AppService rzuca wyjątek informujący o braku zamówienia
+        // The AppService throws an exception indicating the order is missing
         doThrow(new OrderNotFoundException("Order ORD-999 not found"))
                 .when(salesAppService).scheduleHandover(any());
 

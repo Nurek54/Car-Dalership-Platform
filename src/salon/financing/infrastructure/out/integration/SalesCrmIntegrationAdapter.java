@@ -8,11 +8,11 @@ import salon.sales.api.CustomerSnapshotDto;
 import salon.sales.api.SalesQueryFacade;
 
 /**
- * ADAPTER WYJSCIOWY (ACL, Rysunek 42: SalesQueryService) — realizacja portu {@link SalesIntegration}.
+ * OUTBOUND ADAPTER (ACL, Figure 42: SalesQueryService) — implementation of the {@link SalesIntegration} port.
  *
- * Warstwa Zapobiegajaca Uszkodzeniu: zalezy wylacznie od publicznej fasady Sprzedazy
- * ({@link SalesQueryFacade}, Jezyk Opublikowany) i tlumaczy jej migawki na lokalny model Finansowania:
- * CustomerSnapshotDto -> {@link BuyerDetails}, a cene koncowa oferty na kwote do sfinansowania
+ * Anti-Corruption Layer: it depends only on the public Sales facade
+ * ({@link SalesQueryFacade}, the Published Language) and translates its snapshots into the Financing-local model:
+ * CustomerSnapshotDto -> {@link BuyerDetails}, and the offer's final price into the amount to be financed
  * ({@link Money} ze Wspolnego Jadra).
  */
 public class SalesCrmIntegrationAdapter implements SalesIntegration {

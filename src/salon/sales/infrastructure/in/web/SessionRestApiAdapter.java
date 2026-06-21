@@ -11,8 +11,8 @@ import salon.sales.application.service.SalesService;
 import java.util.Map;
 
 /**
- * Adapter sterujący (driving) — REST API sesji konfiguratora (UC-CRM-01).
- * Handlowiec inicjuje sesję dla klienta; kontekst emituje InitiateConfiguratorSession.
+ * Driving adapter — REST API for configurator sessions (UC-CRM-01).
+ * The Salesperson initiates a session for the customer; the context emits InitiateConfiguratorSession.
  */
 @RestController
 @RequestMapping("/api/sales/sessions")
@@ -35,7 +35,7 @@ public class SessionRestApiAdapter {
         return ResponseEntity.ok(Map.of("sessionId", sessionId));
     }
 
-    /** DTO wejściowe UC-CRM-01. */
+    /** Input DTO for UC-CRM-01. */
     public record InitiateSessionRequest(String customerId, String salespersonId) {
     }
 }

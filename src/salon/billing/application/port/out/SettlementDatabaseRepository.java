@@ -7,11 +7,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * PORT WYJSCIOWY (Rys. 48 — SettlementDatabaseRepository) — utrwalanie agregatu Rozliczenia.
+ * OUTBOUND PORT (Fig. 48 — SettlementDatabaseRepository) — persistence of the Settlement aggregate.
  *
- * Repozytorium udostepnia agregaty jednego typu (Settlement), tworzac zludzenie kolekcji w pamieci.
- * Indeks po OrderId, bo wplaty i zadania faktur odnosza sie do zamowienia. Nie kontroluje transakcji
- * (to usluga aplikacji) i nie tworzy agregatow (to fabryka).
+ * The repository provides aggregates of one type (Settlement), creating the illusion of an in-memory collection.
+ * Indexed by OrderId, because payments and invoice requests relate to the order. Does not control transactions
+ * (that is the application service) and does not create aggregates (that is the factory).
  */
 public interface SettlementDatabaseRepository {
 

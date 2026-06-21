@@ -7,17 +7,17 @@ import salon.catalog.application.domain.model.shared.OptionCode;
 import java.util.Set;
 
 /**
- * Fabryka agregatu VehicleSpecification.
+ * Factory of the VehicleSpecification aggregate.
  *
- * Tworzy specyfikację w spójnym stanie początkowym: nowy globalny identyfikator,
- * stan DRAFT, zerowa cena całkowita i pusty zbiór opcji. Atomowa – nigdy nie zwraca
+ * Creates a specification in a consistent initial state: a new global identifier,
+ * the DRAFT state, a zero total price and an empty set of options. Atomic – never returns
  * obiektu niepoprawnego.
  */
 public class VehicleSpecificationFactory {
 
     /**
-     * Otwarcie sesji konfiguratora (UC-KON-01, krok 1) – tworzy roboczą specyfikację
-     * powiązaną z aktywnym katalogiem przez {@link CatalogId}.
+     * Opening a configurator session (UC-KON-01, step 1) – creates a working specification
+     * linked to the active catalog through {@link CatalogId}.
      */
     public VehicleSpecification createDraft(CatalogId catalogId, String currencyCode) {
         return new VehicleSpecification(
@@ -28,7 +28,7 @@ public class VehicleSpecificationFactory {
                 Set.of());
     }
 
-    /** Odtworzenie agregatu z trwałego magazynu (używane przez adapter repozytorium). */
+    /** Reconstitutes the aggregate from persistent storage (used by the repository adapter). */
     public VehicleSpecification reconstitute(SpecificationId id,
                                              CatalogId catalogId,
                                              Money totalPrice,

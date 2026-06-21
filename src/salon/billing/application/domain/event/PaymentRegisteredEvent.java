@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * UC-FIR-03: zaksięgowano wpłatę bankową dla zamówienia. Płynie do Sprzedaży i CRM (aktywacja zamówienia — UC-CRM-03 cz.2).
+ * UC-FIR-03: a bank payment for the order was posted. Flows to Sales and CRM (order activation — UC-CRM-03 part 2).
  *
- * Zapis faktu (czas przeszły dokonany), zgodny z językiem wszechobecnym Kontekstu Fakturowania.
- * Niesie minimalny zbiór informacji (orderId) — dane wrażliwe dociągają subskrybenci przez ACL.
+ * Record of a fact (past perfect tense), consistent with the ubiquitous language of the Billing Context.
+ * Carries a minimal set of information (orderId) — sensitive data is fetched by subscribers via ACL.
  */
 public record PaymentRegisteredEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
 

@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import salon.sales.infrastructure.out.persistence.OrderDatabaseAdapter;
 import salon.sales.application.domain.model.order.Order;
+import salon.sales.application.domain.model.order.PaymentStatus;
 import salon.sales.application.domain.model.offer.OfferId;
 import salon.common.model.OrderId;
 import salon.common.model.Money;
@@ -54,7 +55,7 @@ class OrderDatabaseAdapterTest {
         databaseAdapter.save(user1Copy);
 
         // User 2, unaware of the changes, tries to save their "older" copy
-        user2Copy.markAsReadyForHandover();
+        user2Copy.changePaymentStatus(PaymentStatus.PAID);
 
         // The database rejects user 2's save due to a version conflict
         assertThatThrownBy(() -> databaseAdapter.save(user2Copy))

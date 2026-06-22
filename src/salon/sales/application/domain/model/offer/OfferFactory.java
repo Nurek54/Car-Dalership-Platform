@@ -10,7 +10,16 @@ import salon.sales.application.domain.model.customer.CustomerId;
  */
 public class OfferFactory {
 
-    public Offer createProforma(CustomerId customerId, SpecificationId specificationId, Money basePrice) {
+    /** Creates a fresh DRAFT proforma offer; rejects a zero/negative base price up front. */
+    public Offer createOffer(CustomerId customerId, SpecificationId specificationId, Money basePrice) {
+        if (basePrice == null || basePrice.amount().signum() <= 0) {
+            throw new InvalidOfferDataException("Cannot create offer with zero or negative base price");
+        }
         return new Offer(OfferId.generate(), customerId, specificationId, basePrice);
+    }
+
+    /** Backward-compatible alias used by the application service. */
+    public Offer createProforma(CustomerId customerId, SpecificationId specificationId, Money basePrice) {
+        return createOffer(customerId, specificationId, basePrice);
     }
 }

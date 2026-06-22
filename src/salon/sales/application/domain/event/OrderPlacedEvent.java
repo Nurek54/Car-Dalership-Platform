@@ -16,4 +16,8 @@ public record OrderPlacedEvent(String orderId, String offerId, String specificat
     public OrderPlacedEvent(String orderId, String offerId, String specificationId, String customerId) {
         this(orderId, offerId, specificationId, customerId, UUID.randomUUID(), Instant.now());
     }
+
+    public OrderPlacedEvent(UUID eventId, String orderId, String specificationId, Instant occurredOn) {
+        this(orderId, null, specificationId, null, eventId, occurredOn);
+    }
 }

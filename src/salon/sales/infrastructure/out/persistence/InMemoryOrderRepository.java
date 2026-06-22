@@ -1,6 +1,7 @@
 package salon.sales.infrastructure.out.persistence;
 
 import salon.common.model.OrderId;
+import salon.sales.application.domain.model.offer.OfferId;
 import salon.sales.application.domain.model.order.Order;
 import salon.sales.application.port.out.OrderDatabaseRepository;
 
@@ -12,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * OUTBOUND ADAPTER (Figure 22: DBAdapter) — in-memory implementation of
- * {@link OrderDatabaseRepository}. Orders keyed by the (shared-kernel) order id.
+ * {@link OrderDatabaseRepository} used by the POJO/demo wiring. Orders keyed by the order id.
  */
 public class InMemoryOrderRepository implements OrderDatabaseRepository {
 
@@ -26,6 +27,13 @@ public class InMemoryOrderRepository implements OrderDatabaseRepository {
     @Override
     public Optional<Order> findById(OrderId id) {
         return Optional.ofNullable(this.byId.get(id.value()));
+    }
+
+    @Override
+    public Optional<Order> findByOfferId(OfferId offerId) {
+        return this.byId.values().stream()
+                .filter(o -> o.getSourceOfferId().equals(offerId))
+                .findFirst();
     }
 
     @Override

@@ -20,7 +20,8 @@ class OfferTest {
         Offer offer = new Offer(
                 new OfferId("O-200"),
                 new CustomerId("C-001"),
-                new SpecificationId("SPEC-1")
+                new SpecificationId("SPEC-1"),
+                Money.of(120000, "PLN")
         );
 
         // The Salesperson finishes filling in the offer and publishes it
@@ -35,7 +36,8 @@ class OfferTest {
         Offer offer = new Offer(
                 new OfferId("O-201"),
                 new CustomerId("C-001"),
-                new SpecificationId("SPEC-1")
+                new SpecificationId("SPEC-1"),
+                Money.of(120000, "PLN")
         );
 
         // An acceptance attempt by the customer must be blocked
@@ -71,7 +73,8 @@ class OfferTest {
         Offer offer = new Offer(
                 new OfferId("O-203"),
                 new CustomerId("C-001"),
-                new SpecificationId("SPEC-1")
+                new SpecificationId("SPEC-1"),
+                Money.of(120000, "PLN")
         );
         offer.publishOffer();
         offer.reject();

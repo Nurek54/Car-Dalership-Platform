@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * OUTBOUND ADAPTER (Figure 22: DBAdapter) — in-memory implementation of
- * {@link CustomerDatabaseRepository}. CRM master data keyed by the customer id.
+ * {@link CustomerDatabaseRepository} used by the POJO/demo wiring.
  */
 public class InMemoryCustomerRepository implements CustomerDatabaseRepository {
 
@@ -24,5 +24,10 @@ public class InMemoryCustomerRepository implements CustomerDatabaseRepository {
     @Override
     public Optional<Customer> findById(CustomerId id) {
         return Optional.ofNullable(this.byId.get(id.value()));
+    }
+
+    @Override
+    public boolean existsById(String customerId) {
+        return this.byId.containsKey(customerId);
     }
 }

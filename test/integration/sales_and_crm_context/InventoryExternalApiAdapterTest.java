@@ -3,7 +3,9 @@ package integration.sales_and_crm_context;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
+import salon.catalog.infrastructure.out.messaging.MessageBroker;
 import salon.sales.infrastructure.out.external.InventoryExternalApiAdapter;
 import salon.sales.application.domain.exception.InventoryLockedException;
 import salon.sales.application.domain.exception.ExternalServiceUnavailableException;
@@ -12,7 +14,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
-@SpringBootTest
+@SpringBootTest(classes = InventoryExternalApiAdapter.class)
 @AutoConfigureWireMock(port = 8082)
 class InventoryExternalApiAdapterTest {
 
@@ -43,7 +45,7 @@ class InventoryExternalApiAdapterTest {
         // The HTTP adapter correctly parses the error and throws a safe domain exception
         assertThatThrownBy(() -> inventoryAdapter.allocateVehicleOrProductionSlot("ORD-222"))
                 .isInstanceOf(InventoryLockedException.class)
-                .hasMessageContaining("No production slots available");
+                .hasMessageContaining("Inventory rejected the allocation (409 Conflict)");
     }
 
     @Test

@@ -1,28 +1,38 @@
 package acceptance.sales_and_crm_context;
 
 import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter;
-import org.springframework.boot.autoconfigure.AutoConfigurationPackage;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.TypeExcludeFilter;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import salon.sales.application.domain.model.offer.OfferFactory;
+import salon.sales.application.domain.model.order.OrderFactory;
 
 /**
  * Spring configuration anchor for the acceptance tests of the Sales Context
- * (full context @SpringBootTest + MockMvc + WireMock on a single port).
+ * (full Sales slice: REST + JPA + the event bus, with WireMock for outbound HTTP and a mocked broker).
+ *
+ * IMPORTANT: the component scan is restricted to {@code salon.sales} ONLY. The other bounded contexts
+ * (Billing, Financing, Logistics, Catalog) are wired in {@code salon.bootstrap.SalonWiringConfiguration}
+ * and pull in collaborators that are irrelevant here; scanning the whole {@code salon} tree would boot
+ * those beans too and cascade unrelated failures. We therefore load just the Sales beans and provide
+ * the two framework-free domain factories ourselves.
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@AutoConfigurationPackage(basePackages = "salon")
-@ComponentScan(
-        value = "salon",
-        excludeFilters = {
-                @ComponentScan.Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
-                @ComponentScan.Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class),
-                @ComponentScan.Filter(type = FilterType.ANNOTATION, classes = SpringBootApplication.class)
-        }
-)
+@ComponentScan(basePackages = "salon.sales")
+@EntityScan(basePackages = "salon.sales.infrastructure.out.persistence")
+@EnableJpaRepositories(basePackages = "salon.sales.infrastructure.out.persistence")
 public class SalesContextAcceptanceTestApplication {
+
+    @Bean
+    public OfferFactory offerFactory() {
+        return new OfferFactory();
+    }
+
+    @Bean
+    public OrderFactory orderFactory() {
+        return new OrderFactory();
+    }
 }

@@ -1,6 +1,7 @@
 package unit.sales_and_crm_context.aggregateTests;
 
 import org.junit.jupiter.api.Test;
+import salon.sales.application.domain.event.FinancingRequestedEvent;
 import salon.sales.application.domain.model.offer.OfferId;
 import salon.sales.application.domain.model.order.*;
 import salon.common.model.Money;
@@ -35,7 +36,7 @@ class OrderTest {
                 .isInstanceOf(FinancingRequestedEvent.class)
                 .satisfies(event -> {
                     FinancingRequestedEvent e = (FinancingRequestedEvent) event;
-                    assertThat(e.orderId()).isEqualTo(new OrderId("ORD-001"));
+                    assertThat(e.orderId()).isEqualTo("ORD-001");
                 });
     }
 
@@ -68,7 +69,7 @@ class OrderTest {
         // An order ready for handover (without a scheduled date in the calendar)
         Order order = createBaseOrder("ORD-003", "O-102");
 
-        order.activate(); // Aktywacja (DRAFT -> IN_PROGRESS)
+        order.activate(); // Aktywacja (DRAFT_CREATED -> IN_PROGRESS)
         order.markAsReadyForHandover(); // State: READY_FOR_HANDOVER
         order.changePaymentStatus(PaymentStatus.PAID); // It must be paid
 

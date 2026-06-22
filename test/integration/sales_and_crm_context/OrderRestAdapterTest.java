@@ -35,15 +35,13 @@ class OrderRestAdapterTest {
 
     @Test
     void shouldReturn400BadRequestWhenDateIsInvalidOrMissing() throws Exception {
-        // JSON without the required date
         String invalidJson = "{ \"handoverDate\": \"\" }";
 
-        // Validation rejects the request before it reaches the domain
         mockMvc.perform(post("/api/sales/orders/ORD-123/schedule-handover")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Invalid input parameters"));
+                .andExpect(jsonPath("$.fieldErrors.handoverDate").value("must not be null"));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package salon.sales.application.service;
 
+import org.springframework.stereotype.Service;
 import salon.common.model.OrderId;
 import salon.sales.api.CustomerSnapshotDto;
 import salon.sales.api.OfferSnapshotDto;
@@ -16,6 +17,7 @@ import salon.sales.application.port.out.OrderDatabaseRepository;
  * for synchronous cross-context queries; performs the order -> offer -> customer navigation and
  * returns Published-Language snapshots (no aggregates leak out).
  */
+@Service
 public class SalesQueryService implements SalesQueryFacade {
 
     private final OrderDatabaseRepository orderRepository;

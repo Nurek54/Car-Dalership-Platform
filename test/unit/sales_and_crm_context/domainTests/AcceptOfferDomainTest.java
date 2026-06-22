@@ -19,7 +19,8 @@ class AcceptOfferDomainTest {
     @Test
     void shouldAcceptOfferAndAllowOrderCreation() {
         // We have an offer
-        Offer offer = new Offer(new OfferId("O-1"), new CustomerId("C-1"), new SpecificationId("S-1"));
+        Offer offer = new Offer(new OfferId("O-1"), new CustomerId("C-1"),
+                new SpecificationId("S-1"), Money.of(150000, "PLN"));
         offer.publishOffer();
 
         // The customer accepts the offer, and we generate an order based on it
@@ -37,7 +38,8 @@ class AcceptOfferDomainTest {
     @Test
     void shouldRejectAcceptanceWhenOfferIsAlreadyRejected() {       // Scenariusz alternatywny
         // The customer withdrew earlier and the offer was marked as rejected
-        Offer offer = new Offer(new OfferId("O-2"), new CustomerId("C-2"), new SpecificationId("S-2"));
+        Offer offer = new Offer(new OfferId("O-2"), new CustomerId("C-2"),
+                new SpecificationId("S-2"), Money.of(150000, "PLN"));
         offer.publishOffer();
         offer.reject();
 

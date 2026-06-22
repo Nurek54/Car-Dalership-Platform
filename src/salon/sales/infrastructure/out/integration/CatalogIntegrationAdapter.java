@@ -3,11 +3,8 @@ package salon.sales.infrastructure.out.integration;
 import salon.sales.application.port.out.CatalogIntegration;
 
 /**
- * OUTBOUND ADAPTER (ACL, Figure 22) — integration with the Catalog and Configuration Context.
- *
- * Translates the Sales request "open a configurator session" into a call on the Catalog
- * (here simulated by logging). In a distributed setup this maps onto a Catalog REST endpoint
- * or a command message.
+ * OUTBOUND ADAPTER (ACL, Figure 22) — log-only integration with the Catalog and Configuration
+ * Context (used by the POJO/demo wiring).
  */
 public class CatalogIntegrationAdapter implements CatalogIntegration {
 
@@ -15,5 +12,11 @@ public class CatalogIntegrationAdapter implements CatalogIntegration {
     public void initiateConfiguratorSession(String sessionId, int modelYear) {
         System.out.println("[CatalogIntegrationAdapter] Configurator session " + sessionId
                 + " opened in the Catalog for model year " + modelYear + ".");
+    }
+
+    @Override
+    public void openConfiguratorInterface(String sessionId, String customerId, String salespersonId) {
+        System.out.println("[CatalogIntegrationAdapter] Configurator interface opened for session "
+                + sessionId + " (customer " + customerId + ", salesperson " + salespersonId + ").");
     }
 }

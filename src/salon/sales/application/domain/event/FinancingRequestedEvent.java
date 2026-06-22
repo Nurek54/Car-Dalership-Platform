@@ -15,4 +15,8 @@ public record FinancingRequestedEvent(String orderId, String customerId,
     public FinancingRequestedEvent(String orderId, String customerId) {
         this(orderId, customerId, UUID.randomUUID(), Instant.now());
     }
+
+    public FinancingRequestedEvent(UUID eventId, String orderId, String customerId, Instant occurredOn) {
+        this(orderId, customerId, eventId, occurredOn);
+    }
 }

@@ -12,7 +12,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
-@SpringBootTest
+@SpringBootTest(classes = BillingExternalApiAdapter.class)
 @AutoConfigureWireMock(port = 8083)
 class BillingExternalApiAdapterTest {
 

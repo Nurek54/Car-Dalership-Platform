@@ -18,8 +18,8 @@ public class ConfiguratorRestController {
         this.startConfigurator = startConfigurator;
     }
 
-    public String startSession(String customerId, String salespersonId, int modelYear) {
+    public String startSession(String customerId, String salespersonId) {
         return this.startConfigurator.startSession(
-                new StartConfiguratorSessionCommand(customerId, salespersonId, modelYear));
+                new StartConfiguratorSessionCommand(customerId, salespersonId));
     }
 }

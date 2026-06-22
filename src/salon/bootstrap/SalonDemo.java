@@ -53,7 +53,7 @@ public class SalonDemo {
                 new BillingIntegrationAdapter(), new InventoryIntegrationAdapter(), bus,
                 new OfferFactory(), new OrderFactory());
         ConfiguratorAppService configurator =
-                new ConfiguratorAppService(new CatalogIntegrationAdapter(), bus);
+                new ConfiguratorAppService(customerRepo, bus);
 
         // Inbound event adapters (driven by integration events from other contexts).
         CatalogEventSubscriberAdapter catalogSubscriber = new CatalogEventSubscriberAdapter(sales);
@@ -66,7 +66,7 @@ public class SalonDemo {
 
         System.out.println("=== UC-CRM-01: start configurator session ===");
         String sessionId = configurator.startSession(
-                new StartConfiguratorSessionCommand("CUST-1", "SP-7", 2026));
+                new StartConfiguratorSessionCommand("CUST-1", "SP-7"));
         System.out.println("Session: " + sessionId);
 
         System.out.println("\n=== UC-CRM-02: proforma offer (price from the Catalog: 100 000 PLN) ===");

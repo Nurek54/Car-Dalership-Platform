@@ -13,7 +13,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest
+@SpringBootTest(classes = CatalogExternalApiAdapter.class)
 @AutoConfigureWireMock(port = 8081)
 class CatalogExternalApiAdapterTest {
 

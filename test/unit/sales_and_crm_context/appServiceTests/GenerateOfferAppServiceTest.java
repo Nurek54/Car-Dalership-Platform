@@ -1,16 +1,23 @@
 package unit.sales_and_crm_context.appServiceTests;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import salon.sales.application.port.out.OfferDatabaseRepository;
-import salon.sales.application.port.out.SpecificationPriceReadModelPort;
-import salon.sales.application.service.SalesService;
+import org.mockito.junit.jupiter.MockitoExtension;
+import salon.common.application.EventPublisher;
+import salon.common.model.Money;
 import salon.sales.application.domain.exception.SpecificationNotFoundException;
 import salon.sales.application.domain.model.offer.Offer;
-import org.mockito.junit.jupiter.MockitoExtension;
-import salon.common.model.Money;
+import salon.sales.application.domain.model.offer.OfferFactory;
+import salon.sales.application.domain.model.order.OrderFactory;
+import salon.sales.application.port.out.BillingIntegration;
+import salon.sales.application.port.out.CustomerDatabaseRepository;
+import salon.sales.application.port.out.InventoryIntegration;
+import salon.sales.application.port.out.OfferDatabaseRepository;
+import salon.sales.application.port.out.OrderDatabaseRepository;
+import salon.sales.application.port.out.SpecificationPriceReadModelPort;
+import salon.sales.application.service.SalesService;
 
 import java.util.Optional;
 
@@ -22,12 +29,22 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class GenerateOfferAppServiceTest {
 
-    @Mock
-    private OfferDatabaseRepository offerRepository;
-    @Mock
-    private SpecificationPriceReadModelPort specificationPriceReadModel;
-    @InjectMocks
+    @Mock private CustomerDatabaseRepository customerRepository;
+    @Mock private OfferDatabaseRepository offerRepository;
+    @Mock private OrderDatabaseRepository orderRepository;
+    @Mock private BillingIntegration billingIntegration;
+    @Mock private InventoryIntegration inventoryIntegration;
+    @Mock private EventPublisher eventPublisher;
+    @Mock private SpecificationPriceReadModelPort specificationPriceReadModel;
+
     private SalesService salesAppService;
+
+    @BeforeEach
+    void setUp() {
+        salesAppService = new SalesService(customerRepository, offerRepository, orderRepository,
+                billingIntegration, inventoryIntegration, eventPublisher,
+                new OfferFactory(), new OrderFactory(), specificationPriceReadModel);
+    }
 
     @Test
     void shouldGenerateAndSaveOfferSuccessfully() {

@@ -12,11 +12,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * OUTBOUND ADAPTER (Figure 22: DBAdapter) — JPA implementation of {@link OfferDatabaseRepository}.
- * Maps the rich {@link Offer} aggregate to/from {@link OfferEntity} and carries the optimistic-lock
- * version across load -> modify -> save.
- */
 @Repository
 public class OfferDatabaseAdapter implements OfferDatabaseRepository {
 

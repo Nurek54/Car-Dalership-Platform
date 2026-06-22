@@ -8,9 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 import salon.sales.application.command.StartConfiguratorSessionCommand;
 import salon.sales.application.service.ConfiguratorAppService;
 
-/**
- * INBOUND ADAPTER (Figure 22: RestController) — opens a configurator session over HTTP (UC-CRM-01).
- */
 @RestController
 @RequestMapping("/api/sales/sessions")
 public class ConfiguratorRestApiAdapter {
@@ -28,7 +25,7 @@ public class ConfiguratorRestApiAdapter {
         return ResponseEntity.ok(sessionId);
     }
 
-    /** Request body for starting a configurator session. */
+    
     public record StartSessionRequest(String customerId, String salespersonId) {
     }
 }

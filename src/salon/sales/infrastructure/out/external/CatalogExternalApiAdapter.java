@@ -15,11 +15,6 @@ import salon.sales.application.domain.exception.SpecificationNotFoundException;
 
 import java.math.BigDecimal;
 
-/**
- * OUTBOUND ADAPTER (ACL) — HTTP integration with the Catalog and Configuration Context.
- * Translates the external JSON price into the {@link Money} value object and maps transport errors
- * (404/5xx/timeout) onto controlled domain exceptions.
- */
 @Component
 public class CatalogExternalApiAdapter {
 
@@ -29,7 +24,7 @@ public class CatalogExternalApiAdapter {
         this.restClient = RestClient.builder().baseUrl(baseUrl).build();
     }
 
-    /** Fetches the configured specification price from the Catalog. */
+    
     public Money specificationPrice(String specificationId) {
         try {
             ResponseEntity<JsonNode> response = this.restClient.get()

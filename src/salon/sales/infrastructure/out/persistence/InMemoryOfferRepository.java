@@ -10,10 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * OUTBOUND ADAPTER (Figure 22: DBAdapter) — in-memory implementation of
- * {@link OfferDatabaseRepository}. Proforma offers keyed by the offer id.
- */
 public class InMemoryOfferRepository implements OfferDatabaseRepository {
 
     private final Map<String, Offer> byId = new ConcurrentHashMap<>();

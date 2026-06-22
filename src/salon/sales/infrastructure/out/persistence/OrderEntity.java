@@ -14,7 +14,6 @@ import salon.sales.application.domain.model.order.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** JPA persistence model for the {@link salon.sales.application.domain.model.order.Order} aggregate. */
 @Entity
 @Table(name = "sales_order")
 public class OrderEntity {

@@ -11,11 +11,6 @@ import salon.sales.application.port.out.CustomerDatabaseRepository;
 
 import java.util.UUID;
 
-/**
- * APPLICATION SERVICE (Figure 22) — "ConfiguratorAppService". Realizes the {@link StartConfigurator}
- * inbound port (UC-CRM-01): verifies the customer exists, opens a configurator session and emits
- * ConfiguratorSessionInitiated (which the Catalog Context consumes to open the configurator UI).
- */
 @Service
 public class ConfiguratorAppService implements StartConfigurator {
 
@@ -33,7 +28,7 @@ public class ConfiguratorAppService implements StartConfigurator {
         this.eventPublisher = eventPublisher;
     }
 
-    /** UC-CRM-01: opens a configurator session for an existing customer; returns the session id. */
+    
     public String startConfiguratorSession(StartConfiguratorSessionCommand command) {
         if (command == null) {
             throw new IllegalArgumentException("command must not be null.");
@@ -47,7 +42,7 @@ public class ConfiguratorAppService implements StartConfigurator {
         return sessionId;
     }
 
-    /** Inbound-port alias. */
+    
     @Override
     public String startSession(StartConfiguratorSessionCommand command) {
         return startConfiguratorSession(command);

@@ -3,13 +3,6 @@ package salon.catalog.application.domain.model.catalog;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * Value object – globally unique identity of the ProductCatalog aggregate.
- *
- * Per Aggregate Design Rule 3: VehicleSpecification references
- * ProductCatalog ONLY through this identifier (not through a reference),
- * so that the aggregates remain disjoint.
- */
 public final class CatalogId {
 
     private final UUID value;

@@ -9,10 +9,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Domain event emitted after the specification is finalized (UC-KON-01, step 7).
- * Outbound context communication (OHS) – published on the bus (RabbitMQ).
- */
 public final class SpecificationCompleted implements DomainEvent {
 
     private final SpecificationId specificationId;

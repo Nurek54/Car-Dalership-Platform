@@ -31,16 +31,6 @@ import salon.logistics.application.port.out.VehicleDatabaseRepository;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * APPLICATION SERVICE (Figure 37) – "InventoryManagementService".
- *
- * The single orchestration point of the Inventory and Logistics Context. Implements four inbound ports
- * z diagramu architektury: {@link ReserveVehicle}, {@link ReceiveVehicle}, {@link ReleaseVehicle}
- * and {@link PrepareForHandover} (covering UC-INW-01..06), using four outbound ports:
- * {@link VehicleDatabaseRepository}, {@link CatalogIntegration}, {@link ImporterACL} and the shared
- * {@link EventPublisher}. NON-BUSINESS operations (fetching the aggregate, saving, emitting events) are here;
- * the vehicle life-cycle rules — in the {@link InventoryVehicle} aggregate.
- */
 public class InventoryManagementService implements
         ReserveVehicle, ReceiveVehicle, ReleaseVehicle, PrepareForHandover {
 
@@ -72,9 +62,9 @@ public class InventoryManagementService implements
         this.eventPublisher = eventPublisher;
     }
 
-    // ===== Feeding the local copy of the Catalog data (CatalogIntegration outbound port) =====
-    // Helper methods called by the composition root / demo; event subscribers may also
-    // write directly to the CatalogIntegration port.
+    
+    
+    
 
     public void registerSpecification(String specificationId, List<String> optionCodes) {
         this.catalogIntegration.saveSpecification(specificationId, optionCodes);
@@ -84,7 +74,7 @@ public class InventoryManagementService implements
         this.catalogIntegration.linkOrderToSpecification(orderId, specificationId);
     }
 
-    // ===== ReserveVehicle: UC-INW-01 (reservation from the yard) + UC-INW-02 (production order) =====
+    
 
     @Override
     public void reserveVehicleForOrder(String orderId) {
@@ -98,12 +88,12 @@ public class InventoryManagementService implements
 
         if (free.isPresent()) {
             InventoryVehicle vehicle = free.get();
-            vehicle.lockForOrder(order);                    // ON_STOCK -> RESERVED (rule in the aggregate)
+            vehicle.lockForOrder(order);                    
             this.vehicleRepository.save(vehicle);
             this.eventPublisher.publish(
                     new VehicleReservedFromStockEvent(orderId, vehicle.vin().value()));
         } else {
-            // A1: no free car in the yard -> the production-order / deposit path.
+            
             this.eventPublisher.publish(new VehicleIsNotOnStockEvent(orderId));
         }
     }
@@ -127,7 +117,7 @@ public class InventoryManagementService implements
         }
     }
 
-    // ===== ReceiveVehicle: UC-INW-03 (receiving the vehicle into stock) =====
+    
 
     @Override
     public void receiveVehicle(String vin) {
@@ -137,19 +127,19 @@ public class InventoryManagementService implements
         if (existing.isPresent()) {
             InventoryVehicle vehicle = existing.get();
             ImporterData data = new ImporterData(vinNumber, vehicle.specification(), List.of());
-            vehicle.receiveOnYard(data);                    // IN_PRODUCTION -> RESERVED
+            vehicle.receiveOnYard(data);                    
             this.vehicleRepository.save(vehicle);
             OrderId order = vehicle.order();
             this.eventPublisher.publish(new VehicleDeliveredToStockEvent(
                     order == null ? null : order.value(), vin));
         } else {
-            // A1: a "stock" car without an order -> registered as free, without an event.
+            
             ImporterData data = new ImporterData(vinNumber, null, List.of());
             this.vehicleRepository.save(this.vehicleFactory.createStockArrival(data));
         }
     }
 
-    // ===== ReleaseVehicle: UC-INW-06 (handover) + UC-INW-04 (lock release) =====
+    
 
     @Override
     public void releaseVehicle(String orderId) {
@@ -157,12 +147,12 @@ public class InventoryManagementService implements
                 .orElseThrow(() -> new VehicleNotFoundException(
                         "No vehicle to hand over for order " + orderId));
         try {
-            vehicle.handOver();                              // READY_FOR_HANDOVER -> HANDED_OVER
+            vehicle.handOver();                              
             this.vehicleRepository.save(vehicle);
             this.eventPublisher.publish(
                     new VehicleInventoryReleasedEvent(orderId, vehicle.vin().value()));
         } catch (IllegalVehicleStateException e) {
-            // A1: incorrect vehicle status -> a compensating event for Sales.
+            
             this.eventPublisher.publish(new VehicleInventoryReleasedErrorEvent(orderId, e.getMessage()));
         }
     }
@@ -171,24 +161,24 @@ public class InventoryManagementService implements
     public void releaseReservation(String orderId) {
         Optional<InventoryVehicle> reserved = this.vehicleRepository.findByOrderId(new OrderId(orderId));
         if (reserved.isEmpty()) {
-            // A1: the vehicle does not exist among the reservations (previously removed/handed over) — nothing to do.
+            
             return;
         }
         InventoryVehicle vehicle = reserved.get();
-        vehicle.releaseReservation();                        // RESERVED -> ON_STOCK
+        vehicle.releaseReservation();                        
         this.vehicleRepository.save(vehicle);
         this.eventPublisher.publish(
                 new VehicleReservationCancelledEvent(orderId, vehicle.vin().value()));
     }
 
-    // ===== PrepareForHandover: UC-INW-05 (preparation for handover after settlement) =====
+    
 
     @Override
     public void prepareVehicleForHandover(String orderId) {
         InventoryVehicle vehicle = this.vehicleRepository.findByOrderId(new OrderId(orderId))
                 .orElseThrow(() -> new VehicleNotFoundException(
                         "No reserved vehicle for order " + orderId));
-        vehicle.prepareForHandover();                        // RESERVED -> READY_FOR_HANDOVER
+        vehicle.prepareForHandover();                        
         this.vehicleRepository.save(vehicle);
         this.eventPublisher.publish(
                 new VehicleReadyForHandoverEvent(orderId, vehicle.vin().value()));

@@ -2,10 +2,6 @@ package salon.sales.infrastructure.out.integration;
 
 import salon.sales.application.port.out.InventoryIntegration;
 
-/**
- * OUTBOUND ADAPTER (ACL, Figure 22) — log-only integration with the Inventory and Logistics
- * Context (used by the POJO/demo wiring).
- */
 public class InventoryIntegrationAdapter implements InventoryIntegration {
 
     @Override

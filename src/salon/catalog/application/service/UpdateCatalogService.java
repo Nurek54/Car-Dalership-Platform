@@ -20,15 +20,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 
-/**
- * APPLICATION SERVICE (use-case facade for UC-KON-02) – implementation of the inbound
- * port {@link UpdateCatalog}.
- *
- * Orchestration: fetch the package via the ACL → build the aggregate with the factory → logical
- * validation (domain service) → archive the current and save the new catalog in
- * a single transaction → emit CatalogUpdated. On a validation/translation error
- * (scenariusz A1) odrzucenie pakietu i emisja CatalogUpdateFailed.
- */
 @Service
 public class UpdateCatalogService implements UpdateCatalog {
 
@@ -59,28 +50,28 @@ public class UpdateCatalogService implements UpdateCatalog {
     @Transactional
     public void update() {
         try {
-            // Steps 1–2: fetching and translating the package (the ACL performs the format translation).
+            
             ImportedCatalogData data = catalogImporter.fetchLatestCatalog();
 
-            // Step 4 (preparation): determining the next version relative to the current active catalog.
+            
             Optional<ProductCatalog> current = catalogRepository.findActiveByModelYear(data.modelYear());
             int nextVersion = current.map(c -> c.version() + 1).orElse(1);
 
-            // Building the aggregate with the factory – structural validation (prices, uniqueness, existence of options).
+            
             ProductCatalog newCatalog = catalogFactory.createNextVersion(
                     data.modelYear(), nextVersion, data.options(), data.rules());
 
-            // Step 3: logical validation of rule consistency (domain service).
+            
             ruleValidationService.validateCatalogConsistency(newCatalog);
 
-            // Step 4: saving the new catalog; the previous one is marked as archived.
+            
             current.ifPresent(c -> {
                 c.archive();
                 catalogRepository.save(c);
             });
             catalogRepository.save(newCatalog);
 
-            // Step 5: emitting the event on the data bus.
+            
             eventPublisher.publish(new CatalogUpdated(
                     newCatalog.id(), newCatalog.modelYear(), newCatalog.version(), Instant.now(clock)));
 
@@ -88,7 +79,7 @@ public class UpdateCatalogService implements UpdateCatalog {
                     newCatalog.id(), newCatalog.modelYear(), newCatalog.version());
 
         } catch (CatalogValidationException | IllegalArgumentException e) {
-            // Scenario A1: critical error – the package is rejected, logged for IT support.
+            
             log.error("Catalog update aborted: {}", e.getMessage(), e);
             eventPublisher.publish(new CatalogUpdateFailed(e.getMessage(), Instant.now(clock)));
         }

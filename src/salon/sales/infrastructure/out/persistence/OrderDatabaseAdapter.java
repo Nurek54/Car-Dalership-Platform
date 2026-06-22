@@ -11,10 +11,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * OUTBOUND ADAPTER (Figure 22: DBAdapter) — JPA implementation of {@link OrderDatabaseRepository}.
- * Maps the {@link Order} aggregate to/from {@link OrderEntity} and carries the optimistic-lock version.
- */
 @Repository
 public class OrderDatabaseAdapter implements OrderDatabaseRepository {
 

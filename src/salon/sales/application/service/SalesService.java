@@ -41,13 +41,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * APPLICATION SERVICE (Figure 22) — "SalesService". The central orchestration point of the
- * Sales and CRM Context. Realizes the inbound ports {@link AcceptOffer}, {@link ActivateOrderOnDeposit},
- * {@link ScheduleHandover}, {@link ReleaseVehicle} and {@link ExpireOutdatedOffer}, plus the
- * event-driven operations (UC-CRM-02/04/05) invoked by the inbound EventListener adapters.
- * Business rules live in the aggregates; this service only orchestrates and publishes events.
- */
 @Service
 public class SalesService implements
         AcceptOffer, ActivateOrderOnDeposit, ScheduleHandover, ReleaseVehicle, ExpireOutdatedOffer {
@@ -83,7 +76,7 @@ public class SalesService implements
         this.specificationPriceReadModel = specificationPriceReadModel;
     }
 
-    /** Backward-compatible constructor (no read model) used by the legacy POJO wiring/demos. */
+    
     public SalesService(CustomerDatabaseRepository customerRepository,
                         OfferDatabaseRepository offerRepository,
                         OrderDatabaseRepository orderRepository,
@@ -96,7 +89,7 @@ public class SalesService implements
                 inventoryIntegration, eventPublisher, offerFactory, orderFactory, null);
     }
 
-    /** Registers a customer (CRM master data) needed before building offers. */
+    
     public void registerCustomer(Customer customer) {
         if (customer == null) {
             throw new IllegalArgumentException("customer must not be null.");
@@ -104,12 +97,9 @@ public class SalesService implements
         this.customerRepository.save(customer);
     }
 
-    // ===== UC-CRM-02: generate the proforma offer =====
+    
 
-    /**
-     * UC-CRM-02: a completed specification (with the catalog price) arrived from the Catalog Context;
-     * a proforma offer is created and published. Returns the new offer id.
-     */
+    
     public String createProformaOffer(String customerId, String specificationId, Money basePrice) {
         Offer offer = this.offerFactory.createProforma(
                 new CustomerId(customerId), new SpecificationId(specificationId), basePrice);
@@ -119,10 +109,7 @@ public class SalesService implements
         return offer.getId().value();
     }
 
-    /**
-     * UC-CRM-02: generates and publishes a proforma offer using the price already cached in the
-     * local read model (fed by the Catalog's SpecificationCompleted event). No price -> no offer.
-     */
+    
     public String generateOffer(String customerId, String specificationId) {
         SpecificationId specId = new SpecificationId(specificationId);
         Money price = this.specificationPriceReadModel.findPrice(specId)
@@ -135,17 +122,17 @@ public class SalesService implements
         return offer.getId().value();
     }
 
-    // ===== AcceptOffer: UC-CRM-03 =====
+    
 
     @Override
     public String acceptOffer(AcceptOfferCommand command) {
         Offer offer = this.offerRepository.findById(new OfferId(command.offerId()))
                 .orElseThrow(() -> new OfferNotFoundException(command.offerId()));
-        offer.accept();                                   // PUBLISHED -> ACCEPTED (rule in the aggregate)
+        offer.accept();                                   
         this.offerRepository.save(offer);
 
         Order order = this.orderFactory.createFromOffer(offer);
-        order.activate();                                 // DRAFT_CREATED -> IN_PROGRESS
+        order.activate();                                 
         order.declarePaymentMethod(command.paymentMethod());
         this.orderRepository.save(order);
 
@@ -160,10 +147,7 @@ public class SalesService implements
         return orderId;
     }
 
-    /**
-     * UC-CRM-03 (driven from the REST adapter): accepts a published offer and creates the order.
-     * The order is left in DRAFT_CREATED until the deposit/financing path activates it.
-     */
+    
     public String acceptOfferAndCreateOrder(OfferId offerId) {
         Offer offer = this.offerRepository.findById(offerId)
                 .orElseThrow(() -> new OfferNotFoundException(offerId.value()));
@@ -171,7 +155,7 @@ public class SalesService implements
         this.offerRepository.save(offer);
 
         Order order = this.orderFactory.createFromOffer(offer);
-        this.orderRepository.save(order);                 // may throw DatabaseException -> no events published
+        this.orderRepository.save(order);                 
 
         List<DomainEvent> events = new ArrayList<>();
         events.add(new OrderPlacedEvent(order.getId().value(), offer.getId().value(),
@@ -181,7 +165,7 @@ public class SalesService implements
         return order.getId().value();
     }
 
-    // ===== ActivateOrderOnDeposit: UC-CRM-03 (part 2) =====
+    
 
     @Override
     public void activateOnDeposit(String orderId) {
@@ -193,14 +177,14 @@ public class SalesService implements
         }
     }
 
-    // ===== UC-CRM-04 =====
+    
 
-    /** The vehicle is physically and financially ready — mark the order ready for handover. */
+    
     public void markReadyForHandover(String orderId) {
         markOrderAsReadyForHandover(new OrderId(orderId));
     }
 
-    /** UC-CRM-04: marks the order ready for handover (driven by VehicleReadyForHandover). */
+    
     public void markOrderAsReadyForHandover(OrderId orderId) {
         Order order = this.orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order with ID " + orderId.value() + " not found"));
@@ -222,19 +206,19 @@ public class SalesService implements
         this.eventPublisher.publishAll(order.pullDomainEvents());
     }
 
-    // ===== ReleaseVehicle / confirm handover: UC-CRM-05 =====
+    
 
     @Override
     public void releaseVehicle(String orderId) {
         confirmHandover(new OrderId(orderId));
     }
 
-    /** UC-CRM-05: confirms the physical handover, releases the vehicle and completes the order. */
+    
     public void confirmHandover(OrderId orderId) {
         Order order = this.orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order with ID " + orderId.value() + " not found"));
-        order.confirmHandover();                          // -> COMPLETED (in memory)
-        this.inventoryIntegration.releasePhysicalVehicle(orderId.value()); // may throw -> no save/publish
+        order.confirmHandover();                          
+        this.inventoryIntegration.releasePhysicalVehicle(orderId.value()); 
         this.orderRepository.save(order);
 
         List<DomainEvent> events = new ArrayList<>(order.pullDomainEvents());
@@ -242,14 +226,14 @@ public class SalesService implements
         this.eventPublisher.publishAll(events);
     }
 
-    /** UC-CRM-05 / A1: Inventory rejected the release — revert the order to READY_FOR_HANDOVER. */
+    
     public void revertHandoverOnInventoryError(String orderId) {
         Order order = loadOrder(orderId);
         order.revertToReadyForHandover();
         this.orderRepository.save(order);
     }
 
-    /** UC-CRM-03 (A1): cancels the order and notifies Billing/external systems. */
+    
     public void cancelOrder(OrderId orderId, String reason) {
         Order order = this.orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order with ID " + orderId.value() + " not found"));
@@ -259,7 +243,7 @@ public class SalesService implements
         this.eventPublisher.publishAll(order.pullDomainEvents());
     }
 
-    // ===== ExpireOutdatedOffer: CronJob =====
+    
 
     @Override
     public void expireOutdatedOffers() {

@@ -8,10 +8,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * OUTBOUND ADAPTER (Figure 22: DBAdapter) — in-memory implementation of
- * {@link CustomerDatabaseRepository} used by the POJO/demo wiring.
- */
 public class InMemoryCustomerRepository implements CustomerDatabaseRepository {
 
     private final Map<String, Customer> byId = new ConcurrentHashMap<>();

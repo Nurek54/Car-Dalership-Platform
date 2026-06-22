@@ -6,15 +6,6 @@ import salon.common.model.OrderId;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 
-/**
- * AGGREGATE ROOT (Class diagram — «AggregateRoot» AccountingDocument) — invoice / accounting document.
- *
- * Created via the factory method {@link #createInvoice} (static, per the diagram), which guarantees
- * the invariants: complete party data, a non-empty title, a due date computed from
- * {@link BuyerDetails#isCorporate()}. The root is responsible for status transitions (DRAFT -> ISSUED / ERROR)
- * and for generating the PDF representation ({@link #generatePdf()}). The reference to the order is disjoint
- * (only through {@link OrderId}).
- */
 public class AccountingDocument {
 
     private static final int DUE_DAYS_INDIVIDUAL = 7;
@@ -46,11 +37,7 @@ public class AccountingDocument {
         this.status = status;
     }
 
-    /**
-     * FACTORY METHOD (Class diagram — createInvoice$): creates an invoice in the DRAFT state.
-     * Atomic, validates all non-optional elements, never returns an invalid object.
-     * The due date (dueDate) depends on the buyer type (UC-FIR-01/02).
-     */
+    
     public static AccountingDocument createInvoice(OrderId orderId, BuyerDetails buyer,
                                                    SellerDetails seller, Money totalAmount,
                                                    String invoiceTitle, String authorizedIssuer) {
@@ -78,11 +65,7 @@ public class AccountingDocument {
                 totalAmount, issue, due, authorizedIssuer, DocumentStatus.DRAFT);
     }
 
-    /**
-     * Generates the PDF representation of the document (Class diagram — generatePdf(): byte[]).
-     * Here: a lightweight, deterministic serialization of the invoice content; the PdfGeneration adapter may
-     * delegate to this method or wrap it with a library renderer.
-     */
+    
     public byte[] generatePdf() {
         if (this.status == DocumentStatus.ERROR) {
             throw new IllegalStateException("Cannot render a document in ERROR state.");
@@ -100,7 +83,7 @@ public class AccountingDocument {
         return body.getBytes(StandardCharsets.UTF_8);
     }
 
-    /** UC-FIR-02, step 4: document issued (PDF assigned to the order). */
+    
     public void markAsIssued() {
         if (this.status != DocumentStatus.DRAFT) {
             throw new salon.billing.application.domain.exception.IllegalSettlementStateException(
@@ -109,7 +92,7 @@ public class AccountingDocument {
         this.status = DocumentStatus.ISSUED;
     }
 
-    /** UC-FIR-02 / A1: marking a document generation error. */
+    
     public void markAsError() {
         this.status = DocumentStatus.ERROR;
     }

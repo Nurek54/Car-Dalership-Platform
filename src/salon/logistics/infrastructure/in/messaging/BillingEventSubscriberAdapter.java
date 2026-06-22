@@ -4,14 +4,6 @@ import salon.logistics.application.port.in.PrepareForHandover;
 import salon.logistics.application.port.in.ReleaseVehicle;
 import salon.logistics.application.port.in.ReserveVehicle;
 
-/**
- * INBOUND ADAPTER (Figure 37: EventListener) – subscriber of the Billing and Settlement Context events.
- *
- * Maps settlement events to the Inventory inbound ports:
- *  - AdvancePaymentRegistered -> ReserveVehicle.orderVehicleFromFactory (UC-INW-02),
- *  - SettlementCompleted       -> PrepareForHandover (UC-INW-05),
- *  - PaymentDeadlineExpired    -> ReleaseVehicle.releaseReservation (UC-INW-04).
- */
 public class BillingEventSubscriberAdapter {
 
     private final ReserveVehicle reserveVehicle;
@@ -56,7 +48,7 @@ public class BillingEventSubscriberAdapter {
         }
     }
 
-    /** Local (ACL) representations of events from the Billing and Settlement Context. */
+    
     public record AdvancePaymentRegistered(String orderId) {
     }
 

@@ -9,10 +9,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * OUTBOUND ADAPTER — in-memory read model of specification pricing (UC-CRM-02), fed asynchronously
- * by the Catalog's SpecificationCompleted event. Lets Sales build offers without a synchronous query.
- */
 @Component
 public class SpecificationPriceReadModelAdapter implements SpecificationPriceReadModelPort {
 

@@ -11,10 +11,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * OUTBOUND ADAPTER (Figure 22: DBAdapter) — in-memory implementation of
- * {@link OrderDatabaseRepository} used by the POJO/demo wiring. Orders keyed by the order id.
- */
 public class InMemoryOrderRepository implements OrderDatabaseRepository {
 
     private final Map<String, Order> byId = new ConcurrentHashMap<>();

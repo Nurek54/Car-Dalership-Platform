@@ -13,15 +13,6 @@ import salon.sales.application.domain.model.offer.OfferId;
 
 import java.time.LocalDate;
 
-/**
- * AGGREGATE ROOT (Figure 23) — the Order.
- *
- * Created from an accepted offer; references the source offer by id (a disjoint reference) and
- * carries the required deposit (final price) copied from the offer snapshot. Drives the fulfilment
- * lifecycle: activation (UC-CRM-03), readiness (UC-CRM-04), handover scheduling and completion
- * (UC-CRM-05), and cancellation. Business rules live here; the aggregate records domain events
- * (collect & pull) for the application layer to publish.
- */
 public class Order extends AbstractAggregateRoot {
 
     private final OrderId id;
@@ -31,7 +22,7 @@ public class Order extends AbstractAggregateRoot {
     private PaymentStatus paymentStatus;
     private LocalDate handoverDate;
     private OrderState state;
-    private Long version; // optimistic-locking version mirrored from the persistence layer
+    private Long version; 
 
     public Order(OrderId id, OfferId sourceOfferId, Money requiredDeposit) {
         if (id == null) {
@@ -47,12 +38,12 @@ public class Order extends AbstractAggregateRoot {
         this.state = OrderState.DRAFT_CREATED;
     }
 
-    /** Backward-compatible constructor (no deposit amount). */
+    
     public Order(OrderId id, OfferId sourceOfferId) {
         this(id, sourceOfferId, null);
     }
 
-    /** UC-CRM-03: the order is activated once the payment path (deposit/financing) has started. */
+    
     public void activate() {
         if (this.state != OrderState.DRAFT_CREATED) {
             throw new InvalidOrderStateException(
@@ -62,7 +53,7 @@ public class Order extends AbstractAggregateRoot {
         registerEvent(new OrderActivatedEvent(this.id.value()));
     }
 
-    /** UC-CRM-03: records the payment method declared by the customer and emits the payment event. */
+    
     public void declarePaymentMethod(PaymentMethod method) {
         if (method == null) {
             throw new IllegalArgumentException("method must not be null.");
@@ -80,7 +71,7 @@ public class Order extends AbstractAggregateRoot {
         }
     }
 
-    /** Updates the settlement status (kept in sync with Billing). */
+    
     public void changePaymentStatus(PaymentStatus status) {
         if (status == null) {
             throw new IllegalArgumentException("status must not be null.");
@@ -88,7 +79,7 @@ public class Order extends AbstractAggregateRoot {
         this.paymentStatus = status;
     }
 
-    /** UC-CRM-04: the vehicle is ready for handover. */
+    
     public void markAsReadyForHandover() {
         if (this.state == OrderState.COMPLETED) {
             throw new InvalidOrderStateException(
@@ -102,12 +93,12 @@ public class Order extends AbstractAggregateRoot {
         registerEvent(new OrderReadyForHandoverEvent(this.id.value()));
     }
 
-    /** Backward-compatible alias. */
+    
     public void markAsReady() {
         markAsReadyForHandover();
     }
 
-    /** UC-CRM-04: the agreed pickup date is set. */
+    
     public void scheduleHandover(LocalDate date) {
         if (date == null) {
             throw new IllegalArgumentException("date must not be null.");
@@ -120,7 +111,7 @@ public class Order extends AbstractAggregateRoot {
         this.state = OrderState.HANDOVER_SCHEDULED;
     }
 
-    /** UC-CRM-05: the vehicle is physically handed over and the transaction is completed. */
+    
     public void confirmHandover() {
         if (this.state != OrderState.READY_FOR_HANDOVER && this.state != OrderState.HANDOVER_SCHEDULED) {
             throw new InvalidOrderStateException(
@@ -131,7 +122,7 @@ public class Order extends AbstractAggregateRoot {
         registerEvent(new OrderCompletedEvent(this.id.value()));
     }
 
-    /** UC-CRM-05 / A1: inventory rejected the release — compensate back to READY_FOR_HANDOVER. */
+    
     public void revertToReadyForHandover() {
         if (this.state != OrderState.COMPLETED && this.state != OrderState.HANDOVER_SCHEDULED) {
             throw new InvalidOrderStateException(
@@ -141,7 +132,7 @@ public class Order extends AbstractAggregateRoot {
         this.state = OrderState.READY_FOR_HANDOVER;
     }
 
-    /** UC-CRM-03 (A1): the customer withdraws — the order is cancelled with a reason. */
+    
     public void cancel(String reason) {
         if (this.state == OrderState.COMPLETED || this.state == OrderState.CANCELLED) {
             throw new InvalidOrderStateException(
@@ -151,7 +142,7 @@ public class Order extends AbstractAggregateRoot {
         registerEvent(new OrderCancelledEvent(this.id.value(), reason));
     }
 
-    // ----- JavaBean-style getters -----
+    
 
     public OrderId getId() {
         return id;
@@ -173,7 +164,7 @@ public class Order extends AbstractAggregateRoot {
         return state;
     }
 
-    // ----- short, record-style accessors (tests) -----
+    
 
     public OrderId id() {
         return id;
@@ -206,7 +197,7 @@ public class Order extends AbstractAggregateRoot {
     public OrderState state() {
         return state;
     }
-    // ----- persistence support (optimistic locking + reconstitution) -----
+    
 
     public Long getVersion() {
         return version;
@@ -216,7 +207,7 @@ public class Order extends AbstractAggregateRoot {
         this.version = version;
     }
 
-    /** Rebuilds an Order from persisted state (used by the database adapter on load). */
+    
     public static Order reconstitute(OrderId id, OfferId sourceOfferId, Money requiredDeposit,
                                      PaymentMethod paymentMethod, PaymentStatus paymentStatus,
                                      LocalDate handoverDate, OrderState state, Long version) {

@@ -2,13 +2,6 @@ package salon.billing.infrastructure.in.scheduling;
 
 import salon.billing.application.port.in.ProcessPayment;
 
-/**
- * DRIVING ADAPTER — periodic task for reminders about unpaid balances.
- *
- * W kodzie produkcyjnym metoda ma nad soba np. @Scheduled(cron = "0 0 9 * * ?"). Adapter deleguje
- * to the {@link ProcessPayment} port and catches exceptions itself, so that a single run's failure does not
- * stop the scheduler (the cron will fire again).
- */
 public class PaymentReminderCronJobAdapter {
 
     private final ProcessPayment processPayment;

@@ -3,14 +3,6 @@ package salon.financing.application.domain.model.financing;
 import salon.common.model.Money;
 import salon.financing.application.domain.exception.IllegalApplicationStateException;
 
-/**
- * AGGREGATE ROOT (Figure 43) – Financing Application.
- *
- * The aggregate guards the application's state machine (DRAFT -> PENDING -> APPROVED/REJECTED). The dealership never
- * makes the credit decision itself — the aggregate only reflects the status assigned
- * by the external bank system (the sole decision-maker). References to the order and the customer are
- * disjoint (through identifiers).
- */
 public class FinancingApplication {
 
     private final ApplicationId applicationId;
@@ -20,7 +12,7 @@ public class FinancingApplication {
     private final Money moneyForFunding;
     private ApplicationState state;
 
-    /** Package-private constructor — instances are created only by {@link FinancingApplicationFactory}. */
+    
     FinancingApplication(ApplicationId applicationId, OrderId orderId, CustomerId customerId,
                          BuyerDetails buyerDetails, Money moneyForFunding, ApplicationState state) {
         if (applicationId == null) {
@@ -49,7 +41,7 @@ public class FinancingApplication {
         this.state = state;
     }
 
-    /** UC-FIN-01: sending the application to the bank — transition to the "Under bank verification" state. */
+    
     public void submitApplication() {
         if (this.state != ApplicationState.DRAFT) {
             throw new IllegalApplicationStateException(
@@ -58,7 +50,7 @@ public class FinancingApplication {
         this.state = ApplicationState.PENDING;
     }
 
-    /** UC-FIN-02: registering the bank's positive decision. */
+    
     public void approve() {
         if (this.state != ApplicationState.PENDING) {
             throw new IllegalApplicationStateException(
@@ -67,7 +59,7 @@ public class FinancingApplication {
         this.state = ApplicationState.APPROVED;
     }
 
-    /** UC-FIN-02 / A1: registering the bank's negative decision. */
+    
     public void reject() {
         if (this.state != ApplicationState.PENDING) {
             throw new IllegalApplicationStateException(

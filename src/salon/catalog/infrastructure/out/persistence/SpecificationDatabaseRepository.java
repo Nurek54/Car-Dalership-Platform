@@ -7,10 +7,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-/**
- * OUTBOUND ADAPTER (persistence) – implementation of the port
- * {@link VehicleSpecificationRepository} („SpecificationDatabaseRepository” → DBAdapter).
- */
 @Repository
 public class SpecificationDatabaseRepository implements VehicleSpecificationRepository {
 

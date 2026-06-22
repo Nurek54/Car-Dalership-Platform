@@ -28,11 +28,6 @@ import salon.financing.infrastructure.out.mock.BankIntegrationMockAdapter;
 import salon.financing.infrastructure.out.mock.InMemoryFinancingRepository;
 import salon.financing.infrastructure.in.messaging.FinancingEventListener;
 
-// NOTE: The Catalog and Configurator Context is no longer wired in this file.
-// After the refactor it is injected on its own via component-scan
-// (@Service/@Component/@Repository) and salon.catalog.infrastructure.config.DomainBeansConfiguration
-// (factories, RuleValidationService, Clock). Manual beans would collide with the scanned beans.
-
 import salon.logistics.application.service.InventoryManagementService;
 import salon.logistics.application.port.out.ImporterACL;
 import salon.logistics.application.port.out.VehicleDatabaseRepository;
@@ -47,18 +42,10 @@ import salon.sales.application.service.SalesService;
 
 import salon.common.application.EventPublisher;
 
-/**
- * Composition Root for the production run under Spring.
- *
- * The services and adapters of the Catalog Context are component beans
- * (@Service/@Component/@Repository) and are injected via component-scan — we do NOT wire them here.
- * Here we wire the contexts that remain pure POJOs (Sales, Billing, Logistics, Financing)
- * and the cross-context adapters (ACL to CRM, event subscribers).
- */
 @Configuration
 public class SalonWiringConfiguration {
 
-    // --- Sales and CRM (UC-CRM-01..05): factories are framework-free domain objects, wired here ---
+    
 
     @Bean
     public salon.sales.application.domain.model.offer.OfferFactory offerFactory() {
@@ -70,21 +57,20 @@ public class SalonWiringConfiguration {
         return new salon.sales.application.domain.model.order.OrderFactory();
     }
 
-    // --- Outbound ports outside database persistence (for startup: mock implementations) ---
+    
 
     @Bean
     public VehicleDatabaseRepository inventoryRepository() {
         return new InMemoryInventoryRepository();
     }
 
-    /** Outbound port "ImporterACL" (Figure 37) — integration with the factory/importer system. */
+    
     @Bean
     public ImporterACL importerAcl() {
         return new FactoryIntegrationMockAdapter();
     }
 
-
-    // --- Inventory and Logistics: centralized application service (UC-INW-01..06) ---
+    
 
     @Bean
     public InventoryManagementService inventoryManagementAppService(
@@ -96,7 +82,7 @@ public class SalonWiringConfiguration {
                 catalogIntegration, importerAcl, eventPublisherPort);
     }
 
-    // --- Billing and Settlement ---
+    
 
     @Bean
     public PaymentProcessService settlementAppService(SettlementDatabaseRepository settlementRepository,
@@ -127,7 +113,7 @@ public class SalonWiringConfiguration {
         return new PaymentReminderCronJobAdapter(settlementAppService);
     }
 
-    // --- Financing ---
+    
 
     @Bean
     public salon.financing.application.port.out.SalesIntegration financingCrmIntegrationPort(
@@ -144,8 +130,7 @@ public class SalonWiringConfiguration {
                 financingCrmIntegrationPort, bankIntegrationAclPort, eventPublisherPort);
     }
 
-
-    /** Inventory <- Sales: OrderPlaced (spec. linkage) and the ReleaseVehicle command (UC-INW-06). */
+    
     @Bean
     public salon.logistics.infrastructure.in.messaging.SalesEventSubscriberAdapter
     logisticsSalesEventSubscriberAdapter(CatalogIntegration catalogIntegration,
@@ -154,7 +139,7 @@ public class SalonWiringConfiguration {
                 catalogIntegration, inventoryManagementAppService);
     }
 
-    /** Inventory <- Catalog: SpecificationCompleted feeds the local copy of the Catalog data. */
+    
     @Bean
     public salon.logistics.infrastructure.in.messaging.CatalogEventSubscriberAdapter
     logisticsCatalogEventSubscriberAdapter(CatalogIntegration catalogIntegration) {

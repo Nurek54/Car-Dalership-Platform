@@ -8,11 +8,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * OUTBOUND ADAPTER (Figure 42: DBAdapter) – implementation of
- * {@link FinancingApplicationDatabaseRepository} in memory. Indexed by order identifier,
- * because the bank decision (UC-FIN-02) relates to the order.
- */
 public class InMemoryFinancingRepository implements FinancingApplicationDatabaseRepository {
 
     private final Map<String, FinancingApplication> byOrderId = new ConcurrentHashMap<>();

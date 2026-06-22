@@ -6,10 +6,6 @@ import salon.common.model.Money;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * UC-CRM-03: the customer declared a bank-transfer payment. Carries the declared amount so Billing
- * can issue a proforma invoice. Outbound to Inventory/Logistics (vehicle reservation) and Billing.
- */
 public record BankTransferDeclaredEvent(String orderId, Money amount,
                                         UUID eventId, Instant occurredOn) implements DomainEvent {
 

@@ -14,11 +14,6 @@ import salon.sales.application.port.out.InventoryIntegration;
 
 import java.util.Map;
 
-/**
- * OUTBOUND ADAPTER (ACL) — HTTP integration with the Inventory and Logistics Context.
- * Allocates a vehicle/production slot and releases the physical vehicle; maps 409/5xx onto
- * controlled domain exceptions.
- */
 @Component
 public class InventoryExternalApiAdapter implements InventoryIntegration {
 
@@ -70,7 +65,7 @@ public class InventoryExternalApiAdapter implements InventoryIntegration {
                 return body.get("reason").asText();
             }
         } catch (Exception ignored) {
-            // fall through to a generic message
+            
         }
         return "Inventory rejected the allocation (409 Conflict)";
     }

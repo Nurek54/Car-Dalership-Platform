@@ -2,10 +2,6 @@ package salon.sales.infrastructure.out.integration;
 
 import salon.sales.application.port.out.CatalogIntegration;
 
-/**
- * OUTBOUND ADAPTER (ACL, Figure 22) — log-only integration with the Catalog and Configuration
- * Context (used by the POJO/demo wiring).
- */
 public class CatalogIntegrationAdapter implements CatalogIntegration {
 
     @Override

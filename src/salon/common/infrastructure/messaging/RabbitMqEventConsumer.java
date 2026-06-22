@@ -8,15 +8,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * A REAL RabbitMQ event consumer (NOT a mock).
- *
- * Declares the context's queue, binds it to the exchange for each registered event type
- * and listens. After receiving a message: it parses the JSON, reads the "type" field and calls the handler.
- *
- * Deduplication (idempotency, section 3.4.2) is deliberately OMITTED here — it belongs to
- * the subscriber (the specific listener of a given context), exactly as in SettlementEventListener.
- */
 public class RabbitMqEventConsumer {
 
     private final RabbitMqConnection connection;
@@ -34,7 +25,7 @@ public class RabbitMqEventConsumer {
         this.queueName = queueName;
     }
 
-    // We register interest in a given event type (e.g. "PaymentRegisteredEvent").
+    
     public void register(String eventType, RabbitMqMessageHandler handler) {
         if (eventType == null || eventType.isBlank()) {
             throw new IllegalArgumentException("eventType must not be blank.");
@@ -49,7 +40,7 @@ public class RabbitMqEventConsumer {
         Channel channel = this.connection.channel();
         try {
             channel.queueDeclare(this.queueName, true, false, false, null);
-            // We bind the queue to the exchange for each type we are interested in.
+            
             for (Map.Entry<String, RabbitMqMessageHandler> entry : this.handlers.entrySet()) {
                 channel.queueBind(this.queueName, RabbitMqConfig.EXCHANGE, entry.getKey());
             }

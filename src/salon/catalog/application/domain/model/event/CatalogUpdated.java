@@ -6,10 +6,6 @@ import salon.catalog.application.domain.model.catalog.ModelYear;
 import java.time.Instant;
 import java.util.Objects;
 
-/**
- * Domain event emitted after a successful update of the catalog/price list
- * (UC-KON-02, step 5). Published on the data bus (RabbitMQ).
- */
 public final class CatalogUpdated implements DomainEvent {
 
     private final CatalogId catalogId;

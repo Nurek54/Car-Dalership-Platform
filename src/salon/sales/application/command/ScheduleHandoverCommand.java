@@ -2,9 +2,6 @@ package salon.sales.application.command;
 
 import java.time.LocalDate;
 
-/**
- * Command (UC-CRM-04) — set the agreed vehicle pickup date for an order.
- */
 public record ScheduleHandoverCommand(String orderId, LocalDate handoverDate) {
 
     public ScheduleHandoverCommand {

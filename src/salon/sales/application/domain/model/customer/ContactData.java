@@ -1,9 +1,5 @@
 package salon.sales.application.domain.model.customer;
 
-/**
- * Value Object (Figure 23) — the customer's contact details (email, phone).
- * Exposes phone() and the alias phoneNumber() used by the tests.
- */
 public record ContactData(String email, String phone) {
 
     public ContactData {
@@ -15,7 +11,7 @@ public record ContactData(String email, String phone) {
         }
     }
 
-    /** Alias for {@link #phone()}. */
+    
     public String phoneNumber() {
         return phone;
     }

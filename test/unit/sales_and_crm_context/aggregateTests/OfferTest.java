@@ -16,7 +16,7 @@ class OfferTest {
 
     @Test
     void shouldSuccessfullyPublishDraftOffer() {
-        // A newly created offer always starts as DRAFT
+        // Świeżo utworzona oferta zawsze zaczyna jako DRAFT
         Offer offer = new Offer(
                 new OfferId("O-200"),
                 new CustomerId("C-001"),
@@ -24,10 +24,10 @@ class OfferTest {
                 Money.of(120000, "PLN")
         );
 
-        // The Salesperson finishes filling in the offer and publishes it
+        // Sprzedawca kończy wypełnianie oferty i publikuje ją
         offer.publishOffer();
 
-        // The state changes to PUBLISHED
+        // Stan zmienia się na PUBLISHED
         assertThat(offer.state()).isEqualTo(OfferState.PUBLISHED);
     }
 
@@ -40,13 +40,13 @@ class OfferTest {
                 Money.of(120000, "PLN")
         );
 
-        // An acceptance attempt by the customer must be blocked
-        // This guards against a situation where the customer accepts terms that are "being edited"
+        // Próba akceptacji przez klienta musi zostać zablokowana
+        // To zabezpiecza przed sytuacją, w której klient akceptuje warunki, które są „w trakcie edycji"
         assertThatThrownBy(() -> offer.accept())
                 .isInstanceOf(InvalidOfferStateException.class)
                 .hasMessageContaining("Only PUBLISHED offers can be accepted");
 
-        // The state remains unchanged
+        // Stan pozostaje niezmieniony
         assertThat(offer.state()).isEqualTo(OfferState.DRAFT);
     }
 
@@ -58,18 +58,18 @@ class OfferTest {
                 new SpecificationId("SPEC-1"),
                 Money.of(120000, "PLN")
         );
-        offer.publishOffer(); // State: PUBLISHED
+        offer.publishOffer(); // Stan: PUBLISHED
 
-        // The customer rejects the offer
+        // Klient odrzuca ofertę
         offer.reject();
 
-        // The state changes to REJECTED
+        // Stan zmienia się na REJECTED
         assertThat(offer.state()).isEqualTo(OfferState.REJECTED);
     }
 
     @Test
     void shouldPreventStateMutationAfterRejection() {
-        // A rejected offer
+        // Odrzucona oferta
         Offer offer = new Offer(
                 new OfferId("O-203"),
                 new CustomerId("C-001"),
@@ -79,8 +79,8 @@ class OfferTest {
         offer.publishOffer();
         offer.reject();
 
-        // The customer calls to say they changed their mind after all.
-        // The aggregate must block this - a rejected offer is a closed chapter, a new one must be made
+        // Klient dzwoni, że jednak zmienił zdanie.
+        // Agregat musi to zablokować - odrzucona oferta to zamknięty rozdział, trzeba zrobić nową
         assertThatThrownBy(() -> offer.accept())
                 .isInstanceOf(OfferImmutableException.class)
                 .hasMessageContaining("Cannot change state of a REJECTED offer");

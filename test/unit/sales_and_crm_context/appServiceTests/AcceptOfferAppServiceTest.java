@@ -31,7 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
-/** UC-CRM-03: Offer acceptance and order creation */
+/** UC-CRM-03: Akceptacja oferty i utworzenie zamówienia */
 @ExtendWith(MockitoExtension.class)
 class AcceptOfferAppServiceTest {
 
@@ -61,51 +61,51 @@ class AcceptOfferAppServiceTest {
 
     @Test
     void shouldAcceptOfferAndSaveOrder() {
-        // A published offer is in the database
+        // W bazie jest opublikowana oferta
         OfferId offerId = new OfferId("O-100");
         Offer offer = publishedOffer("O-100");
         when(offerRepository.findById(offerId)).thenReturn(Optional.of(offer));
 
-        // They click the accept-and-create-order button (a service call)
+        // Klikają przycisk akceptacji i utworzenia zamówienia (wywołanie serwisu)
         salesAppService.acceptOfferAndCreateOrder(offerId);
 
-        // We save the changed offer state (as ACCEPTED)
+        // Zapisujemy zmieniony stan oferty (jako ACCEPTED)
         verify(offerRepository).save(offer);
-        // We save the newly created order to the database
+        // Zapisujemy nowo utworzone zamówienie do bazy
         verify(orderRepository).save(any(Order.class));
-        // We publish the domain events outward
+        // Publikujemy zdarzenia domenowe na zewnątrz
         verify(eventPublisher).publishAll(anyList());
     }
 
     @Test
     void shouldRollbackAndNotPublishEventsWhenDatabaseFails() {
-        // The order repository fails during the save attempt
+        // Repozytorium zamówień zawodzi podczas próby zapisu
         OfferId offerId = new OfferId("O-101");
         Offer offer = publishedOffer("O-101");
         when(offerRepository.findById(offerId)).thenReturn(Optional.of(offer));
 
         doThrow(new DatabaseException("Connection lost")).when(orderRepository).save(any(Order.class));
 
-        // The whole Use Case throws an error, aborting the transaction
+        // Cały przypadek użycia rzuca błąd, przerywając transakcję
         assertThatThrownBy(() -> salesAppService.acceptOfferAndCreateOrder(offerId))
                 .isInstanceOf(DatabaseException.class);
 
-        // We do not send domain events
+        // Nie wysyłamy zdarzeń domenowych
         verify(eventPublisher, never()).publishAll(anyList());
     }
 
     @Test
     void shouldThrowExceptionWhenOfferNotFound() {
-        // The user submits a wrong offer ID
+        // Użytkownik podaje błędne ID oferty
         OfferId fakeId = new OfferId("O-999-UNKNOWN");
         when(offerRepository.findById(fakeId)).thenReturn(Optional.empty());
 
-        // The service stops the process at the very beginning
+        // Serwis zatrzymuje proces na samym początku
         assertThatThrownBy(() -> salesAppService.acceptOfferAndCreateOrder(fakeId))
                 .isInstanceOf(OfferNotFoundException.class)
                 .hasMessageContaining("Offer O-999-UNKNOWN not found in the system");
 
-        // We check that nothing was overwritten in any database or sent
+        // Sprawdzamy, że nic nie zostało nadpisane w żadnej bazie ani wysłane
         verify(offerRepository, never()).save(any());
         verify(orderRepository, never()).save(any());
         verify(eventPublisher, never()).publishAll(any());

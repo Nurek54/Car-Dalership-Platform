@@ -13,7 +13,7 @@ class CustomerTest {
 
     @Test
     void shouldSuccessfullyVerifyValidTaxId() {
-        // A customer with a valid, 10-digit Polish tax ID
+        // Klient z poprawnym, 10-cyfrowym polskim NIP-em
         Customer customer = new Customer(
                 new CustomerId("C-001"),
                 "Jan Kowalski",
@@ -22,14 +22,14 @@ class CustomerTest {
                 new ContactData("jan@example.com", "123456789")
         );
 
-        // The verification does not throw, the verification status is correct
+        // Weryfikacja nie rzuca wyjątku, status weryfikacji jest poprawny
         assertThatCode(() -> customer.verifyTaxId())
                 .doesNotThrowAnyException();
     }
 
     @Test
     void shouldThrowExceptionWhenTaxIdIsInvalid() {
-        // A customer with an invalid tax ID
+        // Klient z niepoprawnym NIP-em
         Customer customer = new Customer(
                 new CustomerId("C-002"),
                 "Jan Krzak",
@@ -46,12 +46,12 @@ class CustomerTest {
 
     @Test
     void shouldUpdateContactDetailsWithoutChangingIdentity() {
-        // An existing customer
+        // Istniejący klient
         CustomerId id = new CustomerId("C-003");
         Customer customer = new Customer(
                 id,
                 "Anna Nowak",
-                null, // An individual, no tax ID
+                null, // Osoba fizyczna, brak NIP-u
                 new Address("Poznan", "60-001", "Old 1", "Poland"),
                 new ContactData("anna@example.com", "111222333")
         );
@@ -60,7 +60,7 @@ class CustomerTest {
         ContactData newContact = new ContactData("nowa.anna@example.com", "999888777");
         customer.updateContactDetails(newContact);
 
-        // The contact details are updated, but the identity (ID) remains intact
+        // Dane kontaktowe są zaktualizowane, ale tożsamość (ID) pozostaje nienaruszona
         assertThat(customer.contact().email()).isEqualTo("nowa.anna@example.com");
         assertThat(customer.contact().phoneNumber()).isEqualTo("999888777");
         assertThat(customer.id()).isEqualTo(id);

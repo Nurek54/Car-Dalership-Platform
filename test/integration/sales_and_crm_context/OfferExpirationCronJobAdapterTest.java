@@ -18,20 +18,20 @@ class OfferExpirationCronJobAdapterTest {
 
     @Test
     void shouldTriggerOfferExpirationJobSuccessfully() {
-        // The system clock (Spring Scheduler) fires the method at night
+        // Zegar systemowy (Spring Scheduler) odpala metodę w nocy
         cronJobAdapter.expireOldOffersJob();
 
-        // The AppService is notified to check the dates of all offers
+        // AppService dostaje polecenie sprawdzenia dat wszystkich ofert
         verify(salesAppService).expireOutdatedOffers();
     }
 
     @Test
     void shouldContinueRunningEvenIfAppServiceThrowsException() {
-        // The AppService encounters an error
+        // AppService napotyka błąd
         doThrow(new RuntimeException("Database timeout")).when(salesAppService).expireOutdatedOffers();
 
-        // The adapter catches the periodic task's error, logs it
-        // and finishes without blowing up the whole process, so that the cron will fire again later
+        // Adapter przechwytuje błąd zadania okresowego, loguje go
+        // i kończy bez wysadzania całego procesu, aby cron odpalił się ponownie później
         assertDoesNotThrow(() -> cronJobAdapter.expireOldOffersJob());
     }
 }

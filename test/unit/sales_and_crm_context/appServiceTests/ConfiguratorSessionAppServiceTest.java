@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** UC-CRM-01: Starting a configurator session for the customer. */
+/** UC-CRM-01: Rozpoczęcie sesji konfiguratora dla klienta. */
 @ExtendWith(MockitoExtension.class)
 class ConfiguratorSessionAppServiceTest {
 
@@ -26,29 +26,29 @@ class ConfiguratorSessionAppServiceTest {
 
     @Test
     void shouldEmitConfiguratorSessionInitiatedEventAndReturnSessionId() {
-        // We have a registered customer in the database
+        // Mamy zarejestrowanego klienta w bazie
         StartConfiguratorSessionCommand command = new StartConfiguratorSessionCommand("CUST-1", "SALES-7");
         when(customerRepository.existsById("CUST-1")).thenReturn(true);
 
-        // When the salesperson starts a configurator session for this customer
+        // Gdy sprzedawca rozpoczyna sesję konfiguratora dla tego klienta
         String sessionId = configuratorAppService.startConfiguratorSession(command);
 
-        // It broadcasts an event that the session has started
+        // Rozgłasza zdarzenie, że sesja się rozpoczęła
         verify(eventPublisher).publish(any(ConfiguratorSessionInitiatedEvent.class));
     }
 
     @Test
     void shouldFailToStartSessionWhenCustomerDoesNotExist() {
-        // Someone tries to start a session for a non-existent customer ID
+        // Ktoś próbuje rozpocząć sesję dla nieistniejącego ID klienta
         StartConfiguratorSessionCommand command = new StartConfiguratorSessionCommand("UNKNOWN-CUST", "SALES-7");
         when(customerRepository.existsById("UNKNOWN-CUST")).thenReturn(false);
 
-        // The application service aborts the process and throws an error
+        // Serwis aplikacyjny przerywa proces i rzuca błąd
         assertThatThrownBy(() -> configuratorAppService.startConfiguratorSession(command))
                 .isInstanceOf(CustomerNotFoundException.class)
                 .hasMessageContaining("Customer with ID UNKNOWN-CUST not found");
 
-        // We check that no false event leaked to other systems
+        // Sprawdzamy, że żadne fałszywe zdarzenie nie wyciekło do innych systemów
         verify(eventPublisher, never()).publish(any());
     }
 }

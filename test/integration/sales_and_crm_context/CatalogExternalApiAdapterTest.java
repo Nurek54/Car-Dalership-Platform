@@ -21,27 +21,27 @@ class CatalogExternalApiAdapterTest {
 
     @Test
     void shouldFetchDataWhenCatalogReturns200Ok() {
-        // The Catalog is alive and has a response
+        // Katalog żyje i ma odpowiedź
         stubFor(get(urlEqualTo("/api/catalog/specifications/SPEC-OK/price"))
                 .willReturn(aResponse().withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"amount\": 150000, \"currency\": \"PLN\"}")));
 
-        // The adapter calls through HTTP
+        // Adapter woła przez HTTP
         Money price = catalogAdapter.specificationPrice("SPEC-OK");
 
-        // The external JSON turns into an encapsulated Value Object
+        // Zewnętrzny JSON zamienia się w hermetyzowany Value Object
         assertThat(price.amount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(150000));
         assertThat(price.currency()).isEqualTo("PLN");
     }
 
     @Test
     void shouldThrowDomainExceptionWhenSpecificationIsNotFound404() {
-        // The Salesperson provided a non-existent specification, the Catalog returns HTTP 404
+        // Sprzedawca podał nieistniejącą specyfikację, Katalog zwraca HTTP 404
         stubFor(get(urlEqualTo("/api/catalog/specifications/SPEC-MISSING/price"))
                 .willReturn(aResponse().withStatus(404)));
 
-        // Instead of an ugly HTTP error, we throw a controlled business error
+        // Zamiast brzydkiego błędu HTTP rzucamy kontrolowany błąd biznesowy
         assertThatThrownBy(() -> catalogAdapter.specificationPrice("SPEC-MISSING"))
                 .isInstanceOf(SpecificationNotFoundException.class)
                 .hasMessageContaining("Specification SPEC-MISSING not found in Catalog");
@@ -49,11 +49,11 @@ class CatalogExternalApiAdapterTest {
 
     @Test
     void shouldThrowInfrastructureExceptionWhenCatalogIsDown500() {
-        // The Catalog module's database is down (HTTP 500)
+        // Baza modułu Katalogu jest niedostępna (HTTP 500)
         stubFor(get(urlEqualTo("/api/catalog/specifications/SPEC-TIMEOUT/price"))
                 .willReturn(aResponse().withStatus(500)));
 
-        // The application must signal the unavailability of the external service
+        // Aplikacja musi zasygnalizować niedostępność usługi zewnętrznej
         assertThatThrownBy(() -> catalogAdapter.specificationPrice("SPEC-TIMEOUT"))
                 .isInstanceOf(ExternalServiceUnavailableException.class)
                 .hasMessageContaining("Catalog service is currently unavailable");

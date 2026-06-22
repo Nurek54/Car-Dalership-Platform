@@ -13,37 +13,37 @@ import salon.common.model.OrderId;
 import salon.common.model.SpecificationId;
 
 import static org.assertj.core.api.Assertions.*;
-/** UC-CRM-03: Offer acceptance and order creation */
+/** UC-CRM-03: Akceptacja oferty i utworzenie zamówienia */
 class AcceptOfferDomainTest {
 
     @Test
     void shouldAcceptOfferAndAllowOrderCreation() {
-        // We have an offer
+        // Mamy ofertę
         Offer offer = new Offer(new OfferId("O-1"), new CustomerId("C-1"),
                 new SpecificationId("S-1"), Money.of(150000, "PLN"));
         offer.publishOffer();
 
-        // The customer accepts the offer, and we generate an order based on it
+        // Klient akceptuje ofertę, a my generujemy na jej podstawie zamówienie
         offer.accept();
         Order order = new Order(new OrderId("ORD-1"), offer.id(), Money.of(150000, "PLN"));
 
-        // The offer transitions to the ACCEPTED state
+        // Oferta przechodzi w stan ACCEPTED
         assertThat(offer.state()).isEqualTo(OfferState.ACCEPTED);
 
-        // The order initializes correctly in the initial DRAFT_CREATED state
+        // Zamówienie poprawnie inicjuje się w początkowym stanie DRAFT_CREATED
         assertThat(order.offerId()).isEqualTo(new OfferId("O-1"));
         assertThat(order.state()).isEqualTo(OrderState.DRAFT_CREATED);
     }
 
     @Test
     void shouldRejectAcceptanceWhenOfferIsAlreadyRejected() {       // Scenariusz alternatywny
-        // The customer withdrew earlier and the offer was marked as rejected
+        // Klient wcześniej się wycofał, a oferta została oznaczona jako odrzucona
         Offer offer = new Offer(new OfferId("O-2"), new CustomerId("C-2"),
                 new SpecificationId("S-2"), Money.of(150000, "PLN"));
         offer.publishOffer();
         offer.reject();
 
-        // The customer wants to change their mind, but a new one must be generated
+        // Klient chce zmienić zdanie, ale trzeba wygenerować nową
         assertThatThrownBy(offer::accept)
                 .isInstanceOf(InvalidOfferStateException.class)
                 .hasMessageContaining("Cannot accept an offer that is already REJECTED");

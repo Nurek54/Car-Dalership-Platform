@@ -25,7 +25,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** UC-CRM-02: Generating the proforma offer (price from the read model fed by an event). */
+/** UC-CRM-02: Generowanie oferty proforma (cena z modelu odczytowego zasilanego zdarzeniem). */
 @ExtendWith(MockitoExtension.class)
 class GenerateOfferAppServiceTest {
 
@@ -48,27 +48,27 @@ class GenerateOfferAppServiceTest {
 
     @Test
     void shouldGenerateAndSaveOfferSuccessfully() {
-        // The local read model already knows the specification pricing (it arrived via the SpecificationCompleted event)
+        // Lokalny model odczytowy zna już cennik specyfikacji (przyszedł zdarzeniem SpecificationCompleted)
         when(specificationPriceReadModel.findPrice(any()))
                 .thenReturn(Optional.of(Money.of(150000, "PLN")));
 
-        // We invoke the offer-generation use case
+        // Wywołujemy przypadek użycia generowania oferty
         salesAppService.generateOffer("CUST-1", "SPEC-1");
 
-        // The new offer is correctly constructed and passed for saving in the repository
+        // Nowa oferta jest poprawnie zbudowana i przekazana do zapisu w repozytorium
         verify(offerRepository).save(any(Offer.class));
     }
 
     @Test
     void shouldFailToGenerateOfferWhenSpecificationPriceNotYetAvailable() {
-        // The SpecificationCompleted event has not arrived yet — no pricing in the read model
+        // Zdarzenie SpecificationCompleted jeszcze nie dotarło — brak cennika w modelu odczytowym
         when(specificationPriceReadModel.findPrice(any())).thenReturn(Optional.empty());
 
-        // The sales service rejects the process — no pricing = no offer
+        // Serwis sprzedaży odrzuca proces — brak cennika = brak oferty
         assertThatThrownBy(() -> salesAppService.generateOffer("CUST-1", "SPEC-999"))
                 .isInstanceOf(SpecificationNotFoundException.class);
 
-        // No faulty offer is saved in our CRM database
+        // Żadna wadliwa oferta nie zostaje zapisana w naszej bazie CRM
         verify(offerRepository, never()).save(any());
     }
 }

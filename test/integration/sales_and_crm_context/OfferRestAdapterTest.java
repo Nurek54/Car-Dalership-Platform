@@ -24,10 +24,10 @@ class OfferRestAdapterTest {
 
     @Test
     void shouldAcceptOfferAndReturn200Ok() throws Exception {
-        // The frontend sends a request for the customer to accept the offer
+        // Frontend wysyła żądanie akceptacji oferty przez klienta
         String offerId = "OFF-100";
 
-        // The controller processes this request without errors and returns 200 OK
+        // Kontroler obsługuje to żądanie bez błędów i zwraca 200 OK
         mockMvc.perform(post("/api/sales/offers/{id}/accept", offerId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
@@ -35,11 +35,11 @@ class OfferRestAdapterTest {
 
     @Test
     void shouldReturn404NotFoundWhenOfferIsMissing() throws Exception {
-        // There is no offer
+        // Oferta nie istnieje
         doThrow(new OfferNotFoundException("OFF-999"))
                 .when(salesAppService).acceptOfferAndCreateOrder(any());
 
-        // The adapter maps this domain exception to HTTP code 404
+        // Adapter mapuje ten wyjątek domenowy na kod HTTP 404
         mockMvc.perform(post("/api/sales/offers/OFF-999/accept")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())

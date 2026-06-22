@@ -22,27 +22,27 @@ class InventoryExternalApiAdapterTest {
 
     @Test
     void shouldSuccessfullyAllocateVehicleSlotOverHttp() {
-        // The Inventory system accepts the reservation and responds 201 Created
+        // System Magazynu przyjmuje rezerwację i odpowiada 201 Created
         stubFor(post(urlEqualTo("/api/inventory/allocations"))
                 .withRequestBody(matchingJsonPath("$.orderId", equalTo("ORD-111")))
                 .willReturn(aResponse().withStatus(201)));
 
-        // The query passes without exceptions
+        // Zapytanie przechodzi bez wyjątków
         assertDoesNotThrow(() -> inventoryAdapter.allocateVehicleOrProductionSlot("ORD-111"));
 
-        // We make sure there was actually a POST
+        // Upewniamy się, że faktycznie był POST
         verify(1, postRequestedFor(urlPathEqualTo("/api/inventory/allocations")));
     }
 
     @Test
     void shouldThrowDomainExceptionWhenInventoryRejectsAllocationWith409() {
-        // Inventory responds 409 Conflict (e.g. no parts to produce this model)
+        // Magazyn odpowiada 409 Conflict (np. brak części do produkcji tego modelu)
         stubFor(post(urlEqualTo("/api/inventory/allocations"))
                 .willReturn(aResponse()
                         .withStatus(409)
                         .withBody("{\"reason\": \"No production slots available for this specification\"}")));
 
-        // The HTTP adapter correctly parses the error and throws a safe domain exception
+        // Adapter HTTP poprawnie parsuje błąd i rzuca bezpieczny wyjątek domenowy
         assertThatThrownBy(() -> inventoryAdapter.allocateVehicleOrProductionSlot("ORD-222"))
                 .isInstanceOf(InventoryLockedException.class)
                 .hasMessageContaining("Inventory rejected the allocation (409 Conflict)");
@@ -50,11 +50,11 @@ class InventoryExternalApiAdapterTest {
 
     @Test
     void shouldThrowInfrastructureExceptionWhenInventoryIsDown() {
-        // The logistics server is down and returns 503 Service Unavailable
+        // Serwer logistyki jest niedostępny i zwraca 503 Service Unavailable
         stubFor(post(urlEqualTo("/api/inventory/allocations"))
                 .willReturn(aResponse().withStatus(503)));
 
-        // The adapter throws an unavailability notice
+        // Adapter rzuca informację o niedostępności
         assertThatThrownBy(() -> inventoryAdapter.allocateVehicleOrProductionSlot("ORD-333"))
                 .isInstanceOf(ExternalServiceUnavailableException.class)
                 .hasMessageContaining("Inventory system is temporarily unavailable");

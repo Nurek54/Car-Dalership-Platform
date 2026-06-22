@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** UC-CRM-04: Handling the customer's invitation for pickup */
+/** UC-CRM-04: Obsługa zaproszenia klienta po odbiór */
 @ExtendWith(MockitoExtension.class)
 class ScheduleHandoverAppServiceTest {
 
@@ -51,8 +51,8 @@ class ScheduleHandoverAppServiceTest {
     }
 
     @Test
-    void shouldScheduleHandoverAndSaveOrder() { // MAIN SCENARIO
-        // The order exists in the database and is ready for handover
+    void shouldScheduleHandoverAndSaveOrder() { // SCENARIUSZ GŁÓWNY
+        // Zamówienie istnieje w bazie i jest gotowe do wydania
         String rawOrderId = "ORD-11";
         OrderId orderId = new OrderId(rawOrderId);
         Order order = new Order(orderId, new OfferId("OFF-11"), Money.of(150000, "PLN"));
@@ -63,33 +63,33 @@ class ScheduleHandoverAppServiceTest {
         ScheduleHandoverCommand command = new ScheduleHandoverCommand(rawOrderId, LocalDate.now().plusDays(3));
         salesAppService.scheduleHandover(command);
 
-        // The new order state is saved in the database
+        // Nowy stan zamówienia jest zapisany w bazie
         verify(orderRepository).save(order);
-        // Events about scheduling the visit are sent
+        // Zdarzenia o umówieniu wizyty są wysyłane
         verify(eventPublisher).publishAll(anyList());
     }
 
     @Test
     void shouldFailToScheduleHandoverInThePast() {
-        // The Salesperson enters an invalid past date in the form
-        // The application rejects the request (input validation before the database layer)
+        // Sprzedawca wpisuje w formularzu niepoprawną, przeszłą datę
+        // Aplikacja odrzuca żądanie (walidacja wejścia przed warstwą bazy)
         ScheduleHandoverCommand command = new ScheduleHandoverCommand("ORD-12", LocalDate.now().minusDays(5));
         assertThatThrownBy(() -> salesAppService.scheduleHandover(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Handover date cannot be in the past");
 
-        // The order in the database remains intact
+        // Zamówienie w bazie pozostaje nienaruszone
         verify(orderRepository, never()).save(any());
     }
 
     @Test
     void shouldThrowExceptionWhenOrderDoesNotExist() {
-        // The database does not have the indicated order
+        // Baza nie ma wskazanego zamówienia
         String rawOrderId = "ORD-UNKNOWN";
         OrderId fakeId = new OrderId(rawOrderId);
         when(orderRepository.findById(fakeId)).thenReturn(Optional.empty());
 
-        // The application throws an exception
+        // Aplikacja rzuca wyjątek
         ScheduleHandoverCommand command = new ScheduleHandoverCommand(rawOrderId, LocalDate.now().plusDays(1));
         assertThatThrownBy(() -> salesAppService.scheduleHandover(command))
                 .isInstanceOf(OrderNotFoundException.class)

@@ -43,11 +43,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "sales.billing.base-url=http://localhost:8089"
 })
 @AutoConfigureMockMvc
-@AutoConfigureWireMock(port = 8089) // We fake the rest of the company (Catalog, Inventory, Accounting) on a single port
+@AutoConfigureWireMock(port = 8089) // Resztę firmy (Katalog, Magazyn, Księgowość) udajemy na jednym porcie
 class SalesContextAcceptanceTest {
 
-    @Autowired private MockMvc mockMvc; // Replaces the browser / front-end
-    @Autowired private ObjectMapper objectMapper; // For generating JSON
+    @Autowired private MockMvc mockMvc; // Zastępuje przeglądarkę / front-end
+    @Autowired private ObjectMapper objectMapper; // Do generowania JSON-a
 
     @Autowired private OfferDatabaseAdapter offerRepository;
     @Autowired private OrderDatabaseAdapter orderRepository;
@@ -57,21 +57,21 @@ class SalesContextAcceptanceTest {
 
     @BeforeEach
     void setupWireMock() {
-        // We reset the fake servers before each use case
+        // Resetujemy atrapy serwerów przed każdym przypadkiem użycia
         resetAllRequests();
     }
 
     // ===================================================================================
-    // UC-CRM-01: Initiation of a configurator session by the Salesperson
+    // UC-CRM-01: Zainicjowanie sesji konfiguratora przez Sprzedawcę
     // ===================================================================================
     @Test
     void uc01_shouldInitiateConfiguratorSession() throws Exception {
-        // The customer must already exist in the CRM master data
+        // Klient musi już istnieć w danych podstawowych CRM
         customerRepository.save(new Customer(new CustomerId("CUST-001"), "Jan Kowalski", "1234563218",
                 new Address("Testowa 1", "00-001", "Warszawa", "Poland"),
                 new ContactData("jan@example.com", "123456789")));
 
-        // The Salesperson wants to open the configurator for a specific customer
+        // Sprzedawca chce otworzyć konfigurator dla konkretnego klienta
         String payload = """
                 {
                     "customerId": "CUST-001",
@@ -84,85 +84,85 @@ class SalesContextAcceptanceTest {
                         .content(payload))
                 .andExpect(status().isOk());
 
-        // We verify that the system emitted the correct asynchronous event onto the queue
-        verify(rabbitTemplate).convertAndSend(                    // By default once. JAVA to JSON
-                eq("sales.events.exchange"),                // Where it sends
+        // Sprawdzamy, że system wyemitował poprawne zdarzenie asynchroniczne na kolejkę
+        verify(rabbitTemplate).convertAndSend(                    // Domyślnie raz. JAVA na JSON
+                eq("sales.events.exchange"),                // Gdzie wysyła
                 eq("configurator.session.initiated"),       // Etykieta
-                any(Object.class)                                 // The message body
+                any(Object.class)                                 // Treść wiadomości
         );
     }
 
     // ===================================================================================
-    // UC-CRM-02 & UC-SPR-02: Acceptance of a Published Offer and order creation
+    // UC-CRM-02 i UC-SPR-02: Akceptacja opublikowanej oferty i utworzenie zamówienia
     // ===================================================================================
     @Test
     void uc02_shouldAcceptPublishedOfferAndPlaceOrder() throws Exception {
-        // We have a prepared and published offer for the customer in the database
+        // Mamy w bazie przygotowaną i opublikowaną ofertę dla klienta
         OfferId offerId = new OfferId("OFF-555");
         Offer offer = new Offer(offerId, new salon.sales.application.domain.model.customer.CustomerId("CUST-1"),
                 new SpecificationId("SPEC-1"), Money.of(200000, "PLN"));
         offer.publishOffer();
         offerRepository.save(offer);
 
-        // The customer clicks "Accept" on the page
+        // Klient klika „Akceptuj" na stronie
         mockMvc.perform(post("/api/sales/offers/OFF-555/accept")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
-        // The offer state in the database must change to ACCEPTED
+        // Stan oferty w bazie musi zmienić się na ACCEPTED
         Offer savedOffer = offerRepository.findById(offerId).orElseThrow();
         assertThat(savedOffer.state()).isEqualTo(OfferState.ACCEPTED);
 
-        // A new order must have been created in the database!
+        // W bazie musiało powstać nowe zamówienie!
         Order newlyCreatedOrder = orderRepository.findByOfferId(offerId).orElseThrow();
         assertThat(newlyCreatedOrder.state()).isEqualTo(OrderState.DRAFT_CREATED);
 
-        // The domain sent an order-placed Event to RabbitMQ
+        // Domena wysłała zdarzenie złożenia zamówienia do RabbitMQ
         verify(rabbitTemplate).convertAndSend(
                 anyString(), eq("order.placed"), any(Object.class)
         );
     }
 
     // ===================================================================================
-    // UC-CRM-03: Order Cancellation (the Customer withdraws)
+    // UC-CRM-03: Anulowanie zamówienia (Klient się wycofuje)
     // ===================================================================================
     @Test
     void uc03_shouldCancelOrderAndReleaseInventory() throws Exception {
-        // There is an order in the database
+        // W bazie istnieje zamówienie
         OrderId orderId = new OrderId("ORD-777");
         Order order = new Order(orderId, new OfferId("OFF-777"), Money.of(100000, "PLN"));
         orderRepository.save(order);
 
         String payload = "{ \"reason\": \"Loss of financial capacity\" }";
 
-        // The Salesperson clicks "Cancel" in the CRM system
+        // Sprzedawca klika „Anuluj" w systemie CRM
         mockMvc.perform(post("/api/sales/orders/ORD-777/cancel")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk());
 
-        // The aggregate in the database has the CANCELLED status
+        // Agregat w bazie ma status CANCELLED
         Order cancelledOrder = orderRepository.findById(orderId).orElseThrow();
         assertThat(cancelledOrder.state()).isEqualTo(OrderState.CANCELLED);
 
-        // We notified the external systems about the cancellation with the appropriate reason
+        // Powiadomiliśmy systemy zewnętrzne o anulowaniu wraz z odpowiednim powodem
         verify(rabbitTemplate).convertAndSend(
                 anyString(), eq("order.cancelled"), any(Object.class)
         );
     }
 
     // ===================================================================================
-    // UC-CRM-04: Notification of readiness for handover (External Event -> CRM)
+    // UC-CRM-04: Powiadomienie o gotowości do wydania (Zdarzenie zewnętrzne -> CRM)
     // ===================================================================================
     @Test
     void uc04_shouldMarkOrderAsReadyWhenVehicleArrivesFromLogistics() throws Exception {
-        // We have an active order in production
+        // Mamy aktywne zamówienie w produkcji
         OrderId orderId = new OrderId("ORD-888");
         Order order = new Order(orderId, new OfferId("OFF-888"), Money.of(250000, "PLN"));
-        order.activate(); // State: IN_PROGRESS
+        order.activate(); // Stan: IN_PROGRESS
         orderRepository.save(order);
 
-        // From outside the system (Inventory) an Event arrives that the physical car has come into the yard
+        // Z zewnątrz systemu (Magazyn) przychodzi zdarzenie, że fizyczny samochód trafił na plac
         String incomingEventJson = """
                 {
                     "eventId": "12312312-1231-1231-1231-123123123123",
@@ -177,42 +177,42 @@ class SalesContextAcceptanceTest {
                         .content(incomingEventJson))
                 .andExpect(status().isOk());
 
-        // The order state in the Aggregate changed to READY_FOR_HANDOVER
+        // Stan zamówienia w agregacie zmienił się na READY_FOR_HANDOVER
         Order readyOrder = orderRepository.findById(orderId).orElseThrow();
         assertThat(readyOrder.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);
 
-        // The sales module in turn releases its own Event
+        // Moduł sprzedaży z kolei publikuje własne zdarzenie
         verify(rabbitTemplate).convertAndSend(
                 anyString(), eq("order.ready_for_handover"), any(Object.class)
         );
     }
 
     // ===================================================================================
-    // UC-SPR-08: Physical vehicle handover and closing the accounting
+    // UC-SPR-08: Fizyczne wydanie pojazdu i zamknięcie księgowości
     // ===================================================================================
     @Test
     void uc05_shouldHandoverVehicleAndNotifyBilling() throws Exception {
-        // The car is waiting in the yard, ready for handover
+        // Samochód czeka na placu, gotowy do wydania
         OrderId orderId = new OrderId("ORD-999");
         Order order = new Order(orderId, new OfferId("OFF-999"), Money.of(300000, "PLN"));
         order.activate();
-        order.markAsReadyForHandover(); // State: READY_FOR_HANDOVER
+        order.markAsReadyForHandover(); // Stan: READY_FOR_HANDOVER
         orderRepository.save(order);
 
-        // Inventory accepts the physical-release command
+        // Magazyn przyjmuje komendę fizycznego wydania
         stubFor(WireMock.post(urlEqualTo("/api/inventory/releases"))
                 .willReturn(aResponse().withStatus(200)));
 
-        // The Salesperson hands over the keys and clicks "Handed over" in the system
+        // Sprzedawca przekazuje kluczyki i klika „Wydano" w systemie
         mockMvc.perform(post("/api/sales/orders/ORD-999/handover")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
-        // The order state becomes COMPLETED
+        // Stan zamówienia staje się COMPLETED
         Order completedOrder = orderRepository.findById(orderId).orElseThrow();
         assertThat(completedOrder.state()).isEqualTo(OrderState.COMPLETED);
 
-        // An Event for the Billing / After-sales modules
+        // Zdarzenie dla modułów Rozliczeń / Posprzedażowych
         verify(rabbitTemplate).convertAndSend(
                 anyString(), eq("vehicle.handed_over"), any(Object.class)
         );

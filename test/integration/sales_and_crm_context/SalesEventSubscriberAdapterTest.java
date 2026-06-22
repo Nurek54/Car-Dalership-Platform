@@ -24,12 +24,12 @@ class SalesEventSubscriberAdapterTest {
 
     @Test
     void shouldConsumeMessageAndTriggerAppServiceSuccessfully() {
-        // A valid event arrives from Inventory
+        // Z Magazynu przychodzi poprawne zdarzenie
         VehicleReadyForHandoverEvent incomingEvent = new VehicleReadyForHandoverEvent(
                 UUID.randomUUID(), "VIN-999", "ORD-123", Instant.now()
         );
 
-        // The listening adapter catches the message
+        // Nasłuchujący adapter przechwytuje wiadomość
         subscriberAdapter.onVehicleReadyForHandover(incomingEvent);
 
         // Zleca wykonanie pracy do AppService
@@ -38,17 +38,17 @@ class SalesEventSubscriberAdapterTest {
 
     @Test
     void shouldHandleAppServiceExceptionGracefullyWithoutCrashingListener() {
-        // The AppService rejects the event because order ORD-UNKNOWN does not exist in our database
+        // AppService odrzuca zdarzenie, bo zamówienie ORD-UNKNOWN nie istnieje w naszej bazie
         VehicleReadyForHandoverEvent incomingEvent = new VehicleReadyForHandoverEvent(
                 UUID.randomUUID(), "VIN-000", "ORD-UNKNOWN", Instant.now()
         );
         doThrow(new OrderNotFoundException("ORD-UNKNOWN")).when(salesAppService).markOrderAsReadyForHandover(any());
 
-        // The adapter catches the error and records it in the logs
-        // The application must not lock up, so as not to block the whole queue
+        // Adapter przechwytuje błąd i zapisuje go w logach
+        // Aplikacja nie może się zaciąć, żeby nie zablokować całej kolejki
         assertDoesNotThrow(() -> subscriberAdapter.onVehicleReadyForHandover(incomingEvent));
 
-        // We verify that the AppService was actually called
+        // Sprawdzamy, że AppService faktycznie został wywołany
         verify(salesAppService).markOrderAsReadyForHandover(any());
     }
 }

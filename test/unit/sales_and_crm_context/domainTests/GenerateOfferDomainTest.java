@@ -10,25 +10,25 @@ import salon.common.model.*;
 
 import static org.assertj.core.api.Assertions.*;
 
-/** UC-CRM-02: Generating the proforma offer */
+/** UC-CRM-02: Generowanie oferty proforma */
 class GenerateOfferDomainTest {
 
     @Test
     void shouldCreateAndPublishOfferSuccessfully() {
-        // We create a new offer for a specific customer and specification
+        // Tworzymy nową ofertę dla konkretnego klienta i specyfikacji
         Offer offer = new Offer(new OfferId("O-1"), new CustomerId("C-1"), new SpecificationId("S-1"), Money.of(100000, "PLN"));
 
-        // The Salesperson decides to publish the offer
+        // Sprzedawca decyduje się opublikować ofertę
         offer.publishOffer();
 
-        // The state machine state correctly changes to PUBLISHED
+        // Stan maszyny stanów poprawnie zmienia się na PUBLISHED
         assertThat(offer.state()).isEqualTo(OfferState.PUBLISHED);
     }
 
     @Test
     void shouldRejectOfferCreationWithZeroOrNegativeValue() {
-        // An attempt to create an offer with a negative or zero amount
-        // is a violation of a basic business rule. The aggregate must block this in the constructor.
+        // Próba utworzenia oferty z kwotą ujemną lub zerową
+        // to naruszenie podstawowej reguły biznesowej. Agregat musi to zablokować w konstruktorze.
         assertThatThrownBy(() -> new Offer(new OfferId("O-2"), new CustomerId("C-1"), new SpecificationId("S-2"), Money.of(-500, "PLN")))
                 .isInstanceOf(InvalidOfferDataException.class)
                 .hasMessageContaining("Offer price must be strictly positive");

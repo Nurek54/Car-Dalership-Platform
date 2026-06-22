@@ -25,7 +25,7 @@ class OrderDatabaseAdapterTest {
 
     @Test
     void shouldSaveAndLoadOrderFromSqlDatabase() {
-        // A valid Order Aggregate
+        // Poprawny agregat Zamówienia
         OrderId orderId = new OrderId("ORD-DB-1");
         Order order = new Order(orderId, new OfferId("OFF-1"), Money.of(100000, "PLN"));
 
@@ -33,7 +33,7 @@ class OrderDatabaseAdapterTest {
         databaseAdapter.save(order);
         Optional<Order> loadedOrder = databaseAdapter.findById(orderId);
 
-        // The aggregate is correctly read from the database
+        // Agregat jest poprawnie odczytany z bazy
         assertThat(loadedOrder).isPresent();
         assertThat(loadedOrder.get().id()).isEqualTo(orderId);
         assertThat(loadedOrder.get().requiredDeposit()).isEqualTo(Money.of(100000, "PLN"));
@@ -41,23 +41,23 @@ class OrderDatabaseAdapterTest {
 
     @Test
     void shouldThrowOptimisticLockingExceptionWhenConcurrentModificationOccurs() {
-        // We save the order to the database
+        // Zapisujemy zamówienie do bazy
         OrderId orderId = new OrderId("ORD-DB-2");
         Order initialOrder = new Order(orderId, new OfferId("OFF-2"), Money.of(50000, "PLN"));
         databaseAdapter.save(initialOrder);
 
-        // Simulation: two separate processes/users load the same order from the database
+        // Symulacja: dwa osobne procesy/użytkownicy wczytują to samo zamówienie z bazy
         Order user1Copy = databaseAdapter.findById(orderId).orElseThrow();
         Order user2Copy = databaseAdapter.findById(orderId).orElseThrow();
 
-        // User 1 makes changes and saves correctly
+        // Użytkownik 1 wprowadza zmiany i poprawnie zapisuje
         user1Copy.activate();
         databaseAdapter.save(user1Copy);
 
-        // User 2, unaware of the changes, tries to save their "older" copy
+        // Użytkownik 2, nieświadomy zmian, próbuje zapisać swoją „starszą" kopię
         user2Copy.changePaymentStatus(PaymentStatus.PAID);
 
-        // The database rejects user 2's save due to a version conflict
+        // Baza odrzuca zapis użytkownika 2 z powodu konfliktu wersji
         assertThatThrownBy(() -> databaseAdapter.save(user2Copy))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
     }

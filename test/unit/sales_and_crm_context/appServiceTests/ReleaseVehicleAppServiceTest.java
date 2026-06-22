@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** UC-CRM-05: Registering the physical vehicle handover */
+/** UC-CRM-05: Rejestracja fizycznego wydania pojazdu */
 @ExtendWith(MockitoExtension.class)
 class ReleaseVehicleAppServiceTest {
 
@@ -59,17 +59,17 @@ class ReleaseVehicleAppServiceTest {
     }
 
     @Test
-    void shouldExecuteConfirmHandoverUseCaseSuccessfully() { // MAIN SCENARIO
-        // A complete order in the database
+    void shouldExecuteConfirmHandoverUseCaseSuccessfully() { // SCENARIUSZ GŁÓWNY
+        // Kompletne zamówienie w bazie
         OrderId orderId = new OrderId("ORD-999");
         Order order = scheduledOrder("ORD-999", "OFF-999");
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
         salesAppService.confirmHandover(orderId);
 
-        // We instruct the Inventory port to remove the physical car from the warehouse/yard
+        // Instruujemy port Magazynu, aby usunął fizyczny samochód z magazynu/placu
         verify(inventoryPort).releasePhysicalVehicle(order.id().value());
-        // We save the order as Completed
+        // Zapisujemy zamówienie jako Completed
         assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
         verify(orderRepository).save(order);
         verify(eventPublisher).publishAll(anyList());
@@ -77,20 +77,20 @@ class ReleaseVehicleAppServiceTest {
 
     @Test
     void shouldHandleInventoryLockErrorAndRollback() {
-        // The handover is scheduled
+        // Wydanie jest umówione
         OrderId orderId = new OrderId("ORD-999");
         Order order = scheduledOrder("ORD-999", "OFF-999");
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-        // The car is locked
+        // Samochód jest zablokowany
         doThrow(new InventoryLockedException("Vehicle blocked by logistics on parking lot"))
                 .when(inventoryPort).releasePhysicalVehicle(any());
 
-        // The handover process aborts
+        // Proces wydania zostaje przerwany
         assertThatThrownBy(() -> salesAppService.confirmHandover(orderId))
                 .isInstanceOf(InventoryLockedException.class);
 
-        // The system must not save this order as completed!
+        // System nie może zapisać tego zamówienia jako zakończonego!
         verify(orderRepository, never()).save(argThat(savedOrder -> savedOrder.state() == OrderState.COMPLETED));
 
         verify(eventPublisher, never()).publishAll(anyList());

@@ -22,7 +22,7 @@ class OrderPlacedEventHandlerTest {
 
     @Test
     void shouldNotifyInventoryToAllocateProductionSlot() {
-        // The order is placed
+        // Zamówienie zostaje złożone
         OrderPlacedEvent event = new OrderPlacedEvent(
                 UUID.randomUUID(),
                 "ORD-100",
@@ -32,7 +32,7 @@ class OrderPlacedEventHandlerTest {
 
         eventHandler.handle(event);
 
-        // We communicate with Inventory to reserve a slot
+        // Komunikujemy się z Magazynem, aby zarezerwować slot
         verify(inventoryPort).allocateVehicleOrProductionSlot("ORD-100");
     }
 }

@@ -19,14 +19,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(OrderRestApiAdapter.class)
 class OrderRestAdapterTest {
 
-    @Autowired private MockMvc mockMvc;
-    @MockBean private SalesService salesAppService;
+    @Autowired
+    private MockMvc mockMvc;
+    @MockBean
+    private SalesService salesAppService;
 
     @Test
     void shouldAcceptScheduleHandoverRequestAndReturn200Ok() throws Exception {
         String jsonPayload = "{ \"handoverDate\": \"2026-06-20\" }";
 
-        // The controller processes it correctly and returns 200 OK
+        // Kontroler obsługuje je poprawnie i zwraca 200 OK
         mockMvc.perform(post("/api/sales/orders/ORD-123/schedule-handover")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonPayload))
@@ -46,7 +48,7 @@ class OrderRestAdapterTest {
 
     @Test
     void shouldReturn404NotFoundWhenOrderDoesNotExist() throws Exception {
-        // The AppService throws an exception indicating the order is missing
+        // AppService rzuca wyjątek wskazujący, że zamówienia brak
         doThrow(new OrderNotFoundException("Order ORD-999 not found"))
                 .when(salesAppService).scheduleHandover(any());
 

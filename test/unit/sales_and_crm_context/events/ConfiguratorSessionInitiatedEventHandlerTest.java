@@ -32,7 +32,7 @@ class ConfiguratorSessionInitiatedEventHandlerTest {
 
         eventHandler.handle(event);
 
-        // We instruct the Catalog port to open the interface
+        // Instruujemy port Katalogu, aby otworzył interfejs
         verify(catalogPort).openConfiguratorInterface("SESSION-999", "CUST-1", "SALES-7");
     }
 }

@@ -24,7 +24,7 @@ class OrderFactoryTest {
                 Money.of(200000, "PLN")
         );
 
-        // The factory builds the order
+        // Fabryka buduje zamówienie
         Order order = orderFactory.createFromOffer(offerId, validSnapshot);
 
         assertThat(order).isNotNull();
@@ -35,7 +35,7 @@ class OrderFactoryTest {
 
     @Test
     void shouldRejectCreationIfSnapshotOfferIdDoesNotMatch() {
-        // The snapshot belongs to a different offer than declared
+        // Migawka należy do innej oferty niż zadeklarowano
         OfferId actualOfferId = new OfferId("O-123");
         OfferSnapshot mismatchedSnapshot = new OfferSnapshot(
                 new OfferId("O-HACKER-999"),

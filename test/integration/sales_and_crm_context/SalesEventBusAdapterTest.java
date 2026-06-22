@@ -28,26 +28,26 @@ class SalesEventBusAdapterTest {
 
     @Test
     void shouldPublishMultipleEventsToMessageBroker() {
-        // The AppService passes a batch consisting of 2 events
+        // AppService przekazuje paczkę składającą się z 2 zdarzeń
         DomainEvent ev1 = new OrderPlacedEvent(UUID.randomUUID(), "ORD-111", "SPEC-111", Instant.now());
         DomainEvent ev2 = new OrderActivatedEvent(UUID.randomUUID(), "ORD-111", Instant.now());
 
-        // We call the publication of the whole batch
+        // Wywołujemy publikację całej paczki
         eventBusAdapter.publishAll(List.of(ev1, ev2));
 
-        // THEN: RabbitTemplate makes exactly 2 network calls to the appropriate routing key
-        verify(rabbitTemplate, times(1)).convertAndSend(anyString(), eq("order.placed"), eq(ev1));      // conversion to JSON and sending to RabbitMQ
-        verify(rabbitTemplate, times(1)).convertAndSend(anyString(), eq("order.activated"), eq(ev2));   // equal
+        // WTEDY: RabbitTemplate wykonuje dokładnie 2 wywołania sieciowe na odpowiedni routing key
+        verify(rabbitTemplate, times(1)).convertAndSend(anyString(), eq("order.placed"), eq(ev1));      // konwersja do JSON i wysyłka do RabbitMQ
+        verify(rabbitTemplate, times(1)).convertAndSend(anyString(), eq("order.activated"), eq(ev2));   // to samo
     }
 
     @Test
     void shouldThrowExceptionWhenMessageBrokerIsDown() {
-        // RabbitMQ is down, the connection is broken (Spring throws AmqpException)
+        // RabbitMQ jest niedostępny, połączenie zerwane (Spring rzuca AmqpException)
         doThrow(new AmqpException("Connection refused")).when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Object.class));
         DomainEvent ev1 = new OrderPlacedEvent(UUID.randomUUID(), "ORD-222", "SPEC-222", Instant.now());
 
-        // The infrastructure error must be propagated upward,
-        // so that the AppService can roll back the database transaction
+        // Błąd infrastruktury musi zostać przekazany w górę,
+        // aby AppService mógł wycofać transakcję bazodanową
         assertThatThrownBy(() -> eventBusAdapter.publishAll(List.of(ev1)))
                 .isInstanceOf(AmqpException.class);
     }

@@ -22,7 +22,7 @@ class OrderCancelledEventHandlerTest {
 
     @Test
     void shouldPassCancellationReasonToBillingContext() {
-        // The order is cancelled due to a missing payment
+        // Zamówienie zostaje anulowane z powodu braku płatności
         OrderCancelledEvent event = new OrderCancelledEvent(
                 UUID.randomUUID(),
                 "ORD-300",

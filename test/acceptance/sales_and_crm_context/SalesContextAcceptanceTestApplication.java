@@ -10,14 +10,14 @@ import salon.sales.application.domain.model.offer.OfferFactory;
 import salon.sales.application.domain.model.order.OrderFactory;
 
 /**
- * Spring configuration anchor for the acceptance tests of the Sales Context
- * (full Sales slice: REST + JPA + the event bus, with WireMock for outbound HTTP and a mocked broker).
+ * Kotwica konfiguracji Springa dla testów akceptacyjnych kontekstu Sprzedaży
+ * (pełny wycinek Sprzedaży: REST + JPA + szyna zdarzeń, z WireMockiem dla wychodzącego HTTP i zamockowanym brokerem).
  *
- * IMPORTANT: the component scan is restricted to {@code salon.sales} ONLY. The other bounded contexts
- * (Billing, Financing, Logistics, Catalog) are wired in {@code salon.bootstrap.SalonWiringConfiguration}
- * and pull in collaborators that are irrelevant here; scanning the whole {@code salon} tree would boot
- * those beans too and cascade unrelated failures. We therefore load just the Sales beans and provide
- * the two framework-free domain factories ourselves.
+ * WAŻNE: skanowanie komponentów jest ograniczone WYŁĄCZNIE do {@code salon.sales}. Pozostałe konteksty
+ * (Rozliczenia, Finansowanie, Logistyka, Katalog) są spinane w {@code salon.bootstrap.SalonWiringConfiguration}
+ * i ciągną za sobą współpracowników nieistotnych tutaj; przeskanowanie całego drzewa {@code salon} uruchomiłoby
+ * także tamte beany i kaskadowo wyrzucało niepowiązane błędy. Dlatego ładujemy tylko beany Sprzedaży i sami dostarczamy
+ * dwie wolne od frameworka fabryki domenowe.
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration

@@ -6,19 +6,19 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 
 /**
- * Configuration anchor for the slice tests (@DataJpaTest, @WebMvcTest).
+ * Kotwica konfiguracji dla testów wycinkowych (@DataJpaTest, @WebMvcTest).
  *
- * The production composition root (salon.bootstrap.SalonApplication) lies outside the tree
- * of the integration test packages (integration.*), so Spring Boot will not find it
- * by going up the test package. This class serves as the anchor for the slice tests.
+ * Produkcyjny korzeń kompozycji (salon.bootstrap.SalonApplication) leży poza drzewem
+ * pakietów testów integracyjnych (integration.*), więc Spring Boot jej nie znajdzie
+ * idąc w górę pakietu testowego. Ta klasa pełni rolę kotwicy dla testów wycinkowych.
  *
- * @ComponentScan("salon") lets @WebMvcTest detect the controllers and @ControllerAdvice
- * in the salon.* tree. The slices (@WebMvcTest, @DataJpaTest) apply their own type filters,
- * so they do not load the whole context — @WebMvcTest takes only the controllers and web beans,
- * @DataJpaTest only the entities and repositories.
+ * @ComponentScan("salon") pozwala @WebMvcTest wykryć kontrolery i @ControllerAdvice
+ * w drzewie salon.*. Wycinki (@WebMvcTest, @DataJpaTest) stosują własne filtry typów,
+ * więc nie ładują całego kontekstu — @WebMvcTest bierze tylko kontrolery i beany webowe,
+ * @DataJpaTest tylko encje i repozytoria.
  *
  * excludeFilters wyklucza SalonApplication (@SpringBootApplication) ze skanowania,
- * to avoid double registration of @EnableJpaRepositories in the slice tests.
+ * aby uniknąć podwójnej rejestracji @EnableJpaRepositories w testach wycinkowych.
  */
 @SpringBootConfiguration
 @ComponentScan(

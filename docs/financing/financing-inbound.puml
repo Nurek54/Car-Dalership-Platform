@@ -1,0 +1,62 @@
+@startuml FinancingInbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<use case>> LightYellow
+    BackgroundColor<<inbound adapter>> MistyRose
+}
+
+package "salon" {
+  package "financing" {
+
+    package "infrastructure" {
+      package "in" {
+        package "messaging" {
+          class FinancingEventListener <<inbound adapter>> {
+            - processFinancing : ProcessFinancing
+            + handleFinancingRequested(event : FinancingRequested)
+            + handleFinancingDecisionReceived(event : FinancingDecisionReceivedFromBank)
+          }
+        }
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class ProcessFinancingService <<application service>> {
+          - applicationRepository : FinancingApplicationDatabaseRepository
+          - applicationFactory : FinancingApplicationFactory
+          - salesIntegration : SalesIntegration
+          - bankIntegration : BankIntegrationAcl
+          - eventPublisher : EventPublisher
+          + requestFinancing(orderId, customerId)
+          + processBankDecision(orderId, approved)
+        }
+      }
+
+      package "port" {
+        package "in" {
+          interface ProcessFinancing <<use case>> {
+            + requestFinancing(orderId, customerId)
+            + processBankDecision(orderId, approved)
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Implementation
+ProcessFinancingService ..|> ProcessFinancing
+
+' Adapter -> port
+FinancingEventListener --> ProcessFinancing
+
+@enduml

@@ -1,0 +1,147 @@
+@startuml LogisticsDomainModel
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<factory>> Lavender
+    BackgroundColor<<event>> PaleGreen
+    BackgroundColor<<exception>> LightPink
+}
+
+package "salon" {
+  package "logistics" {
+    package "application" {
+      package "domain" {
+
+        package "model" {
+          package "vehicle" {
+            class InventoryVehicle <<aggregate root>> {
+              - vin : VinNumber
+              - specification : SpecificationId
+              - role : VehicleRole
+              - state : VehicleState
+              - order : OrderId
+              + lockForOrder(orderId)
+              + receiveOnYard(data : ImporterData)
+              + releaseReservation()
+              + prepareForHandover()
+              + handOver()
+              + markAsDemo()
+            }
+            class VinNumber <<value object>> {
+              - value : String
+            }
+            class SpecificationId <<value object>> {
+              - value : String
+            }
+            class ImporterData <<value object>> {
+              - vin : VinNumber
+              - specificationId : SpecificationId
+              - optionCodes : List<String>
+            }
+            enum VehicleState {
+              ON_STOCK
+              IN_PRODUCTION
+              RESERVED
+              READY_FOR_HANDOVER
+              HANDED_OVER
+            }
+            enum VehicleRole {
+              STOCK
+              DEMO
+            }
+            class InventoryVehicleFactory <<factory>> {
+              + createForFactoryOrder(vin, order, specification) : InventoryVehicle
+              + createStockArrival(data : ImporterData) : InventoryVehicle
+            }
+          }
+        }
+
+        package "event" {
+          class VehicleReservedFromStockEvent <<event>> {
+            - orderId : String
+            - vin : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class VehicleIsNotOnStockEvent <<event>> {
+            - orderId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class FactoryOrderPlacedEvent <<event>> {
+            - orderId : String
+            - vin : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class FactoryOrderFailedEvent <<event>> {
+            - orderId : String
+            - reason : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class VehicleDeliveredToStockEvent <<event>> {
+            - orderId : String
+            - vin : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class VehicleReservationCancelledEvent <<event>> {
+            - orderId : String
+            - vin : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class VehicleReadyForHandoverEvent <<event>> {
+            - orderId : String
+            - vin : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class VehicleInventoryReleasedEvent <<event>> {
+            - orderId : String
+            - vin : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class VehicleInventoryReleasedErrorEvent <<event>> {
+            - orderId : String
+            - reason : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+        }
+
+        package "exception" {
+          class IllegalVehicleStateException <<exception>> {
+            + IllegalVehicleStateException(message)
+          }
+          class VehicleNotFoundException <<exception>> {
+            + VehicleNotFoundException(message)
+          }
+          class FactoryOrderFailedException <<exception>> {
+            + FactoryOrderFailedException(message)
+            + FactoryOrderFailedException(message, cause)
+          }
+        }
+
+      }
+    }
+  }
+}
+
+' InventoryVehicle aggregate
+InventoryVehicle --> VinNumber
+InventoryVehicle --> SpecificationId
+InventoryVehicle --> VehicleState
+InventoryVehicle --> VehicleRole
+ImporterData --> VinNumber
+ImporterData --> SpecificationId
+InventoryVehicleFactory ..> InventoryVehicle : <<creates>>
+
+@enduml

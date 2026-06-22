@@ -1,0 +1,152 @@
+@startuml SalesInbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<use case>> LightYellow
+    BackgroundColor<<inbound adapter>> MistyRose
+}
+
+package "salon" {
+  package "sales" {
+
+    package "infrastructure" {
+      package "in" {
+        package "messaging" {
+          class BillingEventSubscriberAdapter <<inbound adapter>> {
+            - activateOrderOnDeposit : ActivateOrderOnDeposit
+            + handleAdvancePaymentRegistered(event)
+          }
+          class CatalogEventSubscriberAdapter <<inbound adapter>> {
+            - salesService : SalesService
+            + handleSpecificationCompleted(event)
+          }
+          class InventoryEventSubscriberAdapter <<inbound adapter>> {
+            - salesService : SalesService
+            + handleVehicleReadyForHandover(event)
+            + handleVehicleReleaseFailed(event)
+          }
+          class SalesDepositListener <<inbound adapter>> {
+            - activateOrderOnDeposit : ActivateOrderOnDeposit
+            + handle(event)
+          }
+        }
+        package "web" {
+          class ConfiguratorRestController <<inbound adapter>> {
+            - startConfigurator : StartConfigurator
+            + startSession(customerId, salespersonId, modelYear) : String
+          }
+          class OfferRestController <<inbound adapter>> {
+            - acceptOffer : AcceptOffer
+            + acceptOffer(offerId, paymentMethod) : String
+          }
+          class OrderRestController <<inbound adapter>> {
+            - activateOrderOnDeposit : ActivateOrderOnDeposit
+            - scheduleHandover : ScheduleHandover
+            - releaseVehicle : ReleaseVehicle
+            + activateOnDeposit(orderId)
+            + scheduleHandover(orderId, handoverDate)
+            + releaseVehicle(orderId)
+          }
+        }
+        package "cron" {
+          class OfferExpirationCronJob <<inbound adapter>> {
+            - expireOutdatedOffer : ExpireOutdatedOffer
+            + run()
+          }
+        }
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class SalesService <<application service>> {
+          - customerRepository : CustomerDatabaseRepository
+          - offerRepository : OfferDatabaseRepository
+          - orderRepository : OrderDatabaseRepository
+          - billingIntegration : BillingIntegration
+          - inventoryIntegration : InventoryIntegration
+          - eventPublisher : EventPublisher
+          - offerFactory : OfferFactory
+          - orderFactory : OrderFactory
+          + registerCustomer(customer)
+          + createProformaOffer(customerId, specificationId, basePrice) : String
+          + acceptOffer(command) : String
+          + activateOnDeposit(orderId)
+          + markReadyForHandover(orderId)
+          + scheduleHandover(command)
+          + releaseVehicle(orderId)
+          + revertHandoverOnInventoryError(orderId)
+          + expireOutdatedOffers()
+        }
+        class ConfiguratorAppService <<application service>> {
+          - catalogIntegration : CatalogIntegration
+          - eventPublisher : EventPublisher
+          + startSession(command) : String
+        }
+        class SalesQueryService <<application service>> {
+          - orderRepository : OrderDatabaseRepository
+          - offerRepository : OfferDatabaseRepository
+          - customerRepository : CustomerDatabaseRepository
+          + findBuyerForOrder(orderId) : CustomerSnapshotDto
+          + findOfferForOrder(orderId) : OfferSnapshotDto
+        }
+      }
+
+      package "port" {
+        package "in" {
+          interface AcceptOffer <<use case>> {
+            + acceptOffer(command) : String
+          }
+          interface ActivateOrderOnDeposit <<use case>> {
+            + activateOnDeposit(orderId)
+          }
+          interface ExpireOutdatedOffer <<use case>> {
+            + expireOutdatedOffers()
+          }
+          interface ReleaseVehicle <<use case>> {
+            + releaseVehicle(orderId)
+          }
+          interface ScheduleHandover <<use case>> {
+            + scheduleHandover(command)
+          }
+          interface StartConfigurator <<use case>> {
+            + startSession(command) : String
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Service implementations
+SalesService ..|> AcceptOffer
+SalesService ..|> ActivateOrderOnDeposit
+SalesService ..|> ExpireOutdatedOffer
+SalesService ..|> ReleaseVehicle
+SalesService ..|> ScheduleHandover
+ConfiguratorAppService ..|> StartConfigurator
+
+' Messaging adapters -> ports
+BillingEventSubscriberAdapter --> ActivateOrderOnDeposit
+SalesDepositListener --> ActivateOrderOnDeposit
+CatalogEventSubscriberAdapter --> SalesService
+InventoryEventSubscriberAdapter --> SalesService
+
+' Web adapters -> ports
+ConfiguratorRestController --> StartConfigurator
+OfferRestController --> AcceptOffer
+OrderRestController --> ActivateOrderOnDeposit
+OrderRestController --> ScheduleHandover
+OrderRestController --> ReleaseVehicle
+
+' Cron adapter -> port
+OfferExpirationCronJob --> ExpireOutdatedOffer
+
+@enduml

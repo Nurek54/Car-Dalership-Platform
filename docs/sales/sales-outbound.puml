@@ -1,0 +1,167 @@
+@startuml SalesOutbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<repository>> LightSalmon
+    BackgroundColor<<output port>> LightGray
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<outbound adapter>> Honeydew
+    BackgroundColor<<public api>> LightGoldenRodYellow
+}
+
+package "salon" {
+  package "sales" {
+
+    package "api" {
+      interface SalesQueryFacade <<public api>> {
+        + findBuyerForOrder(orderId) : CustomerSnapshotDto
+        + findOfferForOrder(orderId) : OfferSnapshotDto
+      }
+    }
+
+    package "infrastructure" {
+      package "out" {
+        package "integration" {
+          class BillingIntegrationAdapter <<outbound adapter>> {
+            + openSettlement(orderId, contractValue)
+          }
+          class CatalogIntegrationAdapter <<outbound adapter>> {
+            + initiateConfiguratorSession(sessionId, modelYear)
+          }
+          class InventoryIntegrationAdapter <<outbound adapter>> {
+            + releaseVehicle(orderId)
+          }
+        }
+        package "persistence" {
+          class InMemoryCustomerRepository <<outbound adapter>> {
+            + save(customer)
+            + findById(id) : Optional<Customer>
+          }
+          class InMemoryOfferRepository <<outbound adapter>> {
+            + save(offer)
+            + findById(id) : Optional<Offer>
+            + findAll() : List<Offer>
+          }
+          class InMemoryOrderRepository <<outbound adapter>> {
+            + save(order)
+            + findById(id) : Optional<Order>
+            + findAll() : List<Order>
+          }
+        }
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class SalesService <<application service>> {
+          + registerCustomer(customer)
+          + createProformaOffer(customerId, specificationId, basePrice) : String
+          + acceptOffer(command) : String
+          + activateOnDeposit(orderId)
+          + markReadyForHandover(orderId)
+          + scheduleHandover(command)
+          + releaseVehicle(orderId)
+          + expireOutdatedOffers()
+        }
+        class ConfiguratorAppService <<application service>> {
+          + startSession(command) : String
+        }
+        class SalesQueryService <<application service>> {
+          + findBuyerForOrder(orderId) : CustomerSnapshotDto
+          + findOfferForOrder(orderId) : OfferSnapshotDto
+        }
+      }
+
+      package "port" {
+        package "out" {
+          interface BillingIntegration <<output port>> {
+            + openSettlement(orderId, contractValue)
+          }
+          interface CatalogIntegration <<output port>> {
+            + initiateConfiguratorSession(sessionId, modelYear)
+          }
+          interface CustomerDatabaseRepository <<repository>> {
+            + save(customer)
+            + findById(id) : Optional<Customer>
+          }
+          interface InventoryIntegration <<output port>> {
+            + releaseVehicle(orderId)
+          }
+          interface OfferDatabaseRepository <<repository>> {
+            + save(offer)
+            + findById(id) : Optional<Offer>
+            + findAll() : List<Offer>
+          }
+          interface OrderDatabaseRepository <<repository>> {
+            + save(order)
+            + findById(id) : Optional<Order>
+            + findAll() : List<Order>
+          }
+        }
+      }
+
+      package "domain" {
+        package "model" {
+          class Customer <<aggregate root>> {
+            - id : CustomerId
+            - fullName : String
+            - nip : String
+            - address : Address
+            - contact : ContactData
+          }
+          class Offer <<aggregate root>> {
+            - id : OfferId
+            - customerId : CustomerId
+            - specificationId : SpecificationId
+            - basePrice : Money
+            - finalPrice : Money
+            - state : OfferState
+          }
+          class Order <<aggregate root>> {
+            - id : OrderId
+            - sourceOfferId : OfferId
+            - paymentMethod : PaymentMethod
+            - state : OrderState
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Service -> port dependencies
+SalesService --> BillingIntegration
+SalesService --> CatalogIntegration
+SalesService --> InventoryIntegration
+SalesService --> CustomerDatabaseRepository
+SalesService --> OfferDatabaseRepository
+SalesService --> OrderDatabaseRepository
+ConfiguratorAppService --> CatalogIntegration
+SalesQueryService --> CustomerDatabaseRepository
+SalesQueryService --> OfferDatabaseRepository
+SalesQueryService --> OrderDatabaseRepository
+
+' Public API
+SalesQueryService ..|> SalesQueryFacade
+
+' Adapter implementations
+BillingIntegrationAdapter ..|> BillingIntegration
+CatalogIntegrationAdapter ..|> CatalogIntegration
+InventoryIntegrationAdapter ..|> InventoryIntegration
+InMemoryCustomerRepository ..|> CustomerDatabaseRepository
+InMemoryOfferRepository ..|> OfferDatabaseRepository
+InMemoryOrderRepository ..|> OrderDatabaseRepository
+
+' Repositories -> aggregates
+CustomerDatabaseRepository "1" --> "*" Customer : <<repository for>>
+OfferDatabaseRepository "1" --> "*" Offer : <<repository for>>
+OrderDatabaseRepository "1" --> "*" Order : <<repository for>>
+
+@enduml

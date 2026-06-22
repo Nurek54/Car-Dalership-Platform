@@ -1,0 +1,103 @@
+@startuml FinancingOutbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<repository>> LightSalmon
+    BackgroundColor<<output port>> LightGray
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<outbound adapter>> Honeydew
+}
+
+package "salon" {
+  package "financing" {
+
+    package "infrastructure" {
+      package "out" {
+        package "mock" {
+          class InMemoryFinancingRepository <<outbound adapter>> {
+            + save(application)
+            + findByOrderId(orderId) : Optional<FinancingApplication>
+          }
+          class BankIntegrationMockAdapter <<outbound adapter>> {
+            + submitFinancingApplication(orderId)
+          }
+        }
+        package "integration" {
+          class SalesCrmIntegrationAdapter <<outbound adapter>> {
+            - salesQueryFacade : SalesQueryFacade
+            + buyerDetails(orderId) : BuyerDetails
+            + offerFinalPrice(orderId) : Money
+          }
+        }
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class ProcessFinancingService <<application service>> {
+          + requestFinancing(orderId, customerId)
+          + processBankDecision(orderId, approved)
+        }
+      }
+
+      package "port" {
+        package "out" {
+          interface FinancingApplicationDatabaseRepository <<repository>> {
+            + save(application)
+            + findByOrderId(orderId) : Optional<FinancingApplication>
+          }
+          interface SalesIntegration <<output port>> {
+            + buyerDetails(orderId) : BuyerDetails
+            + offerFinalPrice(orderId) : Money
+          }
+          interface BankIntegrationAcl <<output port>> {
+            + submitFinancingApplication(orderId)
+            + startCreditCheckProcess(orderId)
+          }
+          interface EventPublisher <<output port>> {
+            + publish(event)
+          }
+        }
+      }
+
+      package "domain" {
+        package "model" {
+          class FinancingApplication <<aggregate root>> {
+            - applicationId : ApplicationId
+            - orderId : OrderId
+            - customerId : CustomerId
+            - buyerDetails : BuyerDetails
+            - moneyForFunding : Money
+            - state : ApplicationState
+            + submitApplication()
+            + approve()
+            + reject()
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Service -> port dependencies
+ProcessFinancingService --> FinancingApplicationDatabaseRepository
+ProcessFinancingService --> SalesIntegration
+ProcessFinancingService --> BankIntegrationAcl
+ProcessFinancingService --> EventPublisher
+
+' Adapter implementations
+InMemoryFinancingRepository ..|> FinancingApplicationDatabaseRepository
+BankIntegrationMockAdapter ..|> BankIntegrationAcl
+SalesCrmIntegrationAdapter ..|> SalesIntegration
+
+' Repository -> aggregate
+FinancingApplicationDatabaseRepository "1" --> "*" FinancingApplication : <<repository for>>
+
+@enduml

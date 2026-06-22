@@ -1,0 +1,112 @@
+@startuml LogisticsOutbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<repository>> LightSalmon
+    BackgroundColor<<output port>> LightGray
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<outbound adapter>> Honeydew
+}
+
+package "salon" {
+  package "logistics" {
+
+    package "infrastructure" {
+      package "out" {
+        package "mock" {
+          class InMemoryInventoryRepository <<outbound adapter>> {
+            + save(vehicle)
+            + findByVin(vin) : Optional<InventoryVehicle>
+            + findByOrderId(orderId) : Optional<InventoryVehicle>
+            + findAll() : List<InventoryVehicle>
+          }
+          class InMemorySpecificationReadModelAdapter <<outbound adapter>> {
+            + saveSpecification(specificationId, optionCodes)
+            + linkOrderToSpecification(orderId, specificationId)
+            + findSpecificationByOrder(orderId) : Optional<String>
+            + findOptionCodes(specificationId) : List<String>
+          }
+          class FactoryIntegrationMockAdapter <<outbound adapter>> {
+            + placeFactoryOrder(orderId, optionCodes) : String
+          }
+        }
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class InventoryManagementService <<application service>> {
+          + reserveVehicleForOrder(orderId)
+          + orderVehicleFromFactory(orderId)
+          + receiveVehicle(vin)
+          + releaseVehicle(orderId)
+          + releaseReservation(orderId)
+          + prepareVehicleForHandover(orderId)
+        }
+      }
+
+      package "port" {
+        package "out" {
+          interface VehicleDatabaseRepository <<repository>> {
+            + save(vehicle)
+            + findByVin(vin) : Optional<InventoryVehicle>
+            + findByOrderId(orderId) : Optional<InventoryVehicle>
+            + findAll() : List<InventoryVehicle>
+          }
+          interface CatalogIntegration <<output port>> {
+            + saveSpecification(specificationId, optionCodes)
+            + linkOrderToSpecification(orderId, specificationId)
+            + findSpecificationByOrder(orderId) : Optional<String>
+            + findOptionCodes(specificationId) : List<String>
+          }
+          interface ImporterACL <<output port>> {
+            + placeFactoryOrder(orderId, optionCodes) : String
+          }
+          interface EventPublisher <<output port>> {
+            + publish(event)
+          }
+        }
+      }
+
+      package "domain" {
+        package "model" {
+          class InventoryVehicle <<aggregate root>> {
+            - vin : VinNumber
+            - specification : SpecificationId
+            - role : VehicleRole
+            - state : VehicleState
+            - order : OrderId
+            + lockForOrder(orderId)
+            + receiveOnYard(data)
+            + releaseReservation()
+            + prepareForHandover()
+            + handOver()
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Service -> port dependencies
+InventoryManagementService --> VehicleDatabaseRepository
+InventoryManagementService --> CatalogIntegration
+InventoryManagementService --> ImporterACL
+InventoryManagementService --> EventPublisher
+
+' Adapter implementations
+InMemoryInventoryRepository ..|> VehicleDatabaseRepository
+InMemorySpecificationReadModelAdapter ..|> CatalogIntegration
+FactoryIntegrationMockAdapter ..|> ImporterACL
+
+' Repository -> aggregate
+VehicleDatabaseRepository "1" --> "*" InventoryVehicle : <<repository for>>
+
+@enduml

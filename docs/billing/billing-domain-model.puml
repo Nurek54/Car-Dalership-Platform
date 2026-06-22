@@ -1,0 +1,182 @@
+@startuml BillingDomainModel
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<domain service>> Wheat
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<factory>> Lavender
+    BackgroundColor<<event>> PaleGreen
+    BackgroundColor<<exception>> LightPink
+}
+
+package "salon" {
+  package "billing" {
+    package "application" {
+      package "domain" {
+
+        package "service" {
+          class InvoiceCalculationService <<domain service>> {
+            + calculateAdvanceAmount(settlement) : Money
+            + calculateFinalInvoiceAmount(settlement) : Money
+          }
+        }
+
+        package "model" {
+
+          package "settlement" {
+            class Settlement <<aggregate root>> {
+              - id : SettlementId
+              - orderId : OrderId
+              - totalAmount : Money
+              - payments : List<Payment>
+              - status : SettlementStatus
+              - advanceRequested : boolean
+              + requestAdvancePayment()
+              + registerPayment(transactionId, amount)
+              + outstandingBalance() : Money
+            }
+            class Payment {
+              - transactionId : String
+              - amount : Money
+              - paymentDate : LocalDateTime
+            }
+            class SettlementId <<value object>> {
+              - value : String
+              + generate() : SettlementId$
+            }
+            enum SettlementStatus {
+              OPEN
+              PARTIAL_PAYMENT
+              SETTLED
+            }
+            class SettlementFactory <<factory>> {
+              + createNew(orderId, totalAmount) : Settlement
+            }
+          }
+
+          package "document" {
+            class AccountingDocument <<aggregate root>> {
+              - id : DocumentId
+              - orderId : OrderId
+              - invoiceTitle : String
+              - buyer : BuyerDetails
+              - seller : SellerDetails
+              - totalAmount : Money
+              - issueDate : LocalDate
+              - dueDate : LocalDate
+              - authorizedIssuer : String
+              - status : DocumentStatus
+              + createInvoice(...)$ : AccountingDocument
+              + generatePdf() : byte[]
+              + markAsIssued()
+              + markAsError()
+            }
+            class BuyerDetails <<value object>> {
+              - name : String
+              - nip : String
+              + isCorporate() : boolean
+            }
+            class SellerDetails <<value object>> {
+              - name : String
+              - nip : String
+            }
+            class DocumentId <<value object>> {
+              - value : String
+              + generate() : DocumentId$
+            }
+            enum DocumentStatus {
+              DRAFT
+              ISSUED
+              ERROR
+            }
+            class AccountingDocumentFactory <<factory>> {
+              + createInvoice(...) : AccountingDocument
+            }
+          }
+        }
+
+        package "event" {
+          class AdvancePaymentRequestedEvent <<event>> {
+            - orderId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class AdvancePaymentRegisteredEvent <<event>> {
+            - orderId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class PaymentRegisteredEvent <<event>> {
+            - orderId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class SettlementCompletedEvent <<event>> {
+            - orderId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class InvoiceCreatedEvent <<event>> {
+            - orderId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class ErrorDuringPaymentRequestEvent <<event>> {
+            - orderId : String
+            - reason : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class ErrorDuringInvoiceCreationEvent <<event>> {
+            - orderId : String
+            - reason : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+        }
+
+        package "exception" {
+          class SettlementNotFoundException <<exception>> {
+            + SettlementNotFoundException(message)
+          }
+          class IllegalSettlementStateException <<exception>> {
+            + IllegalSettlementStateException(message)
+          }
+          class DocumentGenerationException <<exception>> {
+            + DocumentGenerationException(message)
+            + DocumentGenerationException(message, cause)
+          }
+        }
+
+      }
+    }
+  }
+}
+
+' Settlement aggregate
+Settlement "1" *-- "*" Payment
+Settlement --> SettlementId
+Settlement --> SettlementStatus
+SettlementFactory ..> Settlement : <<creates>>
+
+' AccountingDocument aggregate
+AccountingDocument --> DocumentId
+AccountingDocument --> BuyerDetails
+AccountingDocument --> SellerDetails
+AccountingDocument --> DocumentStatus
+AccountingDocumentFactory ..> AccountingDocument : <<creates>>
+
+' Domain service
+InvoiceCalculationService ..> Settlement
+
+' Events emitted by Settlement
+Settlement ..> AdvancePaymentRequestedEvent : <<emits>>
+Settlement ..> AdvancePaymentRegisteredEvent : <<emits>>
+Settlement ..> PaymentRegisteredEvent : <<emits>>
+Settlement ..> SettlementCompletedEvent : <<emits>>
+
+@enduml

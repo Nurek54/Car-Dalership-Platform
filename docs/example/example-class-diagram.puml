@@ -1,0 +1,127 @@
+@startuml ReservationServicesAndPorts
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam class {
+BackgroundColor<<application service>> PaleGreen
+BackgroundColor<<repository>> LightSalmon
+BackgroundColor<<output port>> LightGray
+BackgroundColor<<domain service>> Wheat
+BackgroundColor<<aggregate root>> LightBlue
+}
+
+package "com.hotel.reservation.application.ports.output" {
+interface ReservationRepository <<repository>> {
++ findById(reservationId)
++ findAll()
++ findConflicting(roomId, stayPeriod, excludedReservationId)
++ findFutureConfirmedByRoomId(roomId, date)
++ save(reservation)
+}
+
+interface ReservationNumberGenerator <<output port>> {
++ next()
+}
+
+interface EventPublisher <<output port>> {
++ publish(event)
+}
+}
+
+package "com.hotel.room.application.ports.output" {
+interface RoomRepository <<repository>> {
++ findById(roomId)
++ findAll()
+}
+}
+
+package "com.hotel.reservation.application.services" {
+class MakeReservationService <<application service>> {
+- reservationRepository : ReservationRepository
+- roomRepository : RoomRepository
+- reservationNumberGenerator : ReservationNumberGenerator
+- eventPublisher : EventPublisher
+- reservationConflictPolicy : ReservationConflictPolicy
++ makeReservation(command)
+}
+
+class UpdateReservationService <<application service>> {
+- reservationRepository : ReservationRepository
+- roomRepository : RoomRepository
+- eventPublisher : EventPublisher
+- reservationConflictPolicy : ReservationConflictPolicy
++ updateReservation(command)
+}
+
+class CancelReservationService <<application service>> {
+- reservationRepository : ReservationRepository
+- roomRepository : RoomRepository
+- eventPublisher : EventPublisher
++ cancelReservation(command)
+}
+
+class ViewReservationsService <<application service>> {
+- reservationRepository : ReservationRepository
+- roomRepository : RoomRepository
++ viewAllReservations()
++ viewReservation(command)
+}
+
+class CancelReservationsForDeletedRoomService <<application service>> {
+- reservationRepository : ReservationRepository
+- eventPublisher : EventPublisher
+- reservationCancellationPolicy : ReservationCancellationPolicy
++ cancelFutureReservations(command)
+}
+}
+
+package "com.hotel.reservation.domain.service" {
+class ReservationConflictPolicy <<domain service>> {
++ hasConflict(conflictingReservations)
+}
+
+class ReservationCancellationPolicy <<domain service>> {
++ shouldCancelAfterRoomDeletion(reservation, today)
+}
+}
+
+package "com.hotel.reservation.domain" {
+class Reservation <<aggregate root>>
+}
+
+package "com.hotel.room.domain" {
+class Room <<aggregate root>>
+}
+
+EventPublisher -[hidden]-> RoomRepository
+ViewReservationsService -[hidden]-> EventPublisher
+
+ReservationRepository "1" <-- "1" MakeReservationService
+ReservationRepository "1" <-- "1" UpdateReservationService
+ReservationRepository "1" <-- "1" CancelReservationService
+ReservationRepository "1" <-- "1" ViewReservationsService
+ReservationRepository "1" <-- "1" CancelReservationsForDeletedRoomService
+ReservationNumberGenerator "1" <-- "1" MakeReservationService
+
+MakeReservationService "1" --> "1" RoomRepository
+MakeReservationService "1" --> "1" EventPublisher
+MakeReservationService "1" --> "1" ReservationConflictPolicy
+
+UpdateReservationService "1" --> "1" RoomRepository
+UpdateReservationService "1" --> "1" EventPublisher
+UpdateReservationService "1" --> "1" ReservationConflictPolicy
+
+CancelReservationService "1" --> "1" RoomRepository
+CancelReservationService "1" --> "1" EventPublisher
+
+ViewReservationsService "1" --> "1" RoomRepository
+
+CancelReservationsForDeletedRoomService "1" --> "1" EventPublisher
+CancelReservationsForDeletedRoomService "1" --> "1" ReservationCancellationPolicy
+
+ReservationRepository "1" --> "*" Reservation : <<repository for>>
+RoomRepository "1" --> "*" Room : <<repository for>>
+
+@enduml

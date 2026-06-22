@@ -1,0 +1,113 @@
+@startuml BillingInbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<domain service>> Wheat
+    BackgroundColor<<use case>> LightYellow
+    BackgroundColor<<inbound adapter>> MistyRose
+}
+
+package "salon" {
+  package "billing" {
+
+    package "infrastructure" {
+      package "in" {
+        package "messaging" {
+          class BillingEventSubscriberAdapter <<inbound adapter>> {
+            - generateAdvance : GenerateAdvance
+            - generateInvoice : GenerateInvoice
+            - authorizedIssuer : String
+            + handleVehicleIsNotOnStock(event)
+            + handleVehicleReservedFromStock(event)
+          }
+          class SettlementEventListener <<inbound adapter>> {
+            - processPayment : ProcessPayment
+            + on(event : OrderReadyForSettlementEvent)
+          }
+        }
+        package "scheduling" {
+          class PaymentReminderCronJobAdapter <<inbound adapter>> {
+            - processPayment : ProcessPayment
+            + sendPaymentRemindersJob()
+          }
+        }
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class DocumentGenerationService <<application service>> {
+          - settlementRepository : SettlementDatabaseRepository
+          - documentRepository : DocumentDatabaseRepository
+          - invoiceCalculation : InvoiceCalculationService
+          - documentFactory : AccountingDocumentFactory
+          - pdfGeneration : PdfGeneration
+          - notification : NotificationGeneration
+          - eventPublisher : EventPublisher
+          - salesIntegration : SalesIntegration
+          - seller : SellerDetails
+          + generateAdvance(command) : String
+          + generateInvoice(command) : String
+        }
+        class PaymentProcessService <<application service>> {
+          - settlementRepository : SettlementDatabaseRepository
+          - settlementFactory : SettlementFactory
+          - documentRepository : DocumentDatabaseRepository
+          - notification : NotificationGeneration
+          - eventPublisher : EventPublisher
+          + initializeSettlement(orderId, totalAmount)
+          + processPayment(command)
+          + sendPaymentReminders()
+        }
+      }
+
+      package "port" {
+        package "in" {
+          interface GenerateAdvance <<use case>> {
+            + generateAdvance(command : GenerateAdvanceCommand) : String
+          }
+          interface GenerateInvoice <<use case>> {
+            + generateInvoice(command : GenerateInvoiceCommand) : String
+          }
+          interface ProcessPayment <<use case>> {
+            + initializeSettlement(orderId, totalAmount)
+            + processPayment(command : ProcessPaymentCommand)
+            + sendPaymentReminders()
+          }
+        }
+      }
+
+      package "domain" {
+        package "service" {
+          class InvoiceCalculationService <<domain service>> {
+            + calculateAdvanceAmount(settlement) : Money
+            + calculateFinalInvoiceAmount(settlement) : Money
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Implementations
+DocumentGenerationService ..|> GenerateAdvance
+DocumentGenerationService ..|> GenerateInvoice
+PaymentProcessService ..|> ProcessPayment
+
+' Adapter -> port
+BillingEventSubscriberAdapter --> GenerateAdvance
+BillingEventSubscriberAdapter --> GenerateInvoice
+SettlementEventListener --> ProcessPayment
+PaymentReminderCronJobAdapter --> ProcessPayment
+
+' Service -> domain service
+DocumentGenerationService --> InvoiceCalculationService
+
+@enduml

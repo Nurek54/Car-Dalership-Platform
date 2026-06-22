@@ -1,0 +1,240 @@
+% =====================================================
+\textbf{UC-CRM-01: Uruchomienie sesji konfiguratora dla klienta}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-CRM-01 \\
+\hline
+
+Nazwa & Uruchomienie sesji konfiguratora dla klienta \\
+\hline
+
+Opis & 
+Zainicjowanie nowej szansy sprzedaży poprzez wygenerowanie i otwarcie dedykowanej sesji w konfiguratorze pojazdów, przypisanej do konkretnego klienta i handlowca. \\
+\hline
+
+Aktor główny & Handlowiec \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Klient wykazuje zainteresowanie zakupem nowego pojazdu. \\
+\hline
+
+Warunki końcowe & 
+Wygenerowana zostaje nowa sesja, a kontekst emituje zdarzenie \textit{InitiateConfiguratorSession}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Handlowiec wybiera opcję konfiguracji nowego pojazdu dla tego klienta.
+    \item Kontekst emituje zdarzenie inicjujące \textit{InitiateConfiguratorSession}.
+    \item System otwiera w nowym widoku interfejs konfiguratora (z modułu Katalogu).
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [] Brak.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-CRM-02: Wygenerowanie oferty proforma}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-CRM-02 \\
+\hline
+
+Nazwa & Wygenerowanie oferty proforma \\
+\hline
+
+Opis & 
+Proces utworzenia wstępnej oferty handlowej w systemie na podstawie danych (specyfikacji, ceny oraz danych kontaktowych klienta) otrzymanych w payloadzie zdarzenia z konfiguratora. \\
+\hline
+
+Aktor główny & Handlowiec \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Kontekst otrzymał zdarzenie \textit{SpecificationCompleted} zawierające pełną konfigurację, wyliczoną cenę oraz dane identyfikacyjne klienta. \\
+\hline
+
+Warunki końcowe & 
+Nowa Oferta zostaje utworzona i zapisana w systemie ze statusem "W przygotowaniu". \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item System powiadamia handlowca o nowej specyfikacji oczekującej na ofertowanie.
+    \item Handlowiec otwiera formularz nowej oferty.
+    \item Handlowiec uzupełnia ofertę o dane klienta. Informacje o specyfikacji i cenie katalogowej uzupełniane są bezpośrednio z otrzymanego zdarzenia.
+    \item Handlowiec generuje dokument oferty proforma zmieniając status na 'Utworzona' i prezentuje go klientowi.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [] Brak.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-CRM-03: Zatwierdzenie oferty i utworzenie zamówienia}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-CRM-03 \\
+\hline
+
+Nazwa & Zatwierdzenie oferty, utworzenie zamówienia i wybór formy płatności \\
+\hline
+
+Opis & 
+Proces akceptacji wygenerowanej oferty przez klienta oraz utworzenia na jej podstawie nowego zamówienia (osobnego agregatu), co uruchamia właściwe procesy logistyczne i sprzedażowe. \\
+\hline
+
+Aktor główny & Handlowiec \\
+\hline
+
+Aktorzy pomocniczy & Klient \\
+\hline
+
+Warunki wstępne & 
+Wygenerowana i ważna oferta proforma (agregat Oferta) istnieje w systemie CRM. \\
+\hline
+
+Warunki końcowe & 
+Oferta otrzymuje status "Zaakceptowana". W systemie powstaje nowe Zamówienie ze statusem "W realizacji", a system emituje odpowiednie zdarzenie inicjujące weryfikację stanu magazynowego placu lub proces bankowy. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Klient akceptuje warunki przedstawione na ofercie proforma.
+    \item Handlowiec zmienia status oferty na "Zaakceptowana" w systemie CRM.
+    \item Handlowiec tworzy nowe zamówienie na podstawie zaakceptowanej oferty.
+    \item Handlowiec wprowadza na zamówieniu zadeklarowaną przez klienta formę płatności (Przelew lub Finansowanie).
+    \item System CRM emituje zdarzenie \textit{BankTransferDeclaredEvent} (dla przelewu) LUB \textit{FinancingRequestedEvent} (dla finansowania).
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Klient odrzuca ofertę: W kroku 1 klient rezygnuje. Handlowiec zmienia status oferty na "Odrzucona". Nowe zamówienie nie powstaje, a żadne zdarzenie biznesowe nie jest emitowane do innych modułów.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-CRM-04: Obsługa zaproszenia klienta po odbiór samochodu}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-CRM-04 \\
+\hline
+
+Nazwa & Obsługa zaproszenia klienta po odbiór \\
+\hline
+
+Opis & 
+Reakcja systemu na sygnał o pełnej gotowości fizycznej i finansowej pojazdu, uruchamiająca proces kontaktu z klientem w celu zaplanowania wydania auta. \\
+\hline
+
+Aktor główny & Handlowiec \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Kontekst otrzymał zdarzenie \textit{VehicleReadyForHandoverEvent}. \\
+\hline
+
+Warunki końcowe & 
+Ustalenie daty odbioru pojazdu i aktualizacja statusu zamówienia w CRM na "Umówiony na odbiór". \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Kontekst sprzedaży i CRM odbiera zdarzenie \textit{VehicleReadyForHandoverEvent}.
+    \item System zmienia status zamówienia na "Gotowe do odbioru" i generuje powiadomienie dla Handlowca.
+    \item Handlowiec kontaktuje się z klientem (telefonicznie lub mailowo).
+    \item Handlowiec wprowadza do systemu uzgodnioną z klientem datę i godzinę odbioru pojazdu.
+    \item System aktualizuje status zamówienia na "Umówiony na odbiór".
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Odroczony odbiór: W kroku 3 klient informuje, że nie może odebrać auta w najbliższych dniach. Handlowiec ustawia odroczony termin w systemie, auto czeka na placu.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-CRM-05: Rejestracja fizycznego wydania pojazdu}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-CRM-05 \\
+\hline
+
+Nazwa & Rejestracja fizycznego wydania pojazdu \\
+\hline
+
+Opis & 
+Finalny krok w procesie sprzedaży, zamykający transakcję i uruchamiający systemowe zwolnienie pojazdu. \\
+\hline
+
+Aktor główny & Handlowiec \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Zamówienie posiada status "Umówiony na odbiór", klient stawił się w salonie. \\
+\hline
+
+Warunki końcowe & 
+Zamówienie otrzymuje status "Zrealizowane", a CRM wysyła komendę \textit{ReleaseVehicle} do Inwentarza. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Handlowiec przeprowadza z klientem formalności papierowe i podpisuje protokół wydania.
+    \item Handlowiec klika w systemie CRM przycisk potwierdzający wydanie pojazdu.
+    \item Kontekst CRM wysyła komendę \textit{ReleaseVehicle} do modułu Inwentarza.
+    \item System oznacza zamówienie jako 'Zrealizowane'.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Odmowa Inwentarza: Po kroku 3 kontekst CRM odbiera z Inwentarza zdarzenie błędu \textit{VehicleInventoryReleasedError}. System wyświetla handlowcowi powiadomienie o blokadzie magazynowej i cofa zamówienie do statusu "Gotowe do odbioru".
+\end{itemize} \\
+\hline
+\end{longtable}

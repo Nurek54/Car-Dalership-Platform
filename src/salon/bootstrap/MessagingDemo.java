@@ -44,20 +44,12 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Demo (RabbitMQ): asynchronous choreography of UC-CRM-03 part 2 (Figs. 19/20 of the PDF) —
- * Billing posts the deposit and publishes PaymentRegisteredEvent on the broker, and
- * SalesDepositListener (idempotent by eventId) activates the order in the CRM.
- *
- * Requires a running broker (docker-compose up rabbitmq).
- */
 public class MessagingDemo {
 
     public static void main(String[] args) throws Exception {
         try (RabbitMqConnection connection = new RabbitMqConnection()) {
             RecordEventSerializer serializer = new RecordEventSerializer();
 
-            // --- SALES AND CRM: offer -> order + deposit consumer ---
             InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
             InMemoryOfferRepository offerRepo = new InMemoryOfferRepository();
             InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
@@ -70,7 +62,6 @@ public class MessagingDemo {
             sales.registerCustomer(new Customer(new CustomerId("CUST-DEMO"), "Jan Kowalski",
                     "1234563218", new Address("Main Street 1", "00-001", "Warsaw", "PL"),
                     new ContactData("jan.kowalski@example.com", "+48 600 100 200")));
-            // The catalog pricing would arrive via the SpecificationCompleted event; here we pass it directly.
             String offerId = sales.createProformaOffer("CUST-DEMO", "SPEC-DEMO", Money.of(100000, "PLN"));
             String orderId = sales.acceptOffer(new AcceptOfferCommand(offerId, PaymentMethod.BANK_TRANSFER));
 
@@ -79,7 +70,6 @@ public class MessagingDemo {
             salesConsumer.register("PaymentRegisteredEvent", new SalesDepositListener(sales));
             salesConsumer.start();
 
-            // --- BILLING AND SETTLEMENT ---
             EventPublisher billingPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
             InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
             InMemoryDocumentRepository documentRepo = new InMemoryDocumentRepository();
@@ -106,7 +96,6 @@ public class MessagingDemo {
             settlements.processPayment(new ProcessPaymentCommand(
                     orderId, "TX-DEMO-1", new BigDecimal("10000"), "PLN"));
 
-            // Give the consumer a moment to receive the message from the queue.
             Thread.sleep(1500);
             System.out.println(">> Order state after the event passed through the queue: "
                     + orderRepo.findById(new OrderId(orderId)).get().getState());

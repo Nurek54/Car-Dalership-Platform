@@ -1,8 +1,5 @@
 package salon.sales.application.domain.model.customer;
 
-/**
- * Value Object (Figure 23) — the customer's contact details (email, phone).
- */
 public record ContactData(String email, String phone) {
 
     public ContactData {

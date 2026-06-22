@@ -11,10 +11,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * OUTBOUND ADAPTER (Fig. 48 — DBAdapter) — implementation of {@link DocumentDatabaseRepository}
- * in memory. Primary index by DocumentId; lookup by order scans the values.
- */
 public class InMemoryDocumentRepository implements DocumentDatabaseRepository {
 
     private final Map<String, AccountingDocument> byId = new ConcurrentHashMap<>();

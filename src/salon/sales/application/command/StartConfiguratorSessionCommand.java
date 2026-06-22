@@ -1,8 +1,5 @@
 package salon.sales.application.command;
 
-/**
- * Command (UC-CRM-01) — open a configurator session for a customer on behalf of a salesperson.
- */
 public record StartConfiguratorSessionCommand(String customerId, String salespersonId, int modelYear) {
 
     public StartConfiguratorSessionCommand {

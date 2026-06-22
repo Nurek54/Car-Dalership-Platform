@@ -28,21 +28,9 @@ import salon.common.model.OrderId;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * Demo (offline, in-process): the Sales and CRM "Long Track" per the PDF — UC-CRM-01..05.
- *
- * The flow exercises the public Sales API and the inbound EventListener adapters that are driven
- * by integration events from other contexts (Catalog, Billing, Inventory):
- * configurator session -> proforma offer -> acceptance/order -> deposit activation
- * -> ready for handover + scheduling -> physical handover (vehicle release).
- * The outbound integrations (Catalog/Billing/Inventory) are simulated by logging adapters,
- * so the cross-context effects (settlement open, vehicle release) appear on the console.
- */
 public class SalonDemo {
 
     public static void main(String[] args) {
-        // Simple in-process event bus — domain events are only logged here (each context
-        // would subscribe to the ones it cares about; see the dedicated subscriber adapters).
         EventPublisher bus = event -> System.out.println("   [bus] -> " + event.getClass().getSimpleName());
 
         InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
@@ -55,7 +43,6 @@ public class SalonDemo {
         ConfiguratorAppService configurator =
                 new ConfiguratorAppService(new CatalogIntegrationAdapter(), bus);
 
-        // Inbound event adapters (driven by integration events from other contexts).
         CatalogEventSubscriberAdapter catalogSubscriber = new CatalogEventSubscriberAdapter(sales);
         BillingEventSubscriberAdapter billingSubscriber = new BillingEventSubscriberAdapter(sales);
         InventoryEventSubscriberAdapter inventorySubscriber = new InventoryEventSubscriberAdapter(sales);

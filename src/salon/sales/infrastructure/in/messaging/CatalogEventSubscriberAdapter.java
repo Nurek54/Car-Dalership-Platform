@@ -5,12 +5,6 @@ import salon.sales.application.service.SalesService;
 
 import java.math.BigDecimal;
 
-/**
- * INBOUND ADAPTER (Figure 22: EventListener) — subscriber of the Catalog and Configuration Context.
- *
- * On SpecificationCompleted (event-carried state transfer of the configured price) a proforma offer
- * is generated (UC-CRM-02). ACL: the Catalog message is translated into a simple local record.
- */
 public class CatalogEventSubscriberAdapter {
 
     private final SalesService salesService;
@@ -31,7 +25,6 @@ public class CatalogEventSubscriberAdapter {
                 event.customerId(), event.specificationId(), Money.of(event.basePrice(), event.currency()));
     }
 
-    /** Local (ACL) representation of the SpecificationCompleted event from the Catalog. */
     public record SpecificationCompleted(String customerId, String specificationId,
                                          BigDecimal basePrice, String currency) {
     }

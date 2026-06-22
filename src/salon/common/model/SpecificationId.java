@@ -2,10 +2,6 @@ package salon.common.model;
 
 import java.util.UUID;
 
-/**
- * Value Object: the global identifier of the Vehicle Specification.
- * Shared kernel: the Catalog "issues" it, Sales references it (a reference).
- */
 public record SpecificationId(String value) {
 
     public SpecificationId {

@@ -10,10 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * OUTBOUND ADAPTER (Fig. 48 — DBAdapter) — implementation of {@link SettlementDatabaseRepository}
- * in memory (persistent-store style: save writes/overwrites). Indexed by order identifier.
- */
 public class InMemorySettlementRepository implements SettlementDatabaseRepository {
 
     private final Map<String, Settlement> byOrderId = new ConcurrentHashMap<>();

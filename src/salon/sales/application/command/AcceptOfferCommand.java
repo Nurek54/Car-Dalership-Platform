@@ -2,9 +2,6 @@ package salon.sales.application.command;
 
 import salon.sales.application.domain.model.order.PaymentMethod;
 
-/**
- * Command (UC-CRM-03) — accept a published offer and create an order with the declared payment method.
- */
 public record AcceptOfferCommand(String offerId, PaymentMethod paymentMethod) {
 
     public AcceptOfferCommand {

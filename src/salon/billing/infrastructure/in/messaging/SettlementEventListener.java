@@ -8,13 +8,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * INBOUND ADAPTER (Fig. 48 — EventListener) — subscriber for balance initialization.
- *
- * Maps {@link OrderReadyForSettlementEvent} from the bus to the inbound port {@link ProcessPayment}
- * (initializeSettlement). It performs DEDUPLICATION (section 3.4.2) — this is the subscriber's responsibility,
- * not the queue consumer: a repeated event with the same eventId is processed only once.
- */
 public class SettlementEventListener {
 
     private final ProcessPayment processPayment;
@@ -32,7 +25,7 @@ public class SettlementEventListener {
             throw new IllegalArgumentException("event must not be null.");
         }
         if (!this.processedEventIds.add(event.eventId())) {
-            return; // duplikat — pomijamy (idempotencyjnosc)
+            return;
         }
         this.processPayment.initializeSettlement(
                 new OrderId(event.orderId()),

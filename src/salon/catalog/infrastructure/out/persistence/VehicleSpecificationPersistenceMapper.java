@@ -13,9 +13,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Bidirectional mapping between the VehicleSpecification aggregate and the storage record.
- */
 @Component
 public class VehicleSpecificationPersistenceMapper {
 

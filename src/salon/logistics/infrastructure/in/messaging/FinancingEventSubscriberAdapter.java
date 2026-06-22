@@ -2,13 +2,6 @@ package salon.logistics.infrastructure.in.messaging;
 
 import salon.logistics.application.port.in.ReserveVehicle;
 
-/**
- * INBOUND ADAPTER (Figure 37: EventListener) – subscriber of the Financing Context events.
- *
- * After confirmation of readiness to fulfill the order (FinancingApproved / BankTransferDeclared)
- * it triggers UC-INW-01 (reservation of a vehicle from the yard). Anti-corruption layer (ACL):
- * we represent external messages as local records and translate them into a port call.
- */
 public class FinancingEventSubscriberAdapter {
 
     private final ReserveVehicle reserveVehicle;
@@ -36,7 +29,6 @@ public class FinancingEventSubscriberAdapter {
         }
     }
 
-    /** Local (ACL) representations of events incoming from the Financing Context. */
     public record FinancingApproved(String orderId) {
     }
 

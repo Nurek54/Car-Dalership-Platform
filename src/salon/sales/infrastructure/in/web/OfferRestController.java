@@ -4,10 +4,6 @@ import salon.sales.application.command.AcceptOfferCommand;
 import salon.sales.application.domain.model.order.PaymentMethod;
 import salon.sales.application.port.in.AcceptOffer;
 
-/**
- * INBOUND ADAPTER (Figure 22: RestController) — drives the {@link AcceptOffer} port (UC-CRM-03).
- * Maps an HTTP request onto an {@link AcceptOfferCommand} and returns the created order id.
- */
 public class OfferRestController {
 
     private final AcceptOffer acceptOffer;

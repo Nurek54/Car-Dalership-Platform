@@ -7,16 +7,6 @@ import salon.common.event.DomainEvent;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/**
- * A REAL adapter publishing events to RabbitMQ (NOT a mock).
- *
- * Implements the EventPublisher outbound port, so the application layer calls publish(event)
- * without knowing anything about the broker. Here the event is:
- *   1) serializowane do JSON,
- *   2) sent to the topic exchange with routing key = the simple class name of the event.
- *
- * Subscribers (other contexts) bind their queues to the routing keys they are interested in.
- */
 public class RabbitMqEventPublisherAdapter implements EventPublisher {
 
     private final RabbitMqConnection connection;

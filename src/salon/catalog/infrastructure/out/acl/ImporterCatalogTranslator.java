@@ -13,14 +13,6 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * Anti-corruption layer (ACL) translator.
- *
- * Translates the foreign model {@link ExternalCatalogPackage} into value objects of the
- * local model. Data from the "upstream" context is modeled as value objects (PDF, chapter 3).
- * A format-mismatch error is reported as {@link CatalogValidationException}
- * (UC-KON-02 / A1 – data translation error).
- */
 @Component
 public class ImporterCatalogTranslator {
 
@@ -46,7 +38,6 @@ public class ImporterCatalogTranslator {
     }
 
     private CatalogOption toOption(ExternalCatalogPackage.ExternalItem item) {
-        // The vendor provides the price in minor units (cents) – conversion to the major amount.
         BigDecimal price = BigDecimal.valueOf(item.priceMinorUnits(), 2);
         return new CatalogOption(OptionCode.of(item.featureCode()), Money.of(price, item.currencyIso()));
     }

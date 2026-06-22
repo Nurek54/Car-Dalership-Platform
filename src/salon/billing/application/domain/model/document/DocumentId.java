@@ -2,9 +2,6 @@ package salon.billing.application.domain.model.document;
 
 import java.util.UUID;
 
-/**
- * Value object (Class diagram — AccountingDocument): identity of the Accounting Document aggregate.
- */
 public record DocumentId(String value) {
 
     public DocumentId {

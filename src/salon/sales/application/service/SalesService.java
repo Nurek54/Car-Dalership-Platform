@@ -32,13 +32,6 @@ import salon.sales.application.port.out.OrderDatabaseRepository;
 
 import java.time.LocalDate;
 
-/**
- * APPLICATION SERVICE (Figure 22) — "SalesService". The central orchestration point of the
- * Sales and CRM Context. Realizes the inbound ports {@link AcceptOffer}, {@link ActivateOrderOnDeposit},
- * {@link ScheduleHandover}, {@link ReleaseVehicle} and {@link ExpireOutdatedOffer}, and exposes the
- * event-driven operations (UC-CRM-02/04/05) invoked by the inbound EventListener adapters.
- * Business rules live in the aggregates; this service only orchestrates and publishes events.
- */
 public class SalesService implements
         AcceptOffer, ActivateOrderOnDeposit, ScheduleHandover, ReleaseVehicle, ExpireOutdatedOffer {
 
@@ -74,7 +67,6 @@ public class SalesService implements
         this.orderFactory = orderFactory;
     }
 
-    /** Registers a customer (CRM master data) needed before building offers. */
     public void registerCustomer(Customer customer) {
         if (customer == null) {
             throw new IllegalArgumentException("customer must not be null.");
@@ -82,10 +74,6 @@ public class SalesService implements
         this.customerRepository.save(customer);
     }
 
-    /**
-     * UC-CRM-02: a completed specification (with the catalog price) arrived from the Catalog Context;
-     * a proforma offer is created and published. Returns the new offer id.
-     */
     public String createProformaOffer(String customerId, String specificationId, Money basePrice) {
         Offer offer = this.offerFactory.createProforma(
                 new CustomerId(customerId), new SpecificationId(specificationId), basePrice);
@@ -95,13 +83,11 @@ public class SalesService implements
         return offer.getId().value();
     }
 
-    // ===== AcceptOffer: UC-CRM-03 =====
-
     @Override
     public String acceptOffer(AcceptOfferCommand command) {
         Offer offer = this.offerRepository.findById(new OfferId(command.offerId()))
                 .orElseThrow(() -> new IllegalStateException("No offer " + command.offerId()));
-        offer.accept();                                   // PUBLISHED -> ACCEPTED (rule in the aggregate)
+        offer.accept();
         this.offerRepository.save(offer);
 
         Order order = this.orderFactory.createFromOffer(offer);
@@ -114,7 +100,6 @@ public class SalesService implements
                 orderId, offer.getId().value(), offer.getSpecificationId().value(),
                 offer.getCustomerId().value()));
 
-        // UC-CRM-03, step 5: branch on the declared payment method.
         if (command.paymentMethod() == PaymentMethod.BANK_TRANSFER) {
             this.eventPublisher.publish(new BankTransferDeclaredEvent(orderId));
         } else {
@@ -123,19 +108,11 @@ public class SalesService implements
         return orderId;
     }
 
-    // ===== ActivateOrderOnDeposit: UC-CRM-03 (part 2) =====
-
     @Override
     public void activateOnDeposit(String orderId) {
-        // The deposit has been registered by Billing; the order is confirmed active.
-        // Vehicle reservation / factory order are driven by Billing/Inventory on their own events;
-        // here we only assert the order exists (no further state change in the lean Order model).
         loadOrder(orderId);
     }
 
-    // ===== UC-CRM-04 (driven by VehicleReadyForHandover from Inventory) =====
-
-    /** The vehicle is physically and financially ready — mark the order ready for handover. */
     public void markReadyForHandover(String orderId) {
         Order order = loadOrder(orderId);
         order.markAsReady();
@@ -149,24 +126,19 @@ public class SalesService implements
         this.orderRepository.save(order);
     }
 
-    // ===== ReleaseVehicle: UC-CRM-05 =====
-
     @Override
     public void releaseVehicle(String orderId) {
         Order order = loadOrder(orderId);
-        order.confirmHandover();                          // HANDOVER_SCHEDULED -> COMPLETED
+        order.confirmHandover();
         this.orderRepository.save(order);
         this.inventoryIntegration.releaseVehicle(orderId);
     }
 
-    /** UC-CRM-05 / A1: Inventory rejected the release — revert the order to READY_FOR_HANDOVER. */
     public void revertHandoverOnInventoryError(String orderId) {
         Order order = loadOrder(orderId);
         order.revertToReadyForHandover();
         this.orderRepository.save(order);
     }
-
-    // ===== ExpireOutdatedOffer: CronJob =====
 
     @Override
     public void expireOutdatedOffers() {

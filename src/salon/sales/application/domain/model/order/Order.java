@@ -6,14 +6,6 @@ import salon.sales.application.domain.model.offer.OfferId;
 
 import java.time.LocalDate;
 
-/**
- * AGGREGATE ROOT (Figure 23) — the Order.
- *
- * Created from an accepted offer; references the source offer by id (a disjoint reference).
- * Drives the fulfilment lifecycle: payment method declaration (UC-CRM-03), readiness (UC-CRM-04),
- * handover scheduling and completion (UC-CRM-05). Money and customer data are NOT duplicated here —
- * they are obtained from the source offer when needed.
- */
 public class Order {
 
     private final OrderId id;
@@ -34,7 +26,6 @@ public class Order {
         this.state = OrderState.IN_PROGRESS;
     }
 
-    /** UC-CRM-03: records the payment method declared by the customer. */
     public void declarePaymentMethod(PaymentMethod method) {
         if (method == null) {
             throw new IllegalArgumentException("method must not be null.");
@@ -46,7 +37,6 @@ public class Order {
         this.paymentMethod = method;
     }
 
-    /** UC-CRM-04: the vehicle is ready for handover. */
     public void markAsReady() {
         if (this.state != OrderState.IN_PROGRESS) {
             throw new IllegalOrderStateException(
@@ -55,7 +45,6 @@ public class Order {
         this.state = OrderState.READY_FOR_HANDOVER;
     }
 
-    /** UC-CRM-04: the agreed pickup date is set. */
     public void scheduleHandover(LocalDate date) {
         if (date == null) {
             throw new IllegalArgumentException("date must not be null.");
@@ -68,7 +57,6 @@ public class Order {
         this.state = OrderState.HANDOVER_SCHEDULED;
     }
 
-    /** UC-CRM-05: the vehicle is physically handed over and the transaction is completed. */
     public void confirmHandover() {
         if (this.state != OrderState.HANDOVER_SCHEDULED) {
             throw new IllegalOrderStateException(
@@ -77,7 +65,6 @@ public class Order {
         this.state = OrderState.COMPLETED;
     }
 
-    /** UC-CRM-05 / A1: inventory rejected the release — compensate back to READY_FOR_HANDOVER. */
     public void revertToReadyForHandover() {
         if (this.state != OrderState.COMPLETED && this.state != OrderState.HANDOVER_SCHEDULED) {
             throw new IllegalOrderStateException(

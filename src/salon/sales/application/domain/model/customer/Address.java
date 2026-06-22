@@ -1,8 +1,5 @@
 package salon.sales.application.domain.model.customer;
 
-/**
- * Value Object (Figure 23) — the customer's postal address.
- */
 public record Address(String street, String postalCode, String city, String country) {
 
     public Address {

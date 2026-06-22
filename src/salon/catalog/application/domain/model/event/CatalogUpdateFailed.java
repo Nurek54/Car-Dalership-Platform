@@ -3,11 +3,6 @@ package salon.catalog.application.domain.model.event;
 import java.time.Instant;
 import java.util.Objects;
 
-/**
- * Technical integration-error event (UC-KON-02, alternative scenario A1).
- * Emitted when translation or validation of the catalog package fails;
- * details are logged for IT support.
- */
 public final class CatalogUpdateFailed implements DomainEvent {
 
     private final String reason;

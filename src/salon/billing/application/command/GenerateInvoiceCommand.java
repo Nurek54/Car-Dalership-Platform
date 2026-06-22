@@ -1,8 +1,5 @@
 package salon.billing.application.command;
 
-/**
- * Input data model of the GenerateInvoice port (UC-FIR-02).
- */
 public record GenerateInvoiceCommand(String orderId, String invoiceTitle, String authorizedIssuer) {
 
     public GenerateInvoiceCommand {

@@ -10,10 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * OUTBOUND ADAPTER (Figure 22: DBAdapter) — in-memory implementation of
- * {@link OrderDatabaseRepository}. Orders keyed by the (shared-kernel) order id.
- */
 public class InMemoryOrderRepository implements OrderDatabaseRepository {
 
     private final Map<String, Order> byId = new ConcurrentHashMap<>();

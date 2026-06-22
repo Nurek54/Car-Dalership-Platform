@@ -6,9 +6,6 @@ import salon.sales.application.domain.model.order.Order;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * OUTBOUND PORT (Figure 22) — "OrderDatabaseRepository". Persistence of the Order aggregate.
- */
 public interface OrderDatabaseRepository {
 
     void save(Order order);

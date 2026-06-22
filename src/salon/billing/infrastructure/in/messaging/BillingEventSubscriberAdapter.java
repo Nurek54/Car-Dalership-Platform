@@ -5,15 +5,6 @@ import salon.billing.application.command.GenerateInvoiceCommand;
 import salon.billing.application.port.in.GenerateAdvance;
 import salon.billing.application.port.in.GenerateInvoice;
 
-/**
- * INBOUND ADAPTER (Fig. 48 — EventListener) — subscriber of the Inventory and Logistics events,
- * that trigger document issuance:
- *  - VehicleIsNotOnStock     -> GenerateAdvance  (UC-FIR-01: deposit request),
- *  - VehicleReservedFromStock -> GenerateInvoice (UC-FIR-02: final invoice).
- *
- * ACL: we represent external events as local records and translate them into port commands.
- * authorizedIssuer (e.g. the accountant's e-mail) injected from configuration as the document issuer.
- */
 public class BillingEventSubscriberAdapter {
 
     private final GenerateAdvance generateAdvance;
@@ -37,14 +28,12 @@ public class BillingEventSubscriberAdapter {
         this.authorizedIssuer = authorizedIssuer;
     }
 
-    /** UC-FIR-01: no vehicle in the yard -> deposit request. */
     public void handleVehicleIsNotOnStock(VehicleIsNotOnStock event) {
         requireOrderId(event == null ? null : event.orderId());
         this.generateAdvance.generateAdvance(
                 new GenerateAdvanceCommand(event.orderId(), this.authorizedIssuer));
     }
 
-    /** UC-FIR-02: vehicle reserved from the yard -> final invoice. */
     public void handleVehicleReservedFromStock(VehicleReservedFromStock event) {
         requireOrderId(event == null ? null : event.orderId());
         this.generateInvoice.generateInvoice(new GenerateInvoiceCommand(
@@ -57,7 +46,6 @@ public class BillingEventSubscriberAdapter {
         }
     }
 
-    /** Local (ACL) representations of events from the Inventory and Logistics Context. */
     public record VehicleIsNotOnStock(String orderId) {
     }
 

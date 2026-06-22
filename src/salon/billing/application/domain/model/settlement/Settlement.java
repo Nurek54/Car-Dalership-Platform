@@ -14,15 +14,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * AGGREGATE ROOT (Class diagram — «AggregateRoot» Settlement).
- *
- * Guards the transactional consistency of the order balance: the list of payments ({@link Payment}) and the status
- * ({@link SettlementStatus}) change only through the root's commands, atomically in a single
- * transaction (UC-FIR-03). The reference to the order is disjoint — only through {@link OrderId}
- * (Shared Kernel). It records events using the „collect &amp; pull" pattern ({@link AbstractAggregateRoot}):
- * the decision "which event" stays in the domain, and the application service pulls and publishes it.
- */
 public class Settlement extends AbstractAggregateRoot {
 
     private final SettlementId id;
@@ -31,10 +22,8 @@ public class Settlement extends AbstractAggregateRoot {
     private final List<Payment> payments;
     private SettlementStatus status;
 
-    /** Whether a deposit request was sent (UC-FIR-01) — controls the emission of AdvancePaymentRegisteredEvent. */
     private boolean advanceRequested;
 
-    /** Package-private constructor — instances are created only by {@link SettlementFactory}. */
     Settlement(SettlementId id, OrderId orderId, Money totalAmount, SettlementStatus status) {
         if (id == null) {
             throw new IllegalArgumentException("id must not be null.");
@@ -56,20 +45,11 @@ public class Settlement extends AbstractAggregateRoot {
         this.advanceRequested = false;
     }
 
-    /**
-     * UC-FIR-01, steps 2-4: marking the deposit as due and emitting
-     * {@link AdvancePaymentRequestedEvent} (the customer will be asked to pay).
-     */
     public void requestAdvancePayment() {
         this.advanceRequested = true;
         registerEvent(new AdvancePaymentRequestedEvent(this.orderId.value()));
     }
 
-    /**
-     * UC-FIR-03: posting the transfer and recomputing the balance — an atomic invariant.
-     * Records {@link PaymentRegisteredEvent}; if this is the first payment after the deposit request,
-     * additionally {@link AdvancePaymentRegisteredEvent} (triggers production — UC-INW-02).
-     */
     public void registerPayment(String transactionId, Money amount) {
         if (this.status == SettlementStatus.SETTLED) {
             throw new salon.billing.application.domain.exception.IllegalSettlementStateException(
@@ -84,10 +64,6 @@ public class Settlement extends AbstractAggregateRoot {
         recalculateBalance();
     }
 
-    /**
-     * Balance adjustment policy (private — root invariant): balance = 0 -> SETTLED
-     * (+ {@link SettlementCompletedEvent}); a partial payment (A1) -> PARTIAL_PAYMENT.
-     */
     private void recalculateBalance() {
         boolean fullyPaid = outstandingBalance().getAmount().signum() <= 0;
         if (fullyPaid) {
@@ -100,7 +76,6 @@ public class Settlement extends AbstractAggregateRoot {
         }
     }
 
-    /** Remaining balance due = contract amount - sum of posted payments (includes the deposit). */
     public Money outstandingBalance() {
         Money paid = Money.of(BigDecimal.ZERO, this.totalAmount.currency());
         for (Payment payment : this.payments) {

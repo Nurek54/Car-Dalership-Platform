@@ -4,12 +4,6 @@ import salon.catalog.application.domain.model.shared.OptionCode;
 
 import java.util.Objects;
 
-/**
- * Value object – a dependency rule between two equipment options.
- *
- * EXCLUDES example: source=B2 (engine), target=C1 (gearbox) – this combination
- * must not be finalized (UC-KON-01, alternative scenario A1).
- */
 public final class CatalogRule {
 
     private final OptionCode sourceCode;

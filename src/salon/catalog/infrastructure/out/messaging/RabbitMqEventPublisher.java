@@ -7,11 +7,6 @@ import salon.catalog.application.domain.model.event.DomainEvent;
 import salon.catalog.application.domain.model.event.SpecificationCompleted;
 import org.springframework.stereotype.Component;
 
-/**
- * OUTBOUND ADAPTER – implementation of the {@link EventPublisher} port ("EventPublisher"
- * → RabbitMQ). Translates the domain event into a broker message (mapping to
- * the external format / published language). It contains no business logic.
- */
 @Component
 public class RabbitMqEventPublisher implements EventPublisher {
 
@@ -27,10 +22,6 @@ public class RabbitMqEventPublisher implements EventPublisher {
         broker.send(routingKey, serialize(event));
     }
 
-    /**
-     * Serialization into a simple intermediate format (in a real integration: JSON/Avro –
-     * the open-host service's published language). Here simplified for clarity.
-     */
     private String serialize(DomainEvent event) {
         StringBuilder sb = new StringBuilder("{")
                 .append("\"event\":\"").append(event.eventName()).append("\",")

@@ -5,9 +5,6 @@ import salon.sales.application.domain.model.customer.CustomerId;
 
 import java.util.Optional;
 
-/**
- * OUTBOUND PORT (Figure 22) — "CustomerDatabaseRepository". Persistence of the Customer aggregate.
- */
 public interface CustomerDatabaseRepository {
 
     void save(Customer customer);

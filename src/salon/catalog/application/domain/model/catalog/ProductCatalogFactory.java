@@ -7,22 +7,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Factory of the ProductCatalog aggregate.
- *
- * Creating a valid instance is not the responsibility of the aggregate or the client.
- * The factory encapsulates construction, guarantees the invariants and is atomic: it either returns
- * a valid catalog or throws an exception – it never returns an invalid object.
- *
- * Location: the domain layer (the factory expresses a domain concept – building the price list).
- */
 public class ProductCatalogFactory {
 
-    /**
-     * Creates a new, ACTIVE catalog at version 1 with a new, global identifier.
-     * Checks the invariants: a non-empty set of options, unique codes, rules pointing
-     * only to options that exist in the catalog.
-     */
     public ProductCatalog createNew(ModelYear modelYear,
                                     List<CatalogOption> options,
                                     List<CatalogRule> rules) {
@@ -36,9 +22,6 @@ public class ProductCatalogFactory {
                 rules);
     }
 
-    /**
-     * Creates an ACTIVE catalog as the next version (UC-KON-02 – the new price list replaces the current one).
-     */
     public ProductCatalog createNextVersion(ModelYear modelYear,
                                             int newVersion,
                                             List<CatalogOption> options,
@@ -53,10 +36,6 @@ public class ProductCatalogFactory {
                 rules);
     }
 
-    /**
-     * Reconstitutes the aggregate from persistent storage (used by the repository adapter).
-     * Does not validate business rules – the data comes from a trusted source.
-     */
     public ProductCatalog reconstitute(CatalogId id,
                                        ModelYear modelYear,
                                        int version,

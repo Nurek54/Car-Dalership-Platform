@@ -2,9 +2,6 @@ package salon.financing.application.domain.model.financing;
 
 import java.util.UUID;
 
-/**
- * Value object: identity of the Financing Application aggregate (Figure 43).
- */
 public record ApplicationId(String value) {
 
     public ApplicationId {

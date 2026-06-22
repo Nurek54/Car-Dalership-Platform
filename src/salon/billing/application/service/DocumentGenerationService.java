@@ -23,14 +23,6 @@ import salon.common.application.EventPublisher;
 import salon.common.model.Money;
 import salon.common.model.OrderId;
 
-/**
- * APPLICATION SERVICE (Fig. 48 — DocumentGenerationService) — orchestrator of document issuance.
- *
- * Implements the inbound ports {@link GenerateAdvance} (UC-FIR-01) and {@link GenerateInvoice} (UC-FIR-02).
- * It coordinates: the domain service {@link InvoiceCalculationService}, the Sales ACL ({@link SalesIntegration}),
- * the factory and the document aggregate, the ports {@link PdfGeneration}/{@link NotificationGeneration}/{@link DocumentDatabaseRepository}
- * and event publication. Business rules remain in the aggregates — the service only ties together the use-case steps.
- */
 public class DocumentGenerationService implements GenerateAdvance, GenerateInvoice {
 
     private final SettlementDatabaseRepository settlementRepository;
@@ -90,11 +82,6 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
         this.seller = seller;
     }
 
-    /**
-     * UC-FIR-01: Sending the deposit request. Computes the deposit amount, fetches the buyer data (ACL),
-     * creates and issues the proforma, notifies the customer, and then marks the deposit as due
-     * on the balance (the aggregate emits AdvancePaymentRequestedEvent — published at the end).
-     */
     @Override
     public String generateAdvance(GenerateAdvanceCommand command) {
         try {
@@ -114,17 +101,12 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
             this.eventPublisher.publishAll(settlement.pullDomainEvents());
             return documentId;
         } catch (RuntimeException e) {
-            // A1: missing information required to generate the request.
             this.eventPublisher.publish(
                     new ErrorDuringPaymentRequestEvent(command.orderId(), e.getMessage()));
             throw e;
         }
     }
 
-    /**
-     * UC-FIR-02: Creating the final invoice for the amount remaining due (includes the deposit).
-     * Creates and issues the invoice, generates the PDF, notifies the customer and emits InvoiceCreatedEvent.
-     */
     @Override
     public String generateInvoice(GenerateInvoiceCommand command) {
         try {
@@ -141,14 +123,12 @@ public class DocumentGenerationService implements GenerateAdvance, GenerateInvoi
             this.eventPublisher.publish(new InvoiceCreatedEvent(command.orderId()));
             return documentId;
         } catch (RuntimeException e) {
-            // A1: blad generowania dokumentu (PDF/zapis).
             this.eventPublisher.publish(
                     new ErrorDuringInvoiceCreationEvent(command.orderId(), e.getMessage()));
             throw e;
         }
     }
 
-    /** Common path: save DRAFT -> PDF -> markAsIssued -> save -> notify the customer. */
     private String issueAndNotify(AccountingDocument document) {
         this.documentRepository.save(document);
         byte[] pdf = this.pdfGeneration.generatePdf(document);

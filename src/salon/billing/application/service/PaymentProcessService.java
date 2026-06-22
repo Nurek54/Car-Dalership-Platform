@@ -13,13 +13,6 @@ import salon.common.application.EventPublisher;
 import salon.common.model.Money;
 import salon.common.model.OrderId;
 
-/**
- * APPLICATION SERVICE (Fig. 48 — PaymentProcessService) — orchestration of the order balance (UC-FIR-03).
- *
- * Facade type: it begins and closes the use case's logical transaction, coordinates the aggregate
- * the Settlement and the outbound ports and publishes events on success. It contains no rules itself
- * business ones — those are in the {@link Settlement} aggregate. It implements the {@link ProcessPayment} port.
- */
 public class PaymentProcessService implements ProcessPayment {
 
     private final SettlementDatabaseRepository settlementRepository;
@@ -55,17 +48,12 @@ public class PaymentProcessService implements ProcessPayment {
         this.eventPublisher = eventPublisher;
     }
 
-    /** Initializes the balance (OPEN status) for a new order — the factory creates the aggregate. */
     @Override
     public void initializeSettlement(OrderId orderId, Money totalAmount) {
         Settlement settlement = this.settlementFactory.createNew(orderId, totalAmount);
         this.settlementRepository.save(settlement);
     }
 
-    /**
-     * UC-FIR-03: posting the matched transfer. The aggregate records events (collect &amp; pull),
-     * the service pulls them after saving and publishes them (PaymentRegistered, possibly AdvancePaymentRegistered/SettlementCompleted).
-     */
     @Override
     public void processPayment(ProcessPaymentCommand command) {
         OrderId orderId = new OrderId(command.orderId());
@@ -80,7 +68,6 @@ public class PaymentProcessService implements ProcessPayment {
         this.eventPublisher.publishAll(settlement.pullDomainEvents());
     }
 
-    /** Periodic task: reminder for every unsettled balance (status != SETTLED). */
     @Override
     public void sendPaymentReminders() {
         for (Settlement settlement : this.settlementRepository.findAll()) {

@@ -5,12 +5,6 @@ import salon.catalog.application.domain.model.shared.OptionCode;
 
 import java.util.Objects;
 
-/**
- * Value object – a single catalog entry: the option code + its base price.
- *
- * Per Aggregate Design Rule 2: instead of child entities we use value
- * objects, so that the ProductCatalog aggregate stays small.
- */
 public final class CatalogOption {
 
     private final OptionCode code;

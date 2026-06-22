@@ -16,14 +16,6 @@ import salon.financing.application.port.out.BankIntegrationAcl;
 import salon.financing.application.port.out.FinancingApplicationDatabaseRepository;
 import salon.financing.application.port.out.SalesIntegration;
 
-/**
- * APPLICATION SERVICE (Figure 42) – "ProcessFinancingService".
- *
- * The single orchestration point of the Financing Context. Implements the inbound port {@link ProcessFinancing}
- * (UC-FIN-01/02), using the outbound ports: {@link FinancingApplicationDatabaseRepository},
- * {@link SalesIntegration}, {@link BankIntegrationAcl} and the shared {@link EventPublisher}.
- * The dealership does not make the credit decision — the service only sends the application and reflects the bank's decision.
- */
 public class ProcessFinancingService implements ProcessFinancing {
 
     private final FinancingApplicationDatabaseRepository applicationRepository;
@@ -59,30 +51,22 @@ public class ProcessFinancingService implements ProcessFinancing {
         this.eventPublisher = eventPublisher;
     }
 
-    // ===== UC-FIN-01: submitting the financing application =====
-
     @Override
     public void requestFinancing(String orderId, String customerId) {
         try {
-            // Step 2: aggregating data from the Sales Context (buyer data + amount to be financed).
             BuyerDetails buyerDetails = this.salesIntegration.buyerDetails(orderId);
             Money amountToFinance = this.salesIntegration.offerFinalPrice(orderId);
 
-            // Step 3: building the local application (DRAFT) — translation into the domain model.
             FinancingApplication application = this.applicationFactory.createDraft(
                     new OrderId(orderId), new CustomerId(customerId), buyerDetails, amountToFinance);
 
-            // Steps 4–5: sending to the bank (ACL) and marking "Under bank verification".
-            application.submitApplication();                 // DRAFT -> PENDING (rule in the aggregate)
+            application.submitApplication();
             this.applicationRepository.save(application);
             this.bankIntegration.submitFinancingApplication(orderId);
         } catch (RuntimeException e) {
-            // A2: a validation error on the bank side / incomplete data -> the application goes back for correction in CRM.
             this.eventPublisher.publish(new FinancingApplicationFailedEvent(orderId, e.getMessage()));
         }
     }
-
-    // ===== UC-FIN-02: processing the bank's decision =====
 
     @Override
     public void processBankDecision(String orderId, boolean approved) {
@@ -92,11 +76,11 @@ public class ProcessFinancingService implements ProcessFinancing {
                         "No financing application for order " + orderId));
 
         if (approved) {
-            application.approve();                           // PENDING -> APPROVED
+            application.approve();
             this.applicationRepository.save(application);
             this.eventPublisher.publish(new FinancingApprovedEvent(orderId));
         } else {
-            application.reject();                            // PENDING -> REJECTED
+            application.reject();
             this.applicationRepository.save(application);
             this.eventPublisher.publish(new FinancingRejectedEvent(orderId));
         }

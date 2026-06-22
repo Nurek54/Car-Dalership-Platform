@@ -50,16 +50,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Demo (offline): domain rules of individual aggregates in isolation —
- * Catalog (Fail-fast EXCLUDES), Sales (discount policy + offer state machine),
- * Billing and Settlement (UC-FIR-02/03 — the "car from stock" path).
- */
 public class OfflineDemo {
 
     public static void main(String[] args) {
         System.out.println("=== CATALOG: vehicle configuration (Fail-fast) ===");
-        // The catalog is immutable — we build it with a factory from a complete set of options and rules.
         ProductCatalog catalog = new ProductCatalogFactory().createNew(
                 ModelYear.of(2026),
                 java.util.List.of(
@@ -77,7 +71,6 @@ public class OfflineDemo {
         spec.addOption(OptionCode.of("MANUAL_GEARBOX"), catalog);
         try {
             spec.addOption(OptionCode.of("ADAPTIVE_CRUISE"), catalog);
-            // Exclusion rules are validated by the domain service (not the aggregate itself).
             ruleValidation.validateSelection(spec, catalog);
         } catch (CombinationNotAllowedException e) {
             System.out.println("[OK] Rule fired: " + e.getMessage());
@@ -91,7 +84,6 @@ public class OfflineDemo {
         System.out.println("[OK] Offer after publication: " + offer.getState()
                 + ", final price: " + offer.getFinalPrice().amount() + " PLN");
 
-        // A discount above the dealership policy -> the aggregate rejects it (encapsulation of pricing decisions).
         Offer greedy = new Offer(OfferId.generate(), new CustomerId("CUST-2"),
                 SpecificationId.generate(), Money.of(new BigDecimal("100000"), "PLN"));
         try {
@@ -100,13 +92,11 @@ public class OfflineDemo {
             System.out.println("[OK] Discount policy fired: " + e.getMessage());
         }
 
-        // Conversion: an order can be created only from an ACCEPTED offer (rule in the factory/aggregate).
         offer.accept();
         Order order = new OrderFactory().createFromOffer(offer);
         order.declarePaymentMethod(PaymentMethod.BANK_TRANSFER);
         System.out.println("[OK] Order " + order.getId().value() + " in state "
                 + order.getState() + " (payment: " + order.getPaymentMethod() + ")");
-        // An order can be built ONLY from an ACCEPTED offer — rule in the factory.
         try {
             greedy.publishOffer();
             new OrderFactory().createFromOffer(greedy);
@@ -117,7 +107,6 @@ public class OfflineDemo {
         System.out.println("\n=== BILLING AND SETTLEMENT: UC-FIR-02 / 03 ===");
         InProcessEventPublisherAdapter bus = new InProcessEventPublisherAdapter();
 
-        // CRM repositories needed by the SalesIntegration adapter (buyer data by orderId).
         InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
         InMemoryOfferRepository offerRepo = new InMemoryOfferRepository();
         InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
@@ -130,7 +119,6 @@ public class OfflineDemo {
         InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
         InMemoryDocumentRepository documentRepo = new InMemoryDocumentRepository();
 
-        // --- UC-FIR-03: balance initialization + payment registration ---
         PaymentProcessService settlements = new PaymentProcessService(
                 settlementRepo, new SettlementFactory(), documentRepo,
                 new NotificationMockAdapter(), bus);
@@ -139,15 +127,12 @@ public class OfflineDemo {
         listener.on(new OrderReadyForSettlementEvent(UUID.randomUUID(), order.getId().value(),
                 new BigDecimal("100000"), "PLN", Instant.now()));
 
-        // Partial payment -> PARTIAL_PAYMENT.
         settlements.processPayment(new ProcessPaymentCommand(
                 order.getId().value(), "TX-1", new BigDecimal("20000"), "PLN"));
-        // Top-up to the full amount -> SETTLED + SettlementCompletedEvent.
         settlements.processPayment(new ProcessPaymentCommand(
                 order.getId().value(), "TX-2", new BigDecimal("80000"), "PLN"));
         System.out.println("[OK] Balance " + order.getId().value() + " settled (status SETTLED).");
 
-        // --- UC-FIR-02: final invoice (buyer data fetched from the Sales context) ---
         DocumentGenerationService docs = new DocumentGenerationService(
                 settlementRepo, documentRepo,
                 new InvoiceCalculationService(), new AccountingDocumentFactory(),
@@ -159,7 +144,6 @@ public class OfflineDemo {
                 order.getId().value(), "Final invoice " + order.getId().value(), "accountant@salon.pl"));
         System.out.println("[OK] Invoice issued, id=" + invoiceId);
 
-        // Validity rule in the aggregate: an expired offer will not pass accept().
         try {
             Offer stale = new Offer(OfferId.generate(), new CustomerId("CUST-3"),
                     SpecificationId.generate(), Money.of(new BigDecimal("80000"), "PLN"));

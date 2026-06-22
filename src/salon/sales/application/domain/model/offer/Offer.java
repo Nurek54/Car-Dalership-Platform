@@ -9,16 +9,8 @@ import salon.sales.application.domain.model.customer.CustomerId;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * AGGREGATE ROOT (Figure 23) — the proforma Offer.
- *
- * Owns the pricing decision (base/final price, discount policy) and the offer lifecycle
- * (DRAFT -> PUBLISHED -> ACCEPTED/REJECTED). The specification id and base price come from the
- * Catalog's SpecificationCompleted event (UC-CRM-02); the dealership discount policy caps the discount.
- */
 public class Offer {
 
-    /** Dealership policy: a single salesperson may grant at most this discount without approval. */
     private static final BigDecimal MAX_DISCOUNT_PERCENT = BigDecimal.valueOf(20);
 
     private final OfferId id;
@@ -51,7 +43,6 @@ public class Offer {
         this.validityDate = LocalDate.now().plusDays(14);
     }
 
-    /** Applies a percentage discount to the base price; bounded by the dealership policy. */
     public void applyDiscount(Discount discount) {
         if (discount == null) {
             throw new IllegalArgumentException("discount must not be null.");
@@ -70,7 +61,6 @@ public class Offer {
         this.finalPrice = Money.of(this.basePrice.amount().multiply(factor), this.basePrice.currency());
     }
 
-    /** UC-CRM-02: publishes the proforma offer to the customer. */
     public void publishOffer() {
         if (this.state != OfferState.DRAFT) {
             throw new InvalidOfferStateException(
@@ -79,7 +69,6 @@ public class Offer {
         this.state = OfferState.PUBLISHED;
     }
 
-    /** UC-CRM-03: the customer accepts a still-valid published offer. */
     public void accept() {
         if (this.state != OfferState.PUBLISHED) {
             throw new InvalidOfferStateException(
@@ -91,7 +80,6 @@ public class Offer {
         this.state = OfferState.ACCEPTED;
     }
 
-    /** UC-CRM-03 / A1: the customer declines the offer. */
     public void reject() {
         if (this.state != OfferState.DRAFT && this.state != OfferState.PUBLISHED) {
             throw new InvalidOfferStateException(

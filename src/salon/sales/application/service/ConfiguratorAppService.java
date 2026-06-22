@@ -8,11 +8,6 @@ import salon.sales.application.port.out.CatalogIntegration;
 
 import java.util.UUID;
 
-/**
- * APPLICATION SERVICE (Figure 22) — "ConfiguratorAppService". Realizes the {@link StartConfigurator}
- * inbound port (UC-CRM-01): opens a configurator session, asks the Catalog to open the configurator
- * (CatalogIntegration) and emits InitiateConfiguratorSession.
- */
 public class ConfiguratorAppService implements StartConfigurator {
 
     private final CatalogIntegration catalogIntegration;

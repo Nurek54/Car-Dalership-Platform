@@ -3,9 +3,6 @@ package salon.catalog.application.domain.model.specification;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * Value object – globally unique identity of the VehicleSpecification aggregate.
- */
 public final class SpecificationId {
 
     private final UUID value;

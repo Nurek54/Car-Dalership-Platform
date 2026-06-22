@@ -25,14 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 
-/**
- * APPLICATION SERVICE (use-case facade for UC-KON-01) – implementation of the inbound
- * port {@link BuildSpecification}.
- *
- * Performs NON-BUSINESS operations: use-case orchestration, management
- * of persistence transactions and handling of domain events. The business logic (rules,
- * invariants, prices) is delegated to the aggregates and the domain service.
- */
 @Service
 public class BuildSpecificationService implements BuildSpecification {
 
@@ -57,7 +49,6 @@ public class BuildSpecificationService implements BuildSpecification {
         this.clock = clock;
     }
 
-    /** Step 1: opening a configurator session and creating a working specification. */
     @Override
     @Transactional
     public SpecificationView initiate(InitiateConfiguratorSessionCommand command) {
@@ -72,7 +63,6 @@ public class BuildSpecificationService implements BuildSpecification {
         return SpecificationView.from(specification);
     }
 
-    /** Steps 2–4: adding an option + on-the-fly verification of exclusion rules (A1). */
     @Override
     @Transactional
     public SpecificationView addOption(AddOptionCommand command) {
@@ -80,8 +70,6 @@ public class BuildSpecificationService implements BuildSpecification {
         ProductCatalog catalog = loadCatalogFor(specification);
 
         specification.addOption(OptionCode.of(command.optionCode()), catalog);
-        // Validation of the whole state after adding an option – if the combination is blocked,
-        // the exception aborts the transaction and the specification is not saved.
         ruleValidationService.validateSelection(specification, catalog);
 
         specificationRepository.save(specification);
@@ -99,7 +87,6 @@ public class BuildSpecificationService implements BuildSpecification {
         return SpecificationView.from(specification);
     }
 
-    /** Steps 5–7: completeness verification, finalization and event emission. */
     @Override
     @Transactional
     public SpecificationView finalizeSpecification(FinalizeSpecificationCommand command) {

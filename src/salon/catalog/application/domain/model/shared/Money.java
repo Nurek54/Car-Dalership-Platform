@@ -4,12 +4,6 @@ import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.Objects;
 
-/**
- * Value object – a monetary amount (catalog price / total specification price).
- *
- * Immutable, compared by value, operations without side effects
- * (they return a new instance instead of modifying the current one – "it is replaceable").
- */
 public final class Money {
 
     private final BigDecimal amount;
@@ -37,7 +31,6 @@ public final class Money {
         return new Money(BigDecimal.ZERO, Currency.getInstance(currencyCode));
     }
 
-    /** Query operation without side effects – returns a new value object. */
     public Money add(Money other) {
         requireSameCurrency(other);
         return new Money(this.amount.add(other.amount), this.currency);

@@ -7,13 +7,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * INBOUND ADAPTER (Figure 22: EventListener over the broker) — subscriber of the Billing Context's
- * PaymentRegisteredEvent delivered asynchronously via RabbitMQ (UC-CRM-03, part 2).
- *
- * Idempotency (section 3.4.2) is handled here, in the subscriber: an already-seen eventId is ignored.
- * The adapter translates the flat message into a call on the {@link ActivateOrderOnDeposit} port.
- */
 public class SalesDepositListener implements RabbitMqMessageHandler {
 
     private final ActivateOrderOnDeposit activateOrderOnDeposit;
@@ -33,7 +26,7 @@ public class SalesDepositListener implements RabbitMqMessageHandler {
         }
         String eventId = event.get("eventId");
         if (eventId != null && !this.processedEventIds.add(eventId)) {
-            return; // already processed — idempotent.
+            return;
         }
         String orderId = event.get("orderId");
         if (orderId == null || orderId.isBlank()) {

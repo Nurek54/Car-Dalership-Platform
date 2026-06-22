@@ -11,11 +11,6 @@ import salon.sales.application.port.out.CustomerDatabaseRepository;
 import salon.sales.application.port.out.OfferDatabaseRepository;
 import salon.sales.application.port.out.OrderDatabaseRepository;
 
-/**
- * APPLICATION SERVICE (Figure 22) — "SalesQueryService". Realizes the public {@link SalesQueryFacade}
- * for synchronous cross-context queries; performs the order -> offer -> customer navigation and
- * returns Published-Language snapshots (no aggregates leak out).
- */
 public class SalesQueryService implements SalesQueryFacade {
 
     private final OrderDatabaseRepository orderRepository;

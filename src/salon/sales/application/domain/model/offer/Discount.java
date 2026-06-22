@@ -2,9 +2,6 @@ package salon.sales.application.domain.model.offer;
 
 import java.math.BigDecimal;
 
-/**
- * Value Object (Figure 23) — a percentage discount applied to an offer's base price.
- */
 public record Discount(BigDecimal percentage) {
 
     public Discount {

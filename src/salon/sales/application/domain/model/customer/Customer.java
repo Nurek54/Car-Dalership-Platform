@@ -1,11 +1,5 @@
 package salon.sales.application.domain.model.customer;
 
-/**
- * AGGREGATE ROOT (Figure 23) — Customer.
- *
- * Holds the customer's identity and contact/tax data used to prepare offers and orders.
- * Business rules (tax-id validation, contact updates) live here.
- */
 public class Customer {
 
     private final CustomerId id;
@@ -37,7 +31,6 @@ public class Customer {
         this.contact = contact;
     }
 
-    /** Updates the mutable contact details (address, contact data). */
     public void updateContactDetails(Address address, ContactData contact) {
         if (address == null) {
             throw new IllegalArgumentException("address must not be null.");
@@ -49,7 +42,6 @@ public class Customer {
         this.contact = contact;
     }
 
-    /** Validates the tax identifier (NIP): exactly 10 digits. */
     public void verifyTaxId() {
         if (!this.nip.matches("\\d{10}")) {
             throw new IllegalArgumentException("Invalid NIP (expected 10 digits): " + this.nip);

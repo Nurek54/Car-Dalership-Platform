@@ -7,9 +7,6 @@ import salon.common.model.OrderId;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * OUTBOUND PORT (Fig. 48 — DocumentDatabaseRepository) — persistence of the Accounting Document aggregate.
- */
 public interface DocumentDatabaseRepository {
 
     void save(AccountingDocument document);

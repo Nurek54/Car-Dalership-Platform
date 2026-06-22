@@ -3,10 +3,6 @@ package salon.sales.infrastructure.in.web;
 import salon.sales.application.command.StartConfiguratorSessionCommand;
 import salon.sales.application.port.in.StartConfigurator;
 
-/**
- * INBOUND ADAPTER (Figure 22: RestController) — drives the {@link StartConfigurator} port (UC-CRM-01).
- * Maps an HTTP request onto a {@link StartConfiguratorSessionCommand} and returns the session id.
- */
 public class ConfiguratorRestController {
 
     private final StartConfigurator startConfigurator;

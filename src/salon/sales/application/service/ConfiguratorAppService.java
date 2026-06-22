@@ -1,52 +1,43 @@
 package salon.sales.application.service;
 
-import org.springframework.stereotype.Service;
-import salon.sales.application.command.StartConfiguratorSessionCommand;
-import salon.sales.application.port.in.StartConfigurator;
-import salon.sales.application.port.out.CustomerDatabaseRepository;
-import salon.sales.application.domain.event.ConfiguratorSessionInitiatedEvent;
-import salon.sales.application.domain.exception.CustomerNotFoundException;
 import salon.common.application.EventPublisher;
+import salon.sales.application.command.StartConfiguratorSessionCommand;
+import salon.sales.application.domain.event.InitiateConfiguratorSessionEvent;
+import salon.sales.application.port.in.StartConfigurator;
+import salon.sales.application.port.out.CatalogIntegration;
 
-import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Implements UC-CRM-01: starting a configurator session for a REGISTERED customer.
- *
- * Variant with identity verification: before the session is initiated, the service checks
- * whether the customer exists in the CRM database (existsById) — the session must not be opened for
- * a non-existent identifier. Sales does not hold the session state (the entity is on the
- * Catalog side); here there is only the initiation of the sales opportunity and the event emission.
+ * APPLICATION SERVICE (Figure 22) — "ConfiguratorAppService". Realizes the {@link StartConfigurator}
+ * inbound port (UC-CRM-01): opens a configurator session, asks the Catalog to open the configurator
+ * (CatalogIntegration) and emits InitiateConfiguratorSession.
  */
-@Service
 public class ConfiguratorAppService implements StartConfigurator {
 
-    private final CustomerDatabaseRepository customerRepository;
+    private final CatalogIntegration catalogIntegration;
     private final EventPublisher eventPublisher;
 
-    public ConfiguratorAppService(CustomerDatabaseRepository customerRepository,
-                                  EventPublisher eventPublisher) {
-        this.customerRepository = customerRepository;
+    public ConfiguratorAppService(CatalogIntegration catalogIntegration, EventPublisher eventPublisher) {
+        if (catalogIntegration == null) {
+            throw new IllegalArgumentException("catalogIntegration must not be null.");
+        }
+        if (eventPublisher == null) {
+            throw new IllegalArgumentException("eventPublisher must not be null.");
+        }
+        this.catalogIntegration = catalogIntegration;
         this.eventPublisher = eventPublisher;
     }
 
     @Override
-    public String startConfiguratorSession(StartConfiguratorSessionCommand command) {
+    public String startSession(StartConfiguratorSessionCommand command) {
         if (command == null) {
             throw new IllegalArgumentException("command must not be null.");
         }
-        if (!customerRepository.existsById(command.customerId())) {
-            throw new CustomerNotFoundException(
-                    "Customer with ID " + command.customerId() + " not found");
-        }
-        String sessionId = "CFG-" + UUID.randomUUID();
-        eventPublisher.publish(new ConfiguratorSessionInitiatedEvent(
-                UUID.randomUUID(),
-                sessionId,
-                command.customerId(),
-                command.salespersonId(),
-                Instant.now()));
+        String sessionId = "SES-" + UUID.randomUUID();
+        this.catalogIntegration.initiateConfiguratorSession(sessionId, command.modelYear());
+        this.eventPublisher.publish(new InitiateConfiguratorSessionEvent(
+                sessionId, command.customerId(), command.salespersonId(), command.modelYear()));
         return sessionId;
     }
 }

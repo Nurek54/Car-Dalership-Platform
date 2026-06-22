@@ -6,16 +6,14 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "OrderPlaced" (UC-CRM-03) — the order was created from an accepted offer.
- * Listeners: the Billing Context (balance initialization) and Inventory
- * (vehicle / production-slot allocation — the OrderPlacedEventHandler).
- *
- * The event carries specificationId (event-carried state transfer): Inventory links
- * the order with the specification locally and does not have to synchronously query
- * the Sales Context or the Catalog for the equipment codes (UC-INW-01/02).
+ * UC-CRM-03: an order was created from an accepted offer. Carries the specification id
+ * (event-carried state transfer) so downstream contexts (Inventory) can link the order to its
+ * specification without querying back.
  */
-public record OrderPlacedEvent(UUID eventId,
-                               String orderId,
-                               String specificationId,
-                               Instant occurredOn) implements DomainEvent {
+public record OrderPlacedEvent(String orderId, String offerId, String specificationId,
+                               String customerId, UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public OrderPlacedEvent(String orderId, String offerId, String specificationId, String customerId) {
+        this(orderId, offerId, specificationId, customerId, UUID.randomUUID(), Instant.now());
+    }
 }

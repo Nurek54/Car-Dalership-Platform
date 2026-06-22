@@ -1,12 +1,10 @@
 package salon.sales.api;
 
 /**
- * Published Language of the Sales and CRM Context — a snapshot of buyer data
- * made available to other contexts (e.g. Billing) without exposing the aggregates
- * domenowych ({@code Customer}, {@code Offer}, {@code Order}).
+ * Published Language of the Sales and CRM Context — a snapshot of buyer data exposed to other
+ * contexts (e.g. Billing, Financing) without revealing the domain aggregates.
  *
- * It contains only the data needed by consumers; client contexts translate
- * this DTO into their own value objects in their ACLs.
+ * Client contexts translate this DTO into their own value objects in their ACL.
  */
 public record CustomerSnapshotDto(String fullName, String nip) {
 

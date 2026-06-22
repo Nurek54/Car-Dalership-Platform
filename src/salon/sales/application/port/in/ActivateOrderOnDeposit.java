@@ -1,9 +1,11 @@
 package salon.sales.application.port.in;
 
 /**
- * Inbound port triggered by an event from Billing (PaymentRegisteredEvent / PaymentPosted).
- * This implements step 5 of UC-SPR-02: posting the deposit unblocks the order fulfillment.
+ * INBOUND PORT (Figure 22) — "ActivateOrderOnDeposit".
+ * UC-CRM-03 (part 2): activate the order once the deposit payment has been registered
+ * (trigger: a payment event from the Billing Context).
  */
 public interface ActivateOrderOnDeposit {
+
     void activateOnDeposit(String orderId);
 }

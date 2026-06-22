@@ -1,25 +1,21 @@
 package salon.sales.application.service;
 
-import org.springframework.stereotype.Service;
+import salon.common.model.OrderId;
 import salon.sales.api.CustomerSnapshotDto;
 import salon.sales.api.OfferSnapshotDto;
 import salon.sales.api.SalesQueryFacade;
-import salon.sales.application.port.out.CustomerDatabaseRepository;
-import salon.sales.application.port.out.OfferDatabaseRepository;
-import salon.sales.application.port.out.OrderDatabaseRepository;
 import salon.sales.application.domain.model.customer.Customer;
 import salon.sales.application.domain.model.offer.Offer;
 import salon.sales.application.domain.model.order.Order;
-import salon.common.model.OrderId;
+import salon.sales.application.port.out.CustomerDatabaseRepository;
+import salon.sales.application.port.out.OfferDatabaseRepository;
+import salon.sales.application.port.out.OrderDatabaseRepository;
 
 /**
- * Implementation of the query facade {@link SalesQueryFacade} of the Sales and CRM Context.
- *
- * The navigation order -> source offer -> customer identity -> Customer aggregate
- * is Sales domain knowledge and stays entirely within this context;
- * only {@link CustomerSnapshotDto} (Published Language) goes outside.
+ * APPLICATION SERVICE (Figure 22) — "SalesQueryService". Realizes the public {@link SalesQueryFacade}
+ * for synchronous cross-context queries; performs the order -> offer -> customer navigation and
+ * returns Published-Language snapshots (no aggregates leak out).
  */
-@Service
 public class SalesQueryService implements SalesQueryFacade {
 
     private final OrderDatabaseRepository orderRepository;
@@ -48,16 +44,11 @@ public class SalesQueryService implements SalesQueryFacade {
         if (orderId == null) {
             throw new IllegalArgumentException("orderId must not be null.");
         }
-        Order order = this.orderRepository.findById(orderId)
+        Offer offer = sourceOfferOf(orderId);
+        Customer customer = this.customerRepository.findById(offer.getCustomerId())
                 .orElseThrow(() -> new IllegalStateException(
-                        "No order in CRM for id " + orderId.value()));
-        Offer offer = this.offerRepository.findById(order.offerId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No source offer in CRM for order " + orderId.value()));
-        Customer customer = this.customerRepository.findById(offer.customerId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No customer in CRM for id " + offer.customerId().value()));
-        return new CustomerSnapshotDto(customer.fullName(), customer.nip());
+                        "No customer for offer " + offer.getId()));
+        return new CustomerSnapshotDto(customer.getFullName(), customer.getNip());
     }
 
     @Override
@@ -65,16 +56,15 @@ public class SalesQueryService implements SalesQueryFacade {
         if (orderId == null) {
             throw new IllegalArgumentException("orderId must not be null.");
         }
+        Offer offer = sourceOfferOf(orderId);
+        return new OfferSnapshotDto(offer.getId().value(), offer.getFinalPrice());
+    }
+
+    private Offer sourceOfferOf(OrderId orderId) {
         Order order = this.orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalStateException("No order " + orderId.value()));
+        return this.offerRepository.findById(order.getSourceOfferId())
                 .orElseThrow(() -> new IllegalStateException(
-                        "No order in CRM for id " + orderId.value()));
-        Offer offer = this.offerRepository.findById(order.offerId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No source offer in CRM for order " + orderId.value()));
-        if (offer.finalPrice() == null) {
-            throw new IllegalStateException(
-                    "Offer " + offer.id().value() + " has no final price yet.");
-        }
-        return new OfferSnapshotDto(offer.id().value(), offer.finalPrice());
+                        "No source offer " + order.getSourceOfferId() + " for order " + orderId.value()));
     }
 }

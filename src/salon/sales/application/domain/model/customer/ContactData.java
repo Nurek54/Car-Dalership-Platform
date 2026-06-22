@@ -1,6 +1,8 @@
 package salon.sales.application.domain.model.customer;
 
-/** Value object: the customer's contact details (e-mail + phone). Immutable. */
+/**
+ * Value Object (Figure 23) — the customer's contact details (email, phone).
+ */
 public record ContactData(String email, String phone) {
 
     public ContactData {
@@ -10,13 +12,5 @@ public record ContactData(String email, String phone) {
         if (phone == null || phone.isBlank()) {
             throw new IllegalArgumentException("phone must not be blank.");
         }
-    }
-
-    public String email() {
-        return this.email;
-    }
-
-    public String phoneNumber() {
-        return this.phone;
     }
 }

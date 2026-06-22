@@ -2,15 +2,17 @@ package salon.sales.application.domain.model.offer;
 
 import java.math.BigDecimal;
 
-// Value Object: the requested discount expressed as a percentage (e.g. 4.00 = 4%).
+/**
+ * Value Object (Figure 23) — a percentage discount applied to an offer's base price.
+ */
 public record Discount(BigDecimal percentage) {
 
     public Discount {
         if (percentage == null) {
-            throw new IllegalArgumentException("Discount percentage must not be null.");
+            throw new IllegalArgumentException("percentage must not be null.");
         }
-        if (percentage.signum() < 0) {
-            throw new IllegalArgumentException("Discount percentage must not be negative.");
+        if (percentage.signum() < 0 || percentage.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("percentage must be within [0, 100].");
         }
     }
 }

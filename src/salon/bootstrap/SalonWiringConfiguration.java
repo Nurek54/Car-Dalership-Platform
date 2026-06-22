@@ -43,21 +43,16 @@ import salon.logistics.infrastructure.out.mock.InMemoryInventoryRepository;
 import salon.logistics.infrastructure.out.mock.InMemorySpecificationReadModelAdapter;
 
 import salon.sales.api.SalesQueryFacade;
-import salon.sales.application.port.out.FinancingIntegrationPort;
-import salon.sales.application.port.out.SpecificationPriceReadModelPort;
 import salon.sales.application.service.SalesService;
-import salon.sales.infrastructure.out.integration.FinancingEventBusAdapter;
-import salon.sales.infrastructure.in.messaging.LogisticsEventSubscriberAdapter;
-import salon.sales.infrastructure.out.mock.InMemorySpecificationPriceReadModelAdapter;
 
 import salon.common.application.EventPublisher;
 
 /**
  * Composition Root for the production run under Spring.
  *
- * The services and adapters of the Sales and Catalog Contexts are component beans
+ * The services and adapters of the Catalog Context are component beans
  * (@Service/@Component/@Repository) and are injected via component-scan — we do NOT wire them here.
- * Here we wire the contexts that remain pure POJOs (Billing, Logistics, Financing)
+ * Here we wire the contexts that remain pure POJOs (Sales, Billing, Logistics, Financing)
  * and the cross-context adapters (ACL to CRM, event subscribers).
  */
 @Configuration
@@ -84,15 +79,6 @@ public class SalonWiringConfiguration {
     @Bean
     public CatalogIntegration catalogIntegration() {
         return new InMemorySpecificationReadModelAdapter();
-    }
-
-    /**
-     * Sales' local read model of specification pricing — fed asynchronously by the
-     * SpecificationCompleted event (Catalog), instead of synchronously querying the Catalog for the price (UC-CRM-02).
-     */
-    @Bean
-    public SpecificationPriceReadModelPort specificationPriceReadModelPort() {
-        return new InMemorySpecificationPriceReadModelAdapter();
     }
 
     @Bean
@@ -130,10 +116,79 @@ public class SalonWiringConfiguration {
         return new InMemoryFinancingRepository();
     }
 
-    /** Creditworthiness query: the adapter publishes FinancingRequestedEvent (UC-CRM-03 -> UC-FIN-01). */
+    // --- Sales and CRM (UC-CRM-01..05) — wired as pure POJOs ---
+
     @Bean
-    public FinancingIntegrationPort financingIntegrationPort(EventPublisher eventPublisherPort) {
-        return new FinancingEventBusAdapter(eventPublisherPort);
+    public salon.sales.application.domain.model.offer.OfferFactory offerFactory() {
+        return new salon.sales.application.domain.model.offer.OfferFactory();
+    }
+
+    @Bean
+    public salon.sales.application.domain.model.order.OrderFactory orderFactory() {
+        return new salon.sales.application.domain.model.order.OrderFactory();
+    }
+
+    @Bean
+    public salon.sales.application.port.out.CustomerDatabaseRepository salesCustomerRepository() {
+        return new salon.sales.infrastructure.out.persistence.InMemoryCustomerRepository();
+    }
+
+    @Bean
+    public salon.sales.application.port.out.OfferDatabaseRepository salesOfferRepository() {
+        return new salon.sales.infrastructure.out.persistence.InMemoryOfferRepository();
+    }
+
+    @Bean
+    public salon.sales.application.port.out.OrderDatabaseRepository salesOrderRepository() {
+        return new salon.sales.infrastructure.out.persistence.InMemoryOrderRepository();
+    }
+
+    @Bean
+    public salon.sales.application.port.out.CatalogIntegration salesCatalogIntegration() {
+        return new salon.sales.infrastructure.out.integration.CatalogIntegrationAdapter();
+    }
+
+    @Bean
+    public salon.sales.application.port.out.InventoryIntegration salesInventoryIntegration() {
+        return new salon.sales.infrastructure.out.integration.InventoryIntegrationAdapter();
+    }
+
+    @Bean
+    public salon.sales.application.port.out.BillingIntegration salesBillingIntegration() {
+        return new salon.sales.infrastructure.out.integration.BillingIntegrationAdapter();
+    }
+
+    /** Central Sales application service (Figure 22: SalesService) — realizes 5 inbound ports. */
+    @Bean
+    public SalesService salesAppService(
+            salon.sales.application.port.out.CustomerDatabaseRepository salesCustomerRepository,
+            salon.sales.application.port.out.OfferDatabaseRepository salesOfferRepository,
+            salon.sales.application.port.out.OrderDatabaseRepository salesOrderRepository,
+            salon.sales.application.port.out.BillingIntegration salesBillingIntegration,
+            salon.sales.application.port.out.InventoryIntegration salesInventoryIntegration,
+            EventPublisher eventPublisherPort,
+            salon.sales.application.domain.model.offer.OfferFactory offerFactory,
+            salon.sales.application.domain.model.order.OrderFactory orderFactory) {
+        return new SalesService(salesCustomerRepository, salesOfferRepository, salesOrderRepository,
+                salesBillingIntegration, salesInventoryIntegration, eventPublisherPort, offerFactory, orderFactory);
+    }
+
+    /** Public Sales facade (Figure 22: SalesQueryService) consumed by Billing and Financing. */
+    @Bean
+    public SalesQueryFacade salesQueryFacade(
+            salon.sales.application.port.out.OrderDatabaseRepository salesOrderRepository,
+            salon.sales.application.port.out.OfferDatabaseRepository salesOfferRepository,
+            salon.sales.application.port.out.CustomerDatabaseRepository salesCustomerRepository) {
+        return new salon.sales.application.service.SalesQueryService(
+                salesOrderRepository, salesOfferRepository, salesCustomerRepository);
+    }
+
+    /** Configurator application service (Figure 22: ConfiguratorAppService) — UC-CRM-01. */
+    @Bean
+    public salon.sales.application.port.in.StartConfigurator salesConfiguratorAppService(
+            salon.sales.application.port.out.CatalogIntegration salesCatalogIntegration,
+            EventPublisher eventPublisherPort) {
+        return new salon.sales.application.service.ConfiguratorAppService(salesCatalogIntegration, eventPublisherPort);
     }
 
     // --- Inventory and Logistics: centralized application service (UC-INW-01..06) ---
@@ -210,22 +265,32 @@ public class SalonWiringConfiguration {
 
     // --- Driving adapters (event subscribers) as beans ---
 
+    /** Sales <- Billing: AdvancePaymentRegistered activates the order (UC-CRM-03, part 2). */
     @Bean
     public salon.sales.infrastructure.in.messaging.BillingEventSubscriberAdapter
     salesBillingEventSubscriberAdapter(SalesService salesAppService) {
         return new salon.sales.infrastructure.in.messaging.BillingEventSubscriberAdapter(salesAppService);
     }
 
-    /** Sales <- Catalog: SpecificationCompleted feeds the local pricing read model (UC-CRM-02). */
+    /** Sales <- Catalog: SpecificationCompleted generates a proforma offer (UC-CRM-02). */
     @Bean
     public salon.sales.infrastructure.in.messaging.CatalogEventSubscriberAdapter
-    catalogEventSubscriberAdapter(SalesService salesAppService) {
+    salesCatalogEventSubscriberAdapter(SalesService salesAppService) {
         return new salon.sales.infrastructure.in.messaging.CatalogEventSubscriberAdapter(salesAppService);
     }
 
+    /** Sales <- Inventory: VehicleReadyForHandover / VehicleReleaseFailed (UC-CRM-04 / 05). */
     @Bean
-    public LogisticsEventSubscriberAdapter logisticsEventSubscriberAdapter(SalesService salesAppService) {
-        return new LogisticsEventSubscriberAdapter(salesAppService);
+    public salon.sales.infrastructure.in.messaging.InventoryEventSubscriberAdapter
+    salesInventoryEventSubscriberAdapter(SalesService salesAppService) {
+        return new salon.sales.infrastructure.in.messaging.InventoryEventSubscriberAdapter(salesAppService);
+    }
+
+    /** Sales CronJob: rejects published offers past their validity date. */
+    @Bean
+    public salon.sales.infrastructure.in.cron.OfferExpirationCronJob offerExpirationCronJob(
+            SalesService salesAppService) {
+        return new salon.sales.infrastructure.in.cron.OfferExpirationCronJob(salesAppService);
     }
 
     /** Inventory <- Sales: OrderPlaced (spec. linkage) and the ReleaseVehicle command (UC-INW-06). */

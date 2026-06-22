@@ -40,9 +40,9 @@ import salon.sales.application.domain.model.offer.OfferId;
 import salon.sales.application.domain.model.order.Order;
 import salon.sales.application.domain.model.order.OrderFactory;
 import salon.sales.application.domain.model.order.PaymentMethod;
-import salon.sales.infrastructure.out.mock.InMemoryCustomerRepository;
-import salon.sales.infrastructure.out.mock.InMemoryOfferRepository;
-import salon.sales.infrastructure.out.mock.InMemoryOrderRepository;
+import salon.sales.infrastructure.out.persistence.InMemoryCustomerRepository;
+import salon.sales.infrastructure.out.persistence.InMemoryOfferRepository;
+import salon.sales.infrastructure.out.persistence.InMemoryOrderRepository;
 import salon.common.model.Money;
 import salon.common.model.SpecificationId;
 
@@ -88,8 +88,8 @@ public class OfflineDemo {
                 SpecificationId.generate(), Money.of(new BigDecimal("100000"), "PLN"));
         offer.applyDiscount(new Discount(new BigDecimal("5.00")));
         offer.publishOffer();
-        System.out.println("[OK] Offer after publication: " + offer.state()
-                + ", final price: " + offer.finalPrice().amount() + " PLN");
+        System.out.println("[OK] Offer after publication: " + offer.getState()
+                + ", final price: " + offer.getFinalPrice().amount() + " PLN");
 
         // A discount above the dealership policy -> the aggregate rejects it (encapsulation of pricing decisions).
         Offer greedy = new Offer(OfferId.generate(), new CustomerId("CUST-2"),
@@ -100,18 +100,18 @@ public class OfflineDemo {
             System.out.println("[OK] Discount policy fired: " + e.getMessage());
         }
 
-        // Conversion: an order can be created only from an ACCEPTED offer (rule in the aggregate).
+        // Conversion: an order can be created only from an ACCEPTED offer (rule in the factory/aggregate).
         offer.accept();
-        Order order = new OrderFactory().createFromOffer(offer.id(), offer.toSnapshot());
+        Order order = new OrderFactory().createFromOffer(offer);
         order.declarePaymentMethod(PaymentMethod.BANK_TRANSFER);
-        System.out.println("[OK] Order " + order.id().value() + " in state "
-                + order.state() + " (payment: " + order.paymentMethod() + ")");
-        // The snapshot (toSnapshot) can be built ONLY from an ACCEPTED offer — rule in the aggregate.
+        System.out.println("[OK] Order " + order.getId().value() + " in state "
+                + order.getState() + " (payment: " + order.getPaymentMethod() + ")");
+        // An order can be built ONLY from an ACCEPTED offer — rule in the factory.
         try {
             greedy.publishOffer();
-            new OrderFactory().createFromOffer(greedy.id(), greedy.toSnapshot());
+            new OrderFactory().createFromOffer(greedy);
         } catch (InvalidOfferStateException e) {
-            System.out.println("[OK] Snapshot only from ACCEPTED — " + e.getMessage());
+            System.out.println("[OK] Order only from ACCEPTED — " + e.getMessage());
         }
 
         System.out.println("\n=== BILLING AND SETTLEMENT: UC-FIR-02 / 03 ===");
@@ -136,16 +136,16 @@ public class OfflineDemo {
                 new NotificationMockAdapter(), bus);
 
         SettlementEventListener listener = new SettlementEventListener(settlements);
-        listener.on(new OrderReadyForSettlementEvent(UUID.randomUUID(), order.id().value(),
+        listener.on(new OrderReadyForSettlementEvent(UUID.randomUUID(), order.getId().value(),
                 new BigDecimal("100000"), "PLN", Instant.now()));
 
         // Partial payment -> PARTIAL_PAYMENT.
         settlements.processPayment(new ProcessPaymentCommand(
-                order.id().value(), "TX-1", new BigDecimal("20000"), "PLN"));
+                order.getId().value(), "TX-1", new BigDecimal("20000"), "PLN"));
         // Top-up to the full amount -> SETTLED + SettlementCompletedEvent.
         settlements.processPayment(new ProcessPaymentCommand(
-                order.id().value(), "TX-2", new BigDecimal("80000"), "PLN"));
-        System.out.println("[OK] Balance " + order.id().value() + " settled (status SETTLED).");
+                order.getId().value(), "TX-2", new BigDecimal("80000"), "PLN"));
+        System.out.println("[OK] Balance " + order.getId().value() + " settled (status SETTLED).");
 
         // --- UC-FIR-02: final invoice (buyer data fetched from the Sales context) ---
         DocumentGenerationService docs = new DocumentGenerationService(
@@ -156,12 +156,13 @@ public class OfflineDemo {
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
         String invoiceId = docs.generateInvoice(new GenerateInvoiceCommand(
-                order.id().value(), "Final invoice " + order.id().value(), "accountant@salon.pl"));
+                order.getId().value(), "Final invoice " + order.getId().value(), "accountant@salon.pl"));
         System.out.println("[OK] Invoice issued, id=" + invoiceId);
 
         // Validity rule in the aggregate: an expired offer will not pass accept().
         try {
-            Offer stale = new Offer(OfferId.generate(), new CustomerId("CUST-3"), SpecificationId.generate());
+            Offer stale = new Offer(OfferId.generate(), new CustomerId("CUST-3"),
+                    SpecificationId.generate(), Money.of(new BigDecimal("80000"), "PLN"));
             stale.publishOffer();
             salon.common.infrastructure.persistence.DomainReflection.set(
                     stale, "validityDate", java.time.LocalDate.now().minusDays(1));

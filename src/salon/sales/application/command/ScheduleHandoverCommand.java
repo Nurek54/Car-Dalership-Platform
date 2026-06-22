@@ -3,8 +3,7 @@ package salon.sales.application.command;
 import java.time.LocalDate;
 
 /**
- * Command for UC-CRM-04 (steps 4-5): the Salesperson enters the handover date agreed with the customer.
- * It also supports scenario A1 (deferred pickup) — a later date is enough.
+ * Command (UC-CRM-04) — set the agreed vehicle pickup date for an order.
  */
 public record ScheduleHandoverCommand(String orderId, LocalDate handoverDate) {
 

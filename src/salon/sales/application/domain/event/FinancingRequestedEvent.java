@@ -6,12 +6,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * "FinancingRequested" (UC-CRM-03, step 5) — an integration message for
- * the Financing Context (UC-FIN-01): triggers the creditworthiness check
- * through the bank ACL (the FinancingRequestedEventHandler).
+ * UC-CRM-03: the customer chose financing/leasing. Outbound to the Financing Context, which
+ * submits the credit application to the bank (UC-FIN-01).
  */
-public record FinancingRequestedEvent(UUID eventId,
-                                      String orderId,
-                                      String customerId,
-                                      Instant occurredOn) implements DomainEvent {
+public record FinancingRequestedEvent(String orderId, String customerId,
+                                      UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public FinancingRequestedEvent(String orderId, String customerId) {
+        this(orderId, customerId, UUID.randomUUID(), Instant.now());
+    }
 }

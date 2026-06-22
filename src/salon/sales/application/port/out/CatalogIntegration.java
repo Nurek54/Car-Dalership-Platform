@@ -1,10 +1,11 @@
 package salon.sales.application.port.out;
 
 /**
- * Outbound port (driven) to the Catalog and Configurator Context.
- * UC-CRM-01: opening the configurator interface for the initiated session.
+ * OUTBOUND PORT (Figure 22) — "CatalogIntegration".
+ * UC-CRM-01: asks the Catalog and Configurator Context to open a configurator session
+ * for the given model year. The adapter (CatalogExternalAPI) handles the technical call.
  */
 public interface CatalogIntegration {
 
-    void openConfiguratorInterface(String sessionId, String customerId, String salespersonId);
+    void initiateConfiguratorSession(String sessionId, int modelYear);
 }

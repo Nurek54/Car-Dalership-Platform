@@ -3,30 +3,27 @@ package salon.sales.api;
 import salon.common.model.OrderId;
 
 /**
- * Public API (facade) of the Sales and CRM Context for synchronous queries
- * from other contexts. The only — besides domain events — legal entry point
- * into the Sales context; it hides the repositories, aggregates and navigation
- * order -> offer -> customer.
+ * Public API (facade) of the Sales and CRM Context for synchronous queries from other contexts
+ * (Figure 22 — "SalesQueryFacade"). Together with domain events it is the only legal entry point
+ * into Sales; it hides repositories, aggregates and the order -> offer -> customer navigation.
  *
- * In a distributed environment this contract maps 1:1 to the REST endpoint
- * of the CRM module.
+ * In a distributed setup this contract maps 1:1 onto a CRM REST endpoint.
  */
 public interface SalesQueryFacade {
 
     /**
-     * Returns a snapshot of the buyer data for the indicated order.
+     * Returns a snapshot of the buyer for the given order.
      *
-     * @throws IllegalArgumentException when orderId is null
-     * @throws IllegalStateException    when the order, offer or customer does not exist
+     * @throws IllegalArgumentException if orderId is null
+     * @throws IllegalStateException    if the order, offer or customer does not exist
      */
     CustomerSnapshotDto findBuyerForOrder(OrderId orderId);
 
     /**
-     * Returns a snapshot of the source offer (including the final price) for the indicated order.
+     * Returns a snapshot of the source offer (incl. final price) for the given order.
      *
-     * @throws IllegalArgumentException when orderId is null
-     * @throws IllegalStateException    when the order or the offer does not exist,
-     *                                  or the offer does not yet have a final price
+     * @throws IllegalArgumentException if orderId is null
+     * @throws IllegalStateException    if the order or offer does not exist
      */
     OfferSnapshotDto findOfferForOrder(OrderId orderId);
 }

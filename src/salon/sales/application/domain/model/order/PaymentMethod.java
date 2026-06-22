@@ -1,13 +1,11 @@
 package salon.sales.application.domain.model.order;
 
 /**
- * The payment method for the vehicle declared by the customer (UC-CRM-03, step 4) —
- * per docs/Agregate/Sales/customer-offer-order.md.
+ * Enumeration (Figure 23) — the payment method declared by the customer on the order (UC-CRM-03).
  *
- * The declaration determines which event will leave the Sales context:
- * BankTransferDeclaredEvent (transfer) or FinancingRequestedEvent (financing).
+ * BANK_TRANSFER – emits BankTransferDeclaredEvent; FINANCING – emits FinancingRequestedEvent.
  */
 public enum PaymentMethod {
-    BANK_TRANSFER,  // the customer's own bank transfer
-    FINANCING       // credit/leasing through the Financing Context
+    BANK_TRANSFER,
+    FINANCING
 }

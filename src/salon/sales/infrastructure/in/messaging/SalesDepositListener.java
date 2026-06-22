@@ -1,47 +1,44 @@
 package salon.sales.infrastructure.in.messaging;
 
-import salon.sales.application.port.in.ActivateOrderOnDeposit;
 import salon.common.infrastructure.messaging.RabbitMqMessageHandler;
+import salon.sales.application.port.in.ActivateOrderOnDeposit;
 
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * INBOUND adapter (driving) of the Sales context: it listens for the "PaymentRegisteredEvent" event
- * (DepositPosted) coming FROM BILLING THROUGH THE RabbitMQ QUEUE and triggers the activation
- * of the order (UC-SPR-02, step 5).
+ * INBOUND ADAPTER (Figure 22: EventListener over the broker) — subscriber of the Billing Context's
+ * PaymentRegisteredEvent delivered asynchronously via RabbitMQ (UC-CRM-03, part 2).
  *
- * Idempotency (3.4.2): it is HERE — on the subscriber side — that we guard against duplicates by eventId.
- * Rejestrujemy ten handler w RabbitMqEventConsumer pod kluczem "PaymentRegisteredEvent"
- * (a posted payment/deposit from the Billing Context — UC-CRM-03 part 2, Fig. 19/20 PDF).
+ * Idempotency (section 3.4.2) is handled here, in the subscriber: an already-seen eventId is ignored.
+ * The adapter translates the flat message into a call on the {@link ActivateOrderOnDeposit} port.
  */
 public class SalesDepositListener implements RabbitMqMessageHandler {
 
-    private final ActivateOrderOnDeposit activateOrder;
+    private final ActivateOrderOnDeposit activateOrderOnDeposit;
     private final Set<String> processedEventIds = ConcurrentHashMap.newKeySet();
 
-    public SalesDepositListener(ActivateOrderOnDeposit activateOrder) {
-        if (activateOrder == null) {
-            throw new IllegalArgumentException("activateOrder must not be null.");
+    public SalesDepositListener(ActivateOrderOnDeposit activateOrderOnDeposit) {
+        if (activateOrderOnDeposit == null) {
+            throw new IllegalArgumentException("activateOrderOnDeposit must not be null.");
         }
-        this.activateOrder = activateOrder;
+        this.activateOrderOnDeposit = activateOrderOnDeposit;
     }
 
     @Override
     public void handle(Map<String, String> event) {
         if (event == null) {
-            return;
+            throw new IllegalArgumentException("event must not be null.");
         }
         String eventId = event.get("eventId");
-        boolean firstTime = this.processedEventIds.add(eventId);
-        if (!firstTime) {
-            System.out.println("[SalesDepositListener] Duplicate event ignored: " + eventId);
-            return;
+        if (eventId != null && !this.processedEventIds.add(eventId)) {
+            return; // already processed — idempotent.
         }
         String orderId = event.get("orderId");
-        System.out.println("[SalesDepositListener] Deposit booked for order " + orderId
-                + " -> activating order.");
-        this.activateOrder.activateOnDeposit(orderId);
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
+        }
+        this.activateOrderOnDeposit.activateOnDeposit(orderId);
     }
 }

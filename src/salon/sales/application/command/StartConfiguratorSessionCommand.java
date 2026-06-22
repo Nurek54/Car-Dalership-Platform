@@ -1,9 +1,9 @@
 package salon.sales.application.command;
 
 /**
- * Command for UC-CRM-01: the Salesperson initiates a configurator session for a specific customer.
+ * Command (UC-CRM-01) — open a configurator session for a customer on behalf of a salesperson.
  */
-public record StartConfiguratorSessionCommand(String customerId, String salespersonId) {
+public record StartConfiguratorSessionCommand(String customerId, String salespersonId, int modelYear) {
 
     public StartConfiguratorSessionCommand {
         if (customerId == null || customerId.isBlank()) {
@@ -11,6 +11,9 @@ public record StartConfiguratorSessionCommand(String customerId, String salesper
         }
         if (salespersonId == null || salespersonId.isBlank()) {
             throw new IllegalArgumentException("salespersonId must not be blank.");
+        }
+        if (modelYear <= 0) {
+            throw new IllegalArgumentException("modelYear must be positive.");
         }
     }
 }

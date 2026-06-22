@@ -3,11 +3,10 @@ package salon.sales.api;
 import salon.common.model.Money;
 
 /**
- * Published Language of the Sales and CRM Context — a snapshot of the order's source offer
- * made available to other contexts (e.g. Financing) without exposing the {@code Offer} aggregate.
+ * Published Language of the Sales and CRM Context — a snapshot of an order's source offer
+ * (final price) exposed to other contexts without revealing the {@code Offer} aggregate.
  *
- * {@link Money} comes from the Shared Kernel, so it can safely
- * cross context boundaries.
+ * {@link Money} comes from the Shared Kernel, so it may safely cross context boundaries.
  */
 public record OfferSnapshotDto(String offerId, Money finalPrice) {
 

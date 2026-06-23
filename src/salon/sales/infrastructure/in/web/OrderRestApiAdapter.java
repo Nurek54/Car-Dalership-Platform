@@ -14,11 +14,6 @@ import salon.sales.application.service.SalesService;
 
 import java.time.LocalDate;
 
-/**
- * INBOUND ADAPTER (Figure 22: RestController) — exposes the order-lifecycle use cases over HTTP:
- * scheduling the handover (UC-CRM-04), confirming the handover (UC-CRM-05) and cancelling the
- * order (UC-CRM-03 / A1).
- */
 @RestController
 @RequestMapping("/api/sales/orders")
 public class OrderRestApiAdapter {
@@ -49,11 +44,11 @@ public class OrderRestApiAdapter {
         return ResponseEntity.ok().build();
     }
 
-    /** Request body for scheduling a handover; the date is mandatory. */
+    
     public record ScheduleHandoverRequest(@NotNull LocalDate handoverDate) {
     }
 
-    /** Request body for cancelling an order. */
+    
     public record CancelOrderRequest(String reason) {
     }
 }

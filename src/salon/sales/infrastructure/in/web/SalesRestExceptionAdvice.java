@@ -11,10 +11,6 @@ import salon.sales.application.domain.exception.OrderNotFoundException;
 
 import java.util.Map;
 
-/**
- * Maps Sales domain/validation errors to HTTP responses for the REST adapters:
- * not-found -> 404 with a "message" field; invalid input -> 400 with an "error" field.
- */
 @RestControllerAdvice(assignableTypes = {
         OfferRestApiAdapter.class, OrderRestApiAdapter.class,
         ConfiguratorRestApiAdapter.class, InventoryWebhookRestApiAdapter.class})

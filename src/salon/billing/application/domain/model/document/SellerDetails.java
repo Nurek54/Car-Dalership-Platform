@@ -1,9 +1,5 @@
 package salon.billing.application.domain.model.document;
 
-/**
- * VALUE OBJECT (Class diagram — «ValueObject» SellerDetails): fixed issuer (dealership) data.
- * Immutable; injected into the domain service from configuration (Composition Root).
- */
 public record SellerDetails(String name, String nip) {
 
     public SellerDetails {

@@ -9,11 +9,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * OUTBOUND ADAPTER (Figure 22: DBAdapter) — Spring-managed in-memory implementation of the CRM
- * {@link CustomerDatabaseRepository}. Customer master data is not exercised by the persistence
- * slice tests, so a lightweight in-memory store is sufficient for the wired context.
- */
 @Repository
 public class CustomerDatabaseAdapter implements CustomerDatabaseRepository {
 

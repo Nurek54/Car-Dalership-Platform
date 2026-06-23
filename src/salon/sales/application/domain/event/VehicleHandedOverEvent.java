@@ -5,10 +5,6 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * UC-CRM-05: the vehicle was physically handed over to the customer. Outbound to Billing
- * (close the balance / issue the VAT invoice) and After-sales (start the warranty/service window).
- */
 public record VehicleHandedOverEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
 
     public VehicleHandedOverEvent(String orderId) {

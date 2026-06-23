@@ -12,19 +12,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * AGGREGATE ROOT – the user's configuration basket (vehicle specification).
- *
- * References the ProductCatalog aggregate ONLY through {@link CatalogId}
- * (Rule 3 – references by identifier, not by reference). ProductCatalog
- * is passed as a command argument only to read prices and check
- * the invariants in a single transaction – it is not held as a field.
- *
- * Invariants:
- *  - only options that exist in the catalog can be selected,
- *  - the total price = the sum of the base prices of the selected options,
- *  - after finalization (FINAL) the specification is immutable.
- */
 public class VehicleSpecification {
 
     private final SpecificationId id;
@@ -33,7 +20,7 @@ public class VehicleSpecification {
     private SpecificationState state;
     private final Set<OptionCode> optionsPicked;
 
-    /** Package-private constructor – invoked by {@code VehicleSpecificationFactory}. */
+    
     VehicleSpecification(SpecificationId id,
                          CatalogId catalogId,
                          Money totalPrice,
@@ -46,12 +33,7 @@ public class VehicleSpecification {
         this.optionsPicked = new LinkedHashSet<>(Objects.requireNonNull(optionsPicked, "optionsPicked"));
     }
 
-    /**
-     * Stateful command: adds an option to the specification (UC-KON-01, steps 2–3).
-     * Checks the invariant "the option must come from the catalog" and recomputes the total price.
-     * Exclusion/requirement rules (EXCLUDES/REQUIRES) are validated by RuleValidationService
-     * before this command is invoked – validating the whole state is not the entity's responsibility.
-     */
+    
     public void addOption(OptionCode code, ProductCatalog catalog) {
         ensureNotFinal();
         requireSameCatalog(catalog);
@@ -64,7 +46,7 @@ public class VehicleSpecification {
         markInProgress();
     }
 
-    /** Stateful command: removes a previously added option and recomputes the price. */
+    
     public void removeOption(OptionCode code, ProductCatalog catalog) {
         ensureNotFinal();
         requireSameCatalog(catalog);
@@ -73,11 +55,7 @@ public class VehicleSpecification {
         markInProgress();
     }
 
-    /**
-     * Stateful command: finalizes the specification (UC-KON-01, steps 6–7).
-     * Verifies final completeness (at least one option) and switches the state to FINAL.
-     * Rule consistency should be confirmed by RuleValidationService before finalization.
-     */
+    
     public void finalizeSpecification() {
         ensureNotFinal();
         if (optionsPicked.isEmpty()) {
@@ -133,7 +111,7 @@ public class VehicleSpecification {
         return Collections.unmodifiableList(new ArrayList<>(optionsPicked));
     }
 
-    /** Returns a copy of the set of selected options (for RuleValidationService / specification). */
+    
     public Set<OptionCode> pickedAsSet() {
         return new LinkedHashSet<>(optionsPicked);
     }

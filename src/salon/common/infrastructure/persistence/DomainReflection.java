@@ -3,11 +3,6 @@ package salon.common.infrastructure.persistence;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 
-/**
- * An infrastructure helper (driven layer): allows faithfully reconstituting the immutable domain
- * aggregates from JPA entities WITHOUT modifying the context code (no setters/reconstituting constructors
- * in the domain). Reflection here is a deliberate decision of the persistence adapter — the domain stays clean.
- */
 public final class DomainReflection {
 
     private DomainReflection() {

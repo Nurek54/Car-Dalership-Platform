@@ -7,11 +7,6 @@ import salon.sales.application.port.in.ScheduleHandover;
 
 import java.time.LocalDate;
 
-/**
- * INBOUND ADAPTER (Figure 22: RestController) — drives the order-lifecycle ports:
- * {@link ActivateOrderOnDeposit}, {@link ScheduleHandover} and {@link ReleaseVehicle}
- * (UC-CRM-03 part 2 / UC-CRM-05).
- */
 public class OrderRestController {
 
     private final ActivateOrderOnDeposit activateOrderOnDeposit;

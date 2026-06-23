@@ -2,9 +2,6 @@ package salon.billing.application.command;
 
 import java.math.BigDecimal;
 
-/**
- * Input data model of the ProcessPayment port (UC-FIR-03) — a matched transfer from the statement.
- */
 public record ProcessPaymentCommand(String orderId, String transactionId,
                                     BigDecimal amount, String currency) {
 

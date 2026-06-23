@@ -5,10 +5,6 @@ import salon.billing.application.port.out.NotificationGeneration;
 import salon.common.model.Money;
 import salon.common.model.OrderId;
 
-/**
- * OUTBOUND ADAPTER (Fig. 48 — NotificationGenerator) — a mock of the {@link NotificationGeneration} port
- * used in the production run (Composition Root). Simulates sending an e-mail to the customer.
- */
 public class NotificationAdapter implements NotificationGeneration {
 
     @Override

@@ -6,15 +6,6 @@ import java.lang.reflect.RecordComponent;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Converts any event (which is a record) into a flat map of fields, and then into JSON.
- *
- * All our events are records with flat fields (String/UUID/Instant). Instead of writing
- * a separate serializer for each of them, we read the record components and store them as text.
- * We add a "type" field = the simple class name, by which the subscriber recognizes the event kind.
- *
- * This is the only place in the whole module where we use reflection — and only to avoid duplicating code.
- */
 public class RecordEventSerializer implements EventSerializer {
 
     @Override

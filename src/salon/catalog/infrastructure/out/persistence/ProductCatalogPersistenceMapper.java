@@ -14,11 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/**
- * Bidirectional mapping between the ProductCatalog aggregate and the storage record.
- * Reconstitution of the aggregate is performed by the factory ({@code reconstitute}) – building an instance
- * is not the mapper's responsibility.
- */
 @Component
 public class ProductCatalogPersistenceMapper {
 

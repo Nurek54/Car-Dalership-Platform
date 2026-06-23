@@ -6,14 +6,6 @@ import salon.common.model.OrderId;
 import salon.sales.api.CustomerSnapshotDto;
 import salon.sales.api.SalesQueryFacade;
 
-/**
- * OUTBOUND ADAPTER (Fig. 48 — SalesQueryService, ACL) — implementation of the {@link SalesIntegration} port.
- *
- * Anti-Corruption Layer: it depends only on the public Sales facade
- * ({@link SalesQueryFacade}, Jezyk Opublikowany) i tlumaczy jej migawke CustomerSnapshotDto na
- * the Billing-local value object {@link BuyerDetails}. The Billing core does not know the aggregates
- * of Sales (Customer/Offer/Order).
- */
 public class SalesCrmIntegrationAdapter implements SalesIntegration {
 
     private final SalesQueryFacade salesQueryFacade;

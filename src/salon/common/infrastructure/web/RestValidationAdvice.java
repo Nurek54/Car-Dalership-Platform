@@ -11,13 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Global mapping of input validation errors (Bean Validation) to 400 Bad Request
- * in the shape { "fieldErrors": { "<field>": "<message>" } }. Shared by the REST adapters.
- *
- * DOMAIN errors (e.g. OfferExpiredException) are mapped by local @ExceptionHandler in the controllers,
- * because the same exception can be a different HTTP code depending on the resource (404 vs 409).
- */
 @RestControllerAdvice
 public class RestValidationAdvice {
 

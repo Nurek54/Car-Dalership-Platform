@@ -2,13 +2,6 @@ package salon.sales.application.domain.model.customer;
 
 import salon.sales.application.domain.exception.InvalidTaxIdException;
 
-/**
- * AGGREGATE ROOT (Figure 23) — Customer.
- *
- * Holds the customer's identity and contact/tax data used to prepare offers and orders.
- * Business rules (tax-id validation, contact updates) live here. The tax id (NIP) is optional —
- * a private individual may have none — but when present it must be a valid 10-digit number.
- */
 public class Customer {
 
     private final CustomerId id;
@@ -29,12 +22,12 @@ public class Customer {
         }
         this.id = id;
         this.fullName = fullName;
-        this.nip = nip; // optional — an individual may have no tax id
+        this.nip = nip; 
         this.address = address;
         this.contact = contact;
     }
 
-    /** Updates the mutable contact details, keeping the identity intact. */
+    
     public void updateContactDetails(ContactData contact) {
         if (contact == null) {
             throw new IllegalArgumentException("contact must not be null.");
@@ -42,7 +35,7 @@ public class Customer {
         this.contact = contact;
     }
 
-    /** Updates both the address and the contact details. */
+    
     public void updateContactDetails(Address address, ContactData contact) {
         if (contact == null) {
             throw new IllegalArgumentException("contact must not be null.");
@@ -51,14 +44,14 @@ public class Customer {
         this.contact = contact;
     }
 
-    /** Validates the tax identifier (NIP): exactly 10 digits when present. */
+    
     public void verifyTaxId() {
         if (this.nip == null || !this.nip.matches("\\d{10}")) {
             throw new InvalidTaxIdException("Provided NIP format is invalid: " + this.nip);
         }
     }
 
-    // ----- JavaBean-style getters -----
+    
 
     public CustomerId getId() {
         return id;
@@ -80,7 +73,7 @@ public class Customer {
         return contact;
     }
 
-    // ----- short, record-style accessors (tests) -----
+    
 
     public CustomerId id() {
         return id;

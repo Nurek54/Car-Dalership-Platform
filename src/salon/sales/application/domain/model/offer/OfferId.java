@@ -2,9 +2,6 @@ package salon.sales.application.domain.model.offer;
 
 import java.util.UUID;
 
-/**
- * Value Object (Figure 23) — the identity of an Offer aggregate.
- */
 public record OfferId(String value) {
 
     public OfferId {

@@ -9,14 +9,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-/**
- * OUTBOUND ADAPTER (persistence) – implementation of the {@link ProductCatalogRepository} port
- * („CatalogDatabaseRepository” → DBAdapter z diagramu).
- *
- * The adapter translates the domain model into the persistent-storage model and delegates to
- * {@link DbAdapter}. It contains no business logic. The Dependency Inversion Principle:
- * the port (an abstraction in the application layer) is implemented here by a detail.
- */
 @Repository
 public class CatalogDatabaseRepository implements ProductCatalogRepository {
 

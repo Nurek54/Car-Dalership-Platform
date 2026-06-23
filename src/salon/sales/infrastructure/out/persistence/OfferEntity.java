@@ -12,7 +12,6 @@ import salon.sales.application.domain.model.offer.OfferState;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** JPA persistence model for the {@link salon.sales.application.domain.model.offer.Offer} aggregate. */
 @Entity
 @Table(name = "sales_offer")
 public class OfferEntity {

@@ -12,11 +12,6 @@ import salon.sales.application.domain.exception.ExternalServiceUnavailableExcept
 
 import java.util.Map;
 
-/**
- * OUTBOUND ADAPTER (ACL) — HTTP integration with the Billing and Settlement Context.
- * Requests proforma invoices and closes balances; a configured 2s timeout protects Sales from a
- * hung accounting system (mapped to {@link ExternalServiceUnavailableException}).
- */
 @Component
 public class BillingExternalApiAdapter {
 
@@ -29,7 +24,7 @@ public class BillingExternalApiAdapter {
         this.restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
     }
 
-    /** Requests a proforma invoice for the declared bank-transfer amount. */
+    
     public void requestProformaInvoice(String orderId, Money amount) {
         String formattedAmount = amount.amount().setScale(2).toPlainString();
         try {
@@ -44,7 +39,7 @@ public class BillingExternalApiAdapter {
         }
     }
 
-    /** Closes the order's balance and triggers the final VAT invoice. */
+    
     public void closeOrderBalance(String orderId) {
         try {
             this.restClient.put()

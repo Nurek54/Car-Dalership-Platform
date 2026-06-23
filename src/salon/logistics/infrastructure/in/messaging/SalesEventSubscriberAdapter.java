@@ -3,13 +3,6 @@ package salon.logistics.infrastructure.in.messaging;
 import salon.logistics.application.port.in.ReleaseVehicle;
 import salon.logistics.application.port.out.CatalogIntegration;
 
-/**
- * INBOUND ADAPTER (Figure 37: EventListener) – subscriber of the Sales and CRM Context events/commands.
- *
- * Handles two paths:
- *  - OrderPlaced -> linking the order with its specification in the local copy of the Catalog data,
- *  - ReleaseVehicle (command) -> UC-INW-06 (removing the vehicle from stock after handover).
- */
 public class SalesEventSubscriberAdapter {
 
     private final CatalogIntegration catalogIntegration;
@@ -41,7 +34,7 @@ public class SalesEventSubscriberAdapter {
         this.releaseVehicle.releaseVehicle(command.orderId());
     }
 
-    /** Local (ACL) representations of messages from the Sales and CRM Context. */
+    
     public record OrderPlaced(String orderId, String specificationId) {
     }
 

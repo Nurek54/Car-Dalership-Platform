@@ -11,19 +11,9 @@ import salon.sales.application.domain.model.customer.CustomerId;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * AGGREGATE ROOT (Figure 23) — the proforma Offer.
- *
- * Owns the pricing decision (base/final price, discount policy) and the offer lifecycle
- * (DRAFT -> PUBLISHED -> ACCEPTED/REJECTED). The specification id and base price come from the
- * Catalog's SpecificationCompleted event (UC-CRM-02); the dealership discount policy caps the discount.
- *
- * Exposes both JavaBean-style getters (getState()) used by the application services and short,
- * record-style accessors (state()) used by the tests.
- */
 public class Offer extends AbstractAggregateRoot {
 
-    /** Dealership policy: a single salesperson may grant at most this discount without approval. */
+    
     private static final BigDecimal MAX_DISCOUNT_PERCENT = BigDecimal.valueOf(20);
 
     private final OfferId id;
@@ -33,7 +23,7 @@ public class Offer extends AbstractAggregateRoot {
     private Money finalPrice;
     private OfferState state;
     private LocalDate validityDate;
-    private Long version; // optimistic-locking version mirrored from the persistence layer
+    private Long version; 
 
     public Offer(OfferId id, CustomerId customerId, SpecificationId specificationId, Money basePrice) {
         if (id == null) {
@@ -48,7 +38,7 @@ public class Offer extends AbstractAggregateRoot {
         if (basePrice == null) {
             throw new IllegalArgumentException("basePrice must not be null.");
         }
-        // A basic business rule: an offer must have a strictly positive price.
+        
         if (basePrice.amount().signum() <= 0) {
             throw new InvalidOfferDataException("Offer price must be strictly positive");
         }
@@ -61,7 +51,7 @@ public class Offer extends AbstractAggregateRoot {
         this.validityDate = LocalDate.now().plusDays(14);
     }
 
-    /** Applies a percentage discount to the base price; bounded by the dealership policy. */
+    
     public void applyDiscount(Discount discount) {
         if (discount == null) {
             throw new IllegalArgumentException("discount must not be null.");
@@ -80,7 +70,7 @@ public class Offer extends AbstractAggregateRoot {
         this.finalPrice = Money.of(this.basePrice.amount().multiply(factor), this.basePrice.currency());
     }
 
-    /** UC-CRM-02: publishes the proforma offer to the customer. */
+    
     public void publishOffer() {
         if (this.state != OfferState.DRAFT) {
             throw new InvalidOfferStateException(
@@ -89,7 +79,7 @@ public class Offer extends AbstractAggregateRoot {
         this.state = OfferState.PUBLISHED;
     }
 
-    /** UC-CRM-03: the customer accepts a still-valid published offer. */
+    
     public void accept() {
         if (this.state == OfferState.PUBLISHED) {
             if (this.validityDate.isBefore(LocalDate.now())) {
@@ -98,7 +88,7 @@ public class Offer extends AbstractAggregateRoot {
             this.state = OfferState.ACCEPTED;
             return;
         }
-        // Terminal states are immutable — accepting them is a closed chapter.
+        
         if (this.state == OfferState.REJECTED) {
             throw new OfferImmutableException(
                     "Cannot accept an offer that is already REJECTED. Cannot change state of a REJECTED offer.");
@@ -107,12 +97,12 @@ public class Offer extends AbstractAggregateRoot {
             throw new OfferImmutableException(
                     "Cannot accept an offer that is already ACCEPTED. Cannot change state of an ACCEPTED offer.");
         }
-        // state == DRAFT
+        
         throw new InvalidOfferStateException(
                 "Only PUBLISHED offers can be accepted (current: " + this.state + ").");
     }
 
-    /** UC-CRM-03 / A1: the customer declines the offer. */
+    
     public void reject() {
         if (this.state != OfferState.DRAFT && this.state != OfferState.PUBLISHED) {
             throw new OfferImmutableException(
@@ -121,7 +111,7 @@ public class Offer extends AbstractAggregateRoot {
         this.state = OfferState.REJECTED;
     }
 
-    // ----- JavaBean-style getters (application services) -----
+    
 
     public OfferId getId() {
         return id;
@@ -151,7 +141,7 @@ public class Offer extends AbstractAggregateRoot {
         return validityDate;
     }
 
-    // ----- short, record-style accessors (tests) -----
+    
 
     public OfferId id() {
         return id;
@@ -181,11 +171,11 @@ public class Offer extends AbstractAggregateRoot {
         return validityDate;
     }
 
-    /** Read-only snapshot of the offer for cross-aggregate creation (OrderFactory). */
+    
     public OfferSnapshot toSnapshot() {
         return new OfferSnapshot(this.id, this.customerId, this.specificationId, this.finalPrice);
     }
-    // ----- persistence support (optimistic locking + reconstitution) -----
+    
 
     public Long getVersion() {
         return version;
@@ -195,7 +185,7 @@ public class Offer extends AbstractAggregateRoot {
         this.version = version;
     }
 
-    /** Rebuilds an Offer from persisted state (used by the database adapter on load). */
+    
     public static Offer reconstitute(OfferId id, CustomerId customerId, SpecificationId specificationId,
                                      Money basePrice, Money finalPrice, OfferState state,
                                      LocalDate validityDate, Long version) {

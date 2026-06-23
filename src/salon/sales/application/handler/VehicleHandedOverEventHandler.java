@@ -4,10 +4,6 @@ import salon.sales.application.domain.event.VehicleHandedOverEvent;
 import salon.sales.application.port.out.AfterSalesIntegrationPort;
 import salon.sales.application.port.out.BillingIntegration;
 
-/**
- * EVENT HANDLER (Figure 22) — reacts to {@link VehicleHandedOverEvent} (UC-CRM-05):
- * tells Billing to close the balance and After-sales to open the service window.
- */
 public class VehicleHandedOverEventHandler {
 
     private final BillingIntegration billingPort;
@@ -19,7 +15,7 @@ public class VehicleHandedOverEventHandler {
     }
 
     public void handle(VehicleHandedOverEvent event) {
-        // We instruct the Billing context to close the balance
+        
         this.billingPort.closeOrderBalance(event.orderId());
         this.afterSalesPort.openServiceWindow(event.orderId());
     }

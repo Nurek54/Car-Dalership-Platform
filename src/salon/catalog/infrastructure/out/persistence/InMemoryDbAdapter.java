@@ -8,15 +8,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * A concrete implementation of the technical port {@link DbAdapter} — persistent storage
- * in memory (HashMap-like behavior, per the contract description).
- *
- * This is the only "database driver" required for the Catalog context to run standalone
- * (the repository adapters delegate here). In a production environment this bean can be
- * replaced with a JDBC/JPA/NoSQL variant without changes in the application layer or the domain —
- * that is the point of dependency inversion (the port in the application, the detail in the infrastructure).
- */
 @Repository
 public class InMemoryDbAdapter implements DbAdapter {
 

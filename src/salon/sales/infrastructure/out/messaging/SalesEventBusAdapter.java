@@ -20,12 +20,6 @@ import salon.sales.application.domain.event.VehicleReadyForHandoverEvent;
 import java.util.List;
 import java.util.Map;
 
-/**
- * OUTBOUND ADAPTER (Figure 22: EventBusAdapter) — realizes the {@link EventPublisher} outbound port
- * over RabbitMQ. Each domain event is converted to JSON and sent to the topic exchange with a
- * stable routing key; an infrastructure error (broker down) is propagated so the application service
- * can roll back the transaction.
- */
 @Component
 @Primary
 public class SalesEventBusAdapter implements EventPublisher {

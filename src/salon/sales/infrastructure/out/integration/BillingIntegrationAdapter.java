@@ -4,11 +4,6 @@ import org.springframework.stereotype.Component;
 import salon.common.model.Money;
 import salon.sales.application.port.out.BillingIntegration;
 
-/**
- * OUTBOUND ADAPTER (ACL, Figure 22) — log-only integration with the Billing and Settlement Context
- * (used by the POJO/demo wiring). In a distributed setup this maps onto Billing command messages /
- * REST endpoints; here each operation is simulated by logging.
- */
 @Component
 public class BillingIntegrationAdapter implements BillingIntegration {
 

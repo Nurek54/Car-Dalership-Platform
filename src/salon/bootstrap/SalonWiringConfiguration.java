@@ -16,6 +16,9 @@ import salon.billing.application.domain.model.settlement.SettlementFactory;
 import salon.billing.application.domain.service.InvoiceCalculationService;
 import salon.billing.infrastructure.out.integration.SalesCrmIntegrationAdapter;
 import salon.billing.infrastructure.in.messaging.SettlementEventListener;
+import salon.billing.infrastructure.out.mock.InMemoryDocumentRepository;
+import salon.billing.infrastructure.out.mock.InMemorySettlementRepository;
+import salon.billing.infrastructure.out.mock.InProcessEventPublisherAdapter;
 import salon.billing.infrastructure.out.mock.NotificationAdapter;
 import salon.billing.infrastructure.out.mock.PdfGeneratorMockAdapter;
 import salon.billing.infrastructure.in.scheduling.PaymentReminderCronJobAdapter;
@@ -38,14 +41,49 @@ import salon.logistics.infrastructure.out.mock.InMemoryInventoryRepository;
 import salon.logistics.infrastructure.out.mock.InMemorySpecificationReadModelAdapter;
 
 import salon.sales.api.SalesQueryFacade;
-import salon.sales.application.service.SalesService;
+import salon.sales.application.port.out.CustomerDatabaseRepository;
+import salon.sales.application.port.out.OfferDatabaseRepository;
+import salon.sales.application.port.out.OrderDatabaseRepository;
+import salon.sales.application.service.SalesQueryService;
+import salon.sales.infrastructure.out.persistence.InMemoryCustomerRepository;
+import salon.sales.infrastructure.out.persistence.InMemoryOfferRepository;
+import salon.sales.infrastructure.out.persistence.InMemoryOrderRepository;
 
 import salon.common.application.EventPublisher;
 
 @Configuration
 public class SalonWiringConfiguration {
 
-    
+    // --- Common ---
+
+    @Bean
+    public EventPublisher eventPublisher() {
+        return new InProcessEventPublisherAdapter();
+    }
+
+    // --- Sales ---
+
+    @Bean
+    public CustomerDatabaseRepository customerRepository() {
+        return new InMemoryCustomerRepository();
+    }
+
+    @Bean
+    public OfferDatabaseRepository offerRepository() {
+        return new InMemoryOfferRepository();
+    }
+
+    @Bean
+    public OrderDatabaseRepository orderRepository() {
+        return new InMemoryOrderRepository();
+    }
+
+    @Bean
+    public SalesQueryFacade salesQueryFacade(OrderDatabaseRepository orderRepository,
+                                              OfferDatabaseRepository offerRepository,
+                                              CustomerDatabaseRepository customerRepository) {
+        return new SalesQueryService(orderRepository, offerRepository, customerRepository);
+    }
 
     @Bean
     public salon.sales.application.domain.model.offer.OfferFactory offerFactory() {
@@ -57,20 +95,22 @@ public class SalonWiringConfiguration {
         return new salon.sales.application.domain.model.order.OrderFactory();
     }
 
-    
+    // --- Logistics ---
 
     @Bean
     public VehicleDatabaseRepository inventoryRepository() {
         return new InMemoryInventoryRepository();
     }
 
-    
+    @Bean
+    public CatalogIntegration catalogIntegration() {
+        return new InMemorySpecificationReadModelAdapter();
+    }
+
     @Bean
     public ImporterACL importerAcl() {
         return new FactoryIntegrationMockAdapter();
     }
-
-    
 
     @Bean
     public InventoryManagementService inventoryManagementAppService(
@@ -82,7 +122,32 @@ public class SalonWiringConfiguration {
                 catalogIntegration, importerAcl, eventPublisherPort);
     }
 
-    
+    // --- Billing ---
+
+    @Bean
+    public SettlementDatabaseRepository settlementRepository() {
+        return new InMemorySettlementRepository();
+    }
+
+    @Bean
+    public DocumentDatabaseRepository documentRepository() {
+        return new InMemoryDocumentRepository();
+    }
+
+    @Bean
+    public NotificationGeneration notificationPort() {
+        return new NotificationAdapter();
+    }
+
+    @Bean
+    public PdfGeneration pdfGeneratorPort() {
+        return new PdfGeneratorMockAdapter();
+    }
+
+    @Bean
+    public SettlementFactory settlementFactory() {
+        return new SettlementFactory();
+    }
 
     @Bean
     public PaymentProcessService settlementAppService(SettlementDatabaseRepository settlementRepository,
@@ -108,12 +173,27 @@ public class SalonWiringConfiguration {
     }
 
     @Bean
+    public SalesIntegration crmIntegrationPort(SalesQueryFacade salesQueryFacade) {
+        return new SalesCrmIntegrationAdapter(salesQueryFacade);
+    }
+
+    @Bean
     public PaymentReminderCronJobAdapter paymentReminderCronJobAdapter(
             PaymentProcessService settlementAppService) {
         return new PaymentReminderCronJobAdapter(settlementAppService);
     }
 
-    
+    // --- Financing ---
+
+    @Bean
+    public FinancingApplicationDatabaseRepository financingRepository() {
+        return new InMemoryFinancingRepository();
+    }
+
+    @Bean
+    public BankIntegrationAcl bankIntegrationAclPort() {
+        return new BankIntegrationMockAdapter();
+    }
 
     @Bean
     public salon.financing.application.port.out.SalesIntegration financingCrmIntegrationPort(
@@ -130,7 +210,13 @@ public class SalonWiringConfiguration {
                 financingCrmIntegrationPort, bankIntegrationAclPort, eventPublisherPort);
     }
 
-    
+    @Bean
+    public FinancingEventListener financingEventListener(ProcessFinancingService financingAppService) {
+        return new FinancingEventListener(financingAppService);
+    }
+
+    // --- Event subscribers ---
+
     @Bean
     public salon.logistics.infrastructure.in.messaging.SalesEventSubscriberAdapter
     logisticsSalesEventSubscriberAdapter(CatalogIntegration catalogIntegration,
@@ -139,7 +225,6 @@ public class SalonWiringConfiguration {
                 catalogIntegration, inventoryManagementAppService);
     }
 
-    
     @Bean
     public salon.logistics.infrastructure.in.messaging.CatalogEventSubscriberAdapter
     logisticsCatalogEventSubscriberAdapter(CatalogIntegration catalogIntegration) {

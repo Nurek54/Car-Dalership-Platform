@@ -8,13 +8,9 @@ import salon.sales.application.domain.exception.OfferExpiredException;
 import salon.sales.application.domain.exception.OfferImmutableException;
 import salon.sales.application.domain.model.customer.CustomerId;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class Offer extends AbstractAggregateRoot {
-
-    
-    private static final BigDecimal MAX_DISCOUNT_PERCENT = BigDecimal.valueOf(20);
 
     private final OfferId id;
     private final CustomerId customerId;
@@ -51,26 +47,6 @@ public class Offer extends AbstractAggregateRoot {
         this.validityDate = LocalDate.now().plusDays(14);
     }
 
-    
-    public void applyDiscount(Discount discount) {
-        if (discount == null) {
-            throw new IllegalArgumentException("discount must not be null.");
-        }
-        if (this.state != OfferState.DRAFT) {
-            throw new InvalidOfferStateException(
-                    "A discount can be applied only to a DRAFT offer (current: " + this.state + ").");
-        }
-        if (discount.percentage().compareTo(MAX_DISCOUNT_PERCENT) > 0) {
-            throw new IllegalArgumentException(
-                    "Discount " + discount.percentage() + "% exceeds the dealership policy of "
-                            + MAX_DISCOUNT_PERCENT + "%.");
-        }
-        BigDecimal factor = BigDecimal.ONE.subtract(
-                discount.percentage().divide(BigDecimal.valueOf(100)));
-        this.finalPrice = Money.of(this.basePrice.amount().multiply(factor), this.basePrice.currency());
-    }
-
-    
     public void publishOffer() {
         if (this.state != OfferState.DRAFT) {
             throw new InvalidOfferStateException(

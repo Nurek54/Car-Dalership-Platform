@@ -64,13 +64,13 @@ public class SalonDemo {
                 new CatalogEventSubscriberAdapter.SpecificationCompleted(
                         "CUST-1", "SPEC-1", new BigDecimal("100000"), "PLN"));
         Offer offer = offerRepo.findAll().get(0);
-        System.out.println("Offer " + offer.getId().value() + ": " + offer.getState());
+        System.out.println("Offer " + offer.id().value() + ": " + offer.state());
 
         System.out.println("\n=== UC-CRM-03: offer acceptance and order creation (bank transfer) ===");
         String orderId = sales.acceptOffer(
-                new AcceptOfferCommand(offer.getId().value(), PaymentMethod.BANK_TRANSFER));
+                new AcceptOfferCommand(offer.id().value(), PaymentMethod.BANK_TRANSFER));
         System.out.println("Order " + orderId + ": "
-                + orderRepo.findById(new OrderId(orderId)).get().getState());
+                + orderRepo.findById(new OrderId(orderId)).get().state());
 
         System.out.println("\n=== UC-CRM-03 (part 2): deposit registered by Billing -> activate order ===");
         billingSubscriber.handleAdvancePaymentRegistered(
@@ -79,13 +79,13 @@ public class SalonDemo {
         System.out.println("\n=== UC-CRM-04: vehicle ready for handover (from Inventory) -> schedule ===");
         inventorySubscriber.handleVehicleReadyForHandover(
                 new InventoryEventSubscriberAdapter.VehicleReadyForHandover(orderId));
-        System.out.println("Order: " + orderRepo.findById(new OrderId(orderId)).get().getState());
+        System.out.println("Order: " + orderRepo.findById(new OrderId(orderId)).get().state());
         sales.scheduleHandover(new ScheduleHandoverCommand(orderId, LocalDate.now().plusDays(3)));
-        System.out.println("Order: " + orderRepo.findById(new OrderId(orderId)).get().getState());
+        System.out.println("Order: " + orderRepo.findById(new OrderId(orderId)).get().state());
 
         System.out.println("\n=== UC-CRM-05: registering the physical vehicle handover ===");
         sales.releaseVehicle(orderId);
-        System.out.println("Order: " + orderRepo.findById(new OrderId(orderId)).get().getState());
+        System.out.println("Order: " + orderRepo.findById(new OrderId(orderId)).get().state());
 
         System.out.println("\n[OK] Sales & CRM long track (UC-CRM-01..05) completed.");
     }

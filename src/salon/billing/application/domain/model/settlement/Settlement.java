@@ -70,7 +70,7 @@ public class Settlement extends AbstractAggregateRoot {
 
     
     private void recalculateBalance() {
-        boolean fullyPaid = outstandingBalance().getAmount().signum() <= 0;
+        boolean fullyPaid = outstandingBalance().amount().signum() <= 0;
         if (fullyPaid) {
             if (this.status != SettlementStatus.SETTLED) {
                 this.status = SettlementStatus.SETTLED;

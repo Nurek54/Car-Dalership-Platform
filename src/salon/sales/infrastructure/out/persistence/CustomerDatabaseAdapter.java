@@ -16,7 +16,7 @@ public class CustomerDatabaseAdapter implements CustomerDatabaseRepository {
 
     @Override
     public void save(Customer customer) {
-        this.byId.put(customer.getId().value(), customer);
+        this.byId.put(customer.id().value(), customer);
     }
 
     @Override

@@ -25,11 +25,6 @@ public record Money(BigDecimal amount, String currency) {
         return new Money(BigDecimal.valueOf(amount), currency);
     }
 
-    
-    public BigDecimal getAmount() {
-        return this.amount;
-    }
-
     public Money add(Money other) {
         checkSameCurrency(other);
         return new Money(this.amount.add(other.amount), this.currency);

@@ -23,7 +23,7 @@ class InvoiceCalculationServiceTest {
         Settlement settlement = factory.createNew(new OrderId("ORD-1"), Money.of(100000, "PLN"));
 
         // Money (rekord) porównuje BigDecimal ze skalą, więc kwotę sprawdzamy numerycznie (10000.00 == 10000)
-        assertThat(service.calculateAdvanceAmount(settlement).getAmount()).isEqualByComparingTo(new BigDecimal("10000"));
+        assertThat(service.calculateAdvanceAmount(settlement).amount()).isEqualByComparingTo(new BigDecimal("10000"));
         assertThat(service.calculateAdvanceAmount(settlement).currency()).isEqualTo("PLN");
     }
 

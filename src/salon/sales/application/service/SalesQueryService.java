@@ -42,10 +42,10 @@ public class SalesQueryService implements SalesQueryFacade {
             throw new IllegalArgumentException("orderId must not be null.");
         }
         Offer offer = sourceOfferOf(orderId);
-        Customer customer = this.customerRepository.findById(offer.getCustomerId())
+        Customer customer = this.customerRepository.findById(offer.customerId())
                 .orElseThrow(() -> new IllegalStateException(
-                        "No customer for offer " + offer.getId()));
-        return new CustomerSnapshotDto(customer.getFullName(), customer.getNip());
+                        "No customer for offer " + offer.id()));
+        return new CustomerSnapshotDto(customer.fullName(), customer.nip());
     }
 
     @Override
@@ -54,14 +54,14 @@ public class SalesQueryService implements SalesQueryFacade {
             throw new IllegalArgumentException("orderId must not be null.");
         }
         Offer offer = sourceOfferOf(orderId);
-        return new OfferSnapshotDto(offer.getId().value(), offer.getFinalPrice());
+        return new OfferSnapshotDto(offer.id().value(), offer.finalPrice());
     }
 
     private Offer sourceOfferOf(OrderId orderId) {
         Order order = this.orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalStateException("No order " + orderId.value()));
-        return this.offerRepository.findById(order.getSourceOfferId())
+        return this.offerRepository.findById(order.sourceOfferId())
                 .orElseThrow(() -> new IllegalStateException(
-                        "No source offer " + order.getSourceOfferId() + " for order " + orderId.value()));
+                        "No source offer " + order.sourceOfferId() + " for order " + orderId.value()));
     }
 }

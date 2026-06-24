@@ -17,6 +17,6 @@ public class NotificationAdapter implements NotificationGeneration {
     @Override
     public void notifyPaymentReminder(OrderId orderId, Money outstanding) {
         System.out.println("[NotificationAdapter] Reminder for order " + orderId.value()
-                + ": do zaplaty " + outstanding.getAmount().toPlainString() + " " + outstanding.currency() + ".");
+                + ": do zaplaty " + outstanding.amount().toPlainString() + " " + outstanding.currency() + ".");
     }
 }

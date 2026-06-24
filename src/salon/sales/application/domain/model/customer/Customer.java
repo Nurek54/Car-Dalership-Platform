@@ -53,28 +53,6 @@ public class Customer {
 
     
 
-    public CustomerId getId() {
-        return id;
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public String getNip() {
-        return nip;
-    }
-
-    public Address getAddress() {
-        return address;
-    }
-
-    public ContactData getContact() {
-        return contact;
-    }
-
-    
-
     public CustomerId id() {
         return id;
     }

@@ -43,12 +43,12 @@ public class OrderDatabaseAdapter implements OrderDatabaseRepository {
     private OrderEntity toEntity(Order order) {
         Money deposit = order.requiredDeposit();
         return new OrderEntity(
-                order.getId().value(),
-                order.getSourceOfferId().value(),
+                order.id().value(),
+                order.sourceOfferId().value(),
                 deposit != null ? deposit.amount() : null,
                 deposit != null ? deposit.currency() : null,
-                order.getPaymentMethod(), order.paymentStatus(), order.getHandoverDate(),
-                order.getState(), order.getVersion());
+                order.paymentMethod(), order.paymentStatus(), order.handoverDate(),
+                order.state(), order.version());
     }
 
     private Order toDomain(OrderEntity e) {

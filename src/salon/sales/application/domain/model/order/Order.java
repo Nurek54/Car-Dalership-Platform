@@ -144,28 +144,6 @@ public class Order extends AbstractAggregateRoot {
 
     
 
-    public OrderId getId() {
-        return id;
-    }
-
-    public OfferId getSourceOfferId() {
-        return sourceOfferId;
-    }
-
-    public PaymentMethod getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public LocalDate getHandoverDate() {
-        return handoverDate;
-    }
-
-    public OrderState getState() {
-        return state;
-    }
-
-    
-
     public OrderId id() {
         return id;
     }
@@ -199,12 +177,8 @@ public class Order extends AbstractAggregateRoot {
     }
     
 
-    public Long getVersion() {
+    public Long version() {
         return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
     }
 
     

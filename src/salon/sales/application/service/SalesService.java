@@ -105,8 +105,8 @@ public class SalesService implements
                 new CustomerId(customerId), new SpecificationId(specificationId), basePrice);
         offer.publishOffer();
         this.offerRepository.save(offer);
-        this.eventPublisher.publish(new OfferCreatedEvent(offer.getId().value(), customerId, specificationId));
-        return offer.getId().value();
+        this.eventPublisher.publish(new OfferCreatedEvent(offer.id().value(), customerId, specificationId));
+        return offer.id().value();
     }
 
     
@@ -118,8 +118,8 @@ public class SalesService implements
         Offer offer = this.offerFactory.createOffer(new CustomerId(customerId), specId, price);
         offer.publishOffer();
         this.offerRepository.save(offer);
-        this.eventPublisher.publish(new OfferCreatedEvent(offer.getId().value(), customerId, specificationId));
-        return offer.getId().value();
+        this.eventPublisher.publish(new OfferCreatedEvent(offer.id().value(), customerId, specificationId));
+        return offer.id().value();
     }
 
     
@@ -136,12 +136,12 @@ public class SalesService implements
         order.declarePaymentMethod(command.paymentMethod());
         this.orderRepository.save(order);
 
-        String orderId = order.getId().value();
-        this.billingIntegration.openSettlement(orderId, offer.getFinalPrice());
+        String orderId = order.id().value();
+        this.billingIntegration.openSettlement(orderId, offer.finalPrice());
 
         List<DomainEvent> events = new ArrayList<>();
-        events.add(new OrderPlacedEvent(orderId, offer.getId().value(),
-                offer.getSpecificationId().value(), offer.getCustomerId().value()));
+        events.add(new OrderPlacedEvent(orderId, offer.id().value(),
+                offer.specificationId().value(), offer.customerId().value()));
         events.addAll(order.pullDomainEvents());
         this.eventPublisher.publishAll(events);
         return orderId;
@@ -158,11 +158,11 @@ public class SalesService implements
         this.orderRepository.save(order);                 
 
         List<DomainEvent> events = new ArrayList<>();
-        events.add(new OrderPlacedEvent(order.getId().value(), offer.getId().value(),
-                offer.getSpecificationId().value(), offer.getCustomerId().value()));
+        events.add(new OrderPlacedEvent(order.id().value(), offer.id().value(),
+                offer.specificationId().value(), offer.customerId().value()));
         events.addAll(order.pullDomainEvents());
         this.eventPublisher.publishAll(events);
-        return order.getId().value();
+        return order.id().value();
     }
 
     
@@ -249,7 +249,7 @@ public class SalesService implements
     public void expireOutdatedOffers() {
         LocalDate today = LocalDate.now();
         for (Offer offer : this.offerRepository.findAll()) {
-            if (offer.getState() == OfferState.PUBLISHED && offer.getValidityDate().isBefore(today)) {
+            if (offer.state() == OfferState.PUBLISHED && offer.validityDate().isBefore(today)) {
                 offer.reject();
                 this.offerRepository.save(offer);
             }

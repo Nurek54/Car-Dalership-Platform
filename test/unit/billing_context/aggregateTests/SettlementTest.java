@@ -32,7 +32,7 @@ class SettlementTest {
 
         assertThat(settlement.status()).isEqualTo(SettlementStatus.PARTIAL_PAYMENT);
         assertThat(settlement.outstandingBalance()).isEqualTo(Money.of(60000, "PLN"));
-        assertThat(settlement.getDomainEvents()).hasAtLeastOneElementOfType(PaymentRegisteredEvent.class);
+        assertThat(settlement.domainEvents()).hasAtLeastOneElementOfType(PaymentRegisteredEvent.class);
     }
 
     @Test
@@ -44,7 +44,7 @@ class SettlementTest {
 
         assertThat(settlement.status()).isEqualTo(SettlementStatus.SETTLED);
         // Kontekst emituje PaymentRegistered i SettlementCompleted
-        assertThat(settlement.getDomainEvents())
+        assertThat(settlement.domainEvents())
                 .hasAtLeastOneElementOfType(PaymentRegisteredEvent.class)
                 .hasAtLeastOneElementOfType(SettlementCompletedEvent.class);
     }
@@ -56,10 +56,10 @@ class SettlementTest {
         // UC-FIR-01: zażądano zadatku, a następnie klient wpłacił pierwszą ratę
         settlement.requestAdvancePayment();
         assertThat(settlement.isAdvanceRequested()).isTrue();
-        assertThat(settlement.getDomainEvents()).hasAtLeastOneElementOfType(AdvancePaymentRequestedEvent.class);
+        assertThat(settlement.domainEvents()).hasAtLeastOneElementOfType(AdvancePaymentRequestedEvent.class);
 
         settlement.registerPayment("TX-1", Money.of(10000, "PLN"));
-        assertThat(settlement.getDomainEvents()).hasAtLeastOneElementOfType(AdvancePaymentRegisteredEvent.class);
+        assertThat(settlement.domainEvents()).hasAtLeastOneElementOfType(AdvancePaymentRegisteredEvent.class);
     }
 
     @Test

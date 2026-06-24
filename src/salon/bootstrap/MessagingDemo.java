@@ -102,7 +102,7 @@ public class MessagingDemo {
             
             Thread.sleep(1500);
             System.out.println(">> Order state after the event passed through the queue: "
-                    + orderRepo.findById(new OrderId(orderId)).get().getState());
+                    + orderRepo.findById(new OrderId(orderId)).get().state());
         }
     }
 }

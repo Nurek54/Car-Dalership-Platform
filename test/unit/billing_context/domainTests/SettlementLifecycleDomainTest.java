@@ -28,6 +28,6 @@ class SettlementLifecycleDomainTest {
         settlement.registerPayment("TX-2", Money.of(70000, "PLN"));
         assertThat(settlement.status()).isEqualTo(SettlementStatus.SETTLED);
         assertThat(settlement.outstandingBalance()).isEqualTo(Money.of(0, "PLN"));
-        assertThat(settlement.getDomainEvents()).hasAtLeastOneElementOfType(SettlementCompletedEvent.class);
+        assertThat(settlement.domainEvents()).hasAtLeastOneElementOfType(SettlementCompletedEvent.class);
     }
 }

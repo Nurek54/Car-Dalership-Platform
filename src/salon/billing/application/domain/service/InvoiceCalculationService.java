@@ -16,7 +16,7 @@ public class InvoiceCalculationService {
             throw new IllegalArgumentException("settlement must not be null.");
         }
         Money total = settlement.totalAmount();
-        return Money.of(total.getAmount().multiply(ADVANCE_RATE), total.currency());
+        return Money.of(total.amount().multiply(ADVANCE_RATE), total.currency());
     }
 
     

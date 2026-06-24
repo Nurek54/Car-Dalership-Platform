@@ -38,12 +38,12 @@ public class OfferDatabaseAdapter implements OfferDatabaseRepository {
 
     private OfferEntity toEntity(Offer offer) {
         return new OfferEntity(
-                offer.getId().value(),
-                offer.getCustomerId().value(),
-                offer.getSpecificationId().value(),
-                offer.getBasePrice().amount(), offer.getBasePrice().currency(),
-                offer.getFinalPrice().amount(), offer.getFinalPrice().currency(),
-                offer.getState(), offer.getValidityDate(), offer.getVersion());
+                offer.id().value(),
+                offer.customerId().value(),
+                offer.specificationId().value(),
+                offer.basePrice().amount(), offer.basePrice().currency(),
+                offer.finalPrice().amount(), offer.finalPrice().currency(),
+                offer.state(), offer.validityDate(), offer.version());
     }
 
     private Offer toDomain(OfferEntity e) {

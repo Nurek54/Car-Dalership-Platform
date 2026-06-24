@@ -36,7 +36,7 @@ class ReleaseVehicleDomainTest {
         // Agregat przechodzi w finalny, niemutowalny stan COMPLETED
         assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
         // Generowane jest zdarzenie zamykające
-        assertThat(order.getDomainEvents()).hasAtLeastOneElementOfType(OrderCompletedEvent.class);
+        assertThat(order.domainEvents()).hasAtLeastOneElementOfType(OrderCompletedEvent.class);
     }
 
     @Test

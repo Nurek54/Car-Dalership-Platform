@@ -113,36 +113,6 @@ public class Offer extends AbstractAggregateRoot {
 
     
 
-    public OfferId getId() {
-        return id;
-    }
-
-    public CustomerId getCustomerId() {
-        return customerId;
-    }
-
-    public SpecificationId getSpecificationId() {
-        return specificationId;
-    }
-
-    public Money getBasePrice() {
-        return basePrice;
-    }
-
-    public Money getFinalPrice() {
-        return finalPrice;
-    }
-
-    public OfferState getState() {
-        return state;
-    }
-
-    public LocalDate getValidityDate() {
-        return validityDate;
-    }
-
-    
-
     public OfferId id() {
         return id;
     }
@@ -177,12 +147,8 @@ public class Offer extends AbstractAggregateRoot {
     }
     
 
-    public Long getVersion() {
+    public Long version() {
         return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
     }
 
     

@@ -76,7 +76,7 @@ public class AccountingDocument {
                 + "Order: " + this.orderId.value() + "\n"
                 + "Sprzedawca: " + this.seller.name() + " (NIP " + this.seller.nip() + ")\n"
                 + "Buyer: " + this.buyer.name() + " (tax ID " + this.buyer.nip() + ")\n"
-                + "Kwota: " + this.totalAmount.getAmount().toPlainString() + " " + this.totalAmount.currency() + "\n"
+                + "Kwota: " + this.totalAmount.amount().toPlainString() + " " + this.totalAmount.currency() + "\n"
                 + "Issue date: " + this.issueDate + "\n"
                 + "Due date: " + this.dueDate + "\n"
                 + "Issued by: " + this.authorizedIssuer + "\n";

@@ -37,7 +37,7 @@ class ScheduleHandoverDomainTest {
         assertThat(order.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);
 
         // Wygenerowano wewnętrzne zdarzenie gotowości
-        assertThat(order.getDomainEvents()).hasAtLeastOneElementOfType(OrderReadyForHandoverEvent.class);
+        assertThat(order.domainEvents()).hasAtLeastOneElementOfType(OrderReadyForHandoverEvent.class);
     }
 
     @Test

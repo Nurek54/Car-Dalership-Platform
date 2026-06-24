@@ -17,7 +17,7 @@ public class InMemoryOrderRepository implements OrderDatabaseRepository {
 
     @Override
     public void save(Order order) {
-        this.byId.put(order.getId().value(), order);
+        this.byId.put(order.id().value(), order);
     }
 
     @Override
@@ -28,7 +28,7 @@ public class InMemoryOrderRepository implements OrderDatabaseRepository {
     @Override
     public Optional<Order> findByOfferId(OfferId offerId) {
         return this.byId.values().stream()
-                .filter(o -> o.getSourceOfferId().equals(offerId))
+                .filter(o -> o.sourceOfferId().equals(offerId))
                 .findFirst();
     }
 

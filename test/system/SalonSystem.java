@@ -137,7 +137,7 @@ final class SalonSystem {
 
     String salesOrderState(String orderId) {
         return salesOrderRepo.findById(new salon.common.model.OrderId(orderId))
-                .map(o -> o.getState().name()).orElse("NONE");
+                .map(o -> o.state().name()).orElse("NONE");
     }
 
     // ===================================================================================

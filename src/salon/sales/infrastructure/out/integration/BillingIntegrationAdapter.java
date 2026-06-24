@@ -10,13 +10,13 @@ public class BillingIntegrationAdapter implements BillingIntegration {
     @Override
     public void openSettlement(String orderId, Money contractValue) {
         System.out.println("[BillingIntegrationAdapter] Settlement opened in Billing for order "
-                + orderId + ", contract value " + contractValue.getAmount() + " " + contractValue.currency() + ".");
+                + orderId + ", contract value " + contractValue.amount() + " " + contractValue.currency() + ".");
     }
 
     @Override
     public void requestProformaInvoice(String orderId, Money amount) {
         System.out.println("[BillingIntegrationAdapter] Proforma invoice requested for order "
-                + orderId + (amount != null ? ", amount " + amount.getAmount() + " " + amount.currency() : "") + ".");
+                + orderId + (amount != null ? ", amount " + amount.amount() + " " + amount.currency() : "") + ".");
     }
 
     @Override

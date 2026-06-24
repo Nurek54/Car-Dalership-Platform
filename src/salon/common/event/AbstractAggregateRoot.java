@@ -24,7 +24,7 @@ public abstract class AbstractAggregateRoot {
     }
 
     
-    public List<DomainEvent> getDomainEvents() {
+    public List<DomainEvent> domainEvents() {
         return Collections.unmodifiableList(new ArrayList<>(this.domainEvents));
     }
 }

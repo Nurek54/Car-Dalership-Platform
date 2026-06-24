@@ -14,11 +14,11 @@ public class OrderFactory {
         if (offer == null) {
             throw new IllegalArgumentException("offer must not be null.");
         }
-        if (offer.getState() != OfferState.ACCEPTED) {
+        if (offer.state() != OfferState.ACCEPTED) {
             throw new InvalidOfferStateException(
-                    "An order can be created only from an ACCEPTED offer (current: " + offer.getState() + ").");
+                    "An order can be created only from an ACCEPTED offer (current: " + offer.state() + ").");
         }
-        return new Order(OrderId.generate(), offer.getId(), offer.getFinalPrice());
+        return new Order(OrderId.generate(), offer.id(), offer.finalPrice());
     }
 
     

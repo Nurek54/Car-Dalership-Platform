@@ -30,7 +30,7 @@ class OrderTest {
 
         // Metoda płatności jest przypisana, a zdarzenie zarejestrowane w agregacie
         assertThat(order.paymentMethod()).isEqualTo(PaymentMethod.FINANCING);
-        assertThat(order.getDomainEvents())
+        assertThat(order.domainEvents())
                 .hasSize(1)
                 .first()
                 .isInstanceOf(FinancingRequestedEvent.class)

@@ -83,8 +83,8 @@ public class OfflineDemo {
                 SpecificationId.generate(), Money.of(new BigDecimal("100000"), "PLN"));
         offer.applyDiscount(new Discount(new BigDecimal("5.00")));
         offer.publishOffer();
-        System.out.println("[OK] Offer after publication: " + offer.getState()
-                + ", final price: " + offer.getFinalPrice().amount() + " PLN");
+        System.out.println("[OK] Offer after publication: " + offer.state()
+                + ", final price: " + offer.finalPrice().amount() + " PLN");
 
         
         Offer greedy = new Offer(OfferId.generate(), new CustomerId("CUST-2"),
@@ -99,8 +99,8 @@ public class OfflineDemo {
         offer.accept();
         Order order = new OrderFactory().createFromOffer(offer);
         order.declarePaymentMethod(PaymentMethod.BANK_TRANSFER);
-        System.out.println("[OK] Order " + order.getId().value() + " in state "
-                + order.getState() + " (payment: " + order.getPaymentMethod() + ")");
+        System.out.println("[OK] Order " + order.id().value() + " in state "
+                + order.state() + " (payment: " + order.paymentMethod() + ")");
         
         try {
             greedy.publishOffer();
@@ -131,16 +131,16 @@ public class OfflineDemo {
                 new NotificationMockAdapter(), bus);
 
         SettlementEventListener listener = new SettlementEventListener(settlements);
-        listener.on(new OrderReadyForSettlementEvent(UUID.randomUUID(), order.getId().value(),
+        listener.on(new OrderReadyForSettlementEvent(UUID.randomUUID(), order.id().value(),
                 new BigDecimal("100000"), "PLN", Instant.now()));
 
         
         settlements.processPayment(new ProcessPaymentCommand(
-                order.getId().value(), "TX-1", new BigDecimal("20000"), "PLN"));
+                order.id().value(), "TX-1", new BigDecimal("20000"), "PLN"));
         
         settlements.processPayment(new ProcessPaymentCommand(
-                order.getId().value(), "TX-2", new BigDecimal("80000"), "PLN"));
-        System.out.println("[OK] Balance " + order.getId().value() + " settled (status SETTLED).");
+                order.id().value(), "TX-2", new BigDecimal("80000"), "PLN"));
+        System.out.println("[OK] Balance " + order.id().value() + " settled (status SETTLED).");
 
         
         DocumentGenerationService docs = new DocumentGenerationService(
@@ -151,7 +151,7 @@ public class OfflineDemo {
                 new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
         String invoiceId = docs.generateInvoice(new GenerateInvoiceCommand(
-                order.getId().value(), "Final invoice " + order.getId().value(), "accountant@salon.pl"));
+                order.id().value(), "Final invoice " + order.id().value(), "accountant@salon.pl"));
         System.out.println("[OK] Invoice issued, id=" + invoiceId);
 
         

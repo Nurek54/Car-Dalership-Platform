@@ -71,17 +71,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * OfflineDemo - the full "from configuration to invoice" business flow of the car dealership,
- * run locally (no RabbitMQ, on in-memory repositories).
- *
- * The demo drives ONE order through all bounded contexts:
- *   Catalog -> Sales -> Billing -> Logistics -> Sales (handover) -> Invoice
- * and finally shows the financing variant (the Financing context).
- *
- * Domain events (the communication between contexts) are printed to the console
- * on lines "-> event: ...". Just read the output from top to bottom.
- */
 public class OfflineDemo {
 
     public static void main(String[] args) {

@@ -80,7 +80,7 @@ import java.util.UUID;
  * and finally shows the financing variant (the Financing context).
  *
  * Domain events (the communication between contexts) are printed to the console
- * on lines "↪ event: ...". Just read the output from top to bottom.
+ * on lines "-> event: ...". Just read the output from top to bottom.
  */
 public class OfflineDemo {
 
@@ -88,7 +88,7 @@ public class OfflineDemo {
 
         // Shared event bus: here it simply prints every domain event,
         // so you can see what comes out of each context and when.
-        EventPublisher bus = event -> System.out.println("   ↪ event: " + event.getClass().getSimpleName());
+        EventPublisher bus = event -> System.out.println("   -> event: " + event.getClass().getSimpleName());
 
         // --- Shared sales repositories (customer / offer / order) ---
         InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();

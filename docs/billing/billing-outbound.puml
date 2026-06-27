@@ -1,0 +1,132 @@
+@startuml BillingOutbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<repository>> LightSalmon
+    BackgroundColor<<output port>> LightGray
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<outbound adapter>> Honeydew
+}
+
+package "salon" {
+  package "billing" {
+
+    package "infrastructure" {
+      package "out" {
+        package "mock" {
+          class InMemorySettlementRepository <<outbound adapter>>
+          class InMemoryDocumentRepository <<outbound adapter>>
+          class InProcessEventPublisherAdapter <<outbound adapter>>
+          class NotificationAdapter <<outbound adapter>>
+          class PdfGeneratorMockAdapter <<outbound adapter>>
+        }
+        package "integration" {
+          class SalesCrmIntegrationAdapter <<outbound adapter>> {
+            - salesQueryFacade : SalesQueryFacade
+            + buyerDetailsFor(orderId) : BuyerDetails
+          }
+        }
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class DocumentGenerationService <<application service>> {
+          + generateAdvance(command) : String
+          + generateInvoice(command) : String
+        }
+        class PaymentProcessService <<application service>> {
+          + initializeSettlement(orderId, totalAmount)
+          + processPayment(command)
+          + sendPaymentReminders()
+        }
+      }
+
+      package "port" {
+        package "out" {
+          interface SettlementDatabaseRepository <<repository>> {
+            + save(settlement)
+            + findByOrderId(orderId) : Optional<Settlement>
+            + findAll() : List<Settlement>
+          }
+          interface DocumentDatabaseRepository <<repository>> {
+            + save(document)
+            + findById(id) : Optional<AccountingDocument>
+            + findByOrderId(orderId) : List<AccountingDocument>
+          }
+          interface NotificationGeneration <<output port>> {
+            + notifyInvoiceIssued(document, pdf)
+            + notifyPaymentReminder(orderId, outstanding)
+          }
+          interface PdfGeneration <<output port>> {
+            + generatePdf(document) : byte[]
+          }
+          interface SalesIntegration <<output port>> {
+            + buyerDetailsFor(orderId) : BuyerDetails
+          }
+          interface EventPublisher <<output port>> {
+            + publish(event)
+            + publishAll(events)
+          }
+        }
+      }
+
+      package "domain" {
+        package "model" {
+          class Settlement <<aggregate root>> {
+            - id : SettlementId
+            - orderId : OrderId
+            - totalAmount : Money
+            - status : SettlementStatus
+            + requestAdvancePayment()
+            + registerPayment(transactionId, amount)
+            + outstandingBalance() : Money
+          }
+          class AccountingDocument <<aggregate root>> {
+            - id : DocumentId
+            - orderId : OrderId
+            - totalAmount : Money
+            - status : DocumentStatus
+            + generatePdf() : byte[]
+            + markAsIssued()
+            + markAsError()
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Service -> port dependencies
+DocumentGenerationService --> SettlementDatabaseRepository
+DocumentGenerationService --> DocumentDatabaseRepository
+DocumentGenerationService --> NotificationGeneration
+DocumentGenerationService --> PdfGeneration
+DocumentGenerationService --> EventPublisher
+DocumentGenerationService --> SalesIntegration
+
+PaymentProcessService --> SettlementDatabaseRepository
+PaymentProcessService --> DocumentDatabaseRepository
+PaymentProcessService --> NotificationGeneration
+PaymentProcessService --> EventPublisher
+
+' Adapter implementations
+InMemorySettlementRepository ..|> SettlementDatabaseRepository
+InMemoryDocumentRepository ..|> DocumentDatabaseRepository
+InProcessEventPublisherAdapter ..|> EventPublisher
+NotificationAdapter ..|> NotificationGeneration
+PdfGeneratorMockAdapter ..|> PdfGeneration
+SalesCrmIntegrationAdapter ..|> SalesIntegration
+
+' Repository -> aggregate
+SettlementDatabaseRepository "1" --> "*" Settlement : <<repository for>>
+DocumentDatabaseRepository "1" --> "*" AccountingDocument : <<repository for>>
+
+@enduml

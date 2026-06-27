@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** UC-CRM-01: Uruchomienie sesji konfiguratora dla klienta. */
+/** UC-CRM-01: Rozpoczęcie sesji konfiguratora dla klienta. */
 @ExtendWith(MockitoExtension.class)
 class ConfiguratorSessionAppServiceTest {
 
@@ -26,20 +26,20 @@ class ConfiguratorSessionAppServiceTest {
 
     @Test
     void shouldEmitConfiguratorSessionInitiatedEventAndReturnSessionId() {
-        // Posiadamy w bazie zarejestrowanego klienta
+        // Mamy zarejestrowanego klienta w bazie
         StartConfiguratorSessionCommand command = new StartConfiguratorSessionCommand("CUST-1", "SALES-7");
         when(customerRepository.existsById("CUST-1")).thenReturn(true);
 
-        // Kiedy andlowiec uruchamia sesję konfiguratora dla tego klienta
+        // Gdy sprzedawca rozpoczyna sesję konfiguratora dla tego klienta
         String sessionId = configuratorAppService.startConfiguratorSession(command);
 
-        // To wypuszcza w świat zdarzenie, że sesja się rozpoczęła
+        // Rozgłasza zdarzenie, że sesja się rozpoczęła
         verify(eventPublisher).publish(any(ConfiguratorSessionInitiatedEvent.class));
     }
 
     @Test
     void shouldFailToStartSessionWhenCustomerDoesNotExist() {
-        // Ktoś próbuje uruchomić sesję dla nieistniejącego ID klienta
+        // Ktoś próbuje rozpocząć sesję dla nieistniejącego ID klienta
         StartConfiguratorSessionCommand command = new StartConfiguratorSessionCommand("UNKNOWN-CUST", "SALES-7");
         when(customerRepository.existsById("UNKNOWN-CUST")).thenReturn(false);
 
@@ -48,7 +48,7 @@ class ConfiguratorSessionAppServiceTest {
                 .isInstanceOf(CustomerNotFoundException.class)
                 .hasMessageContaining("Customer with ID UNKNOWN-CUST not found");
 
-        // Sprawdzamy czy żadne fałszywe zdarzenie nie wyciekło do innych systemów
+        // Sprawdzamy, że żadne fałszywe zdarzenie nie wyciekło do innych systemów
         verify(eventPublisher, never()).publish(any());
     }
 }

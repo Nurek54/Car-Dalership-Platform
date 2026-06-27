@@ -1,29 +1,12 @@
 package salon.billing.application.domain.model.document;
 
-import salon.billing.application.domain.event.InvoiceCreatedEvent;
-import salon.common.event.AbstractAggregateRoot;
 import salon.common.model.Money;
 import salon.common.model.OrderId;
 
-import java.time.Instant;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.util.UUID;
 
-/**
- * Aggregate Root: dokument księgowy (faktura / dokument zadatku) — UC-FIR-02.
- *
- * Oddzielony od agregatu Settlement, co pozwala na niezależne wersjonowanie dokumentów i unika
- * blokad bazy podczas jednoczesnej rejestracji wpłaty i wystawiania faktury.
- *
- * Niezmienniki:
- *  - dokument powstaje wyłącznie przez statyczną fabrykę {@link #createInvoice},
- *  - kwota (totalAmount) jest gotowym obiektem wartości wyliczonym poza agregatem
- *    (InvoiceCalculationService) — agregat jej nie przelicza,
- *  - termin płatności (dueDate) wynika z polityki firmy: 7 dni dla osób fizycznych,
- *    14 dni dla podmiotów gospodarczych (na podstawie BuyerDetails.isCorporate()),
- *  - dokument w stanie ISSUED jest "zamrożony".
- */
-public class AccountingDocument extends AbstractAggregateRoot {
+public class AccountingDocument {
 
     private static final int DUE_DAYS_INDIVIDUAL = 7;
     private static final int DUE_DAYS_CORPORATE = 14;
@@ -39,15 +22,9 @@ public class AccountingDocument extends AbstractAggregateRoot {
     private final String authorizedIssuer;
     private DocumentStatus status;
 
-    private AccountingDocument(DocumentId id,
-                               OrderId orderId,
-                               String invoiceTitle,
-                               BuyerDetails buyer,
-                               SellerDetails seller,
-                               Money totalAmount,
-                               LocalDate issueDate,
-                               LocalDate dueDate,
-                               String authorizedIssuer) {
+    private AccountingDocument(DocumentId id, OrderId orderId, String invoiceTitle, BuyerDetails buyer,
+                              SellerDetails seller, Money totalAmount, LocalDate issueDate,
+                              LocalDate dueDate, String authorizedIssuer, DocumentStatus status) {
         this.id = id;
         this.orderId = orderId;
         this.invoiceTitle = invoiceTitle;
@@ -57,15 +34,13 @@ public class AccountingDocument extends AbstractAggregateRoot {
         this.issueDate = issueDate;
         this.dueDate = dueDate;
         this.authorizedIssuer = authorizedIssuer;
-        this.status = DocumentStatus.DRAFT;
+        this.status = status;
     }
 
-    public static AccountingDocument createInvoice(OrderId orderId,
-                                                   BuyerDetails buyer,
-                                                   SellerDetails seller,
-                                                   Money totalAmount,
-                                                   String invoiceTitle,
-                                                   String authorizedIssuer) {
+    
+    public static AccountingDocument createInvoice(OrderId orderId, BuyerDetails buyer,
+                                                   SellerDetails seller, Money totalAmount,
+                                                   String invoiceTitle, String authorizedIssuer) {
         if (orderId == null) {
             throw new IllegalArgumentException("orderId must not be null.");
         }
@@ -84,71 +59,81 @@ public class AccountingDocument extends AbstractAggregateRoot {
         if (authorizedIssuer == null || authorizedIssuer.isBlank()) {
             throw new IllegalArgumentException("authorizedIssuer must not be blank.");
         }
-
-        LocalDate issueDate = LocalDate.now();
-        LocalDate dueDate = issueDate.plusDays(
-                buyer.isCorporate() ? DUE_DAYS_CORPORATE : DUE_DAYS_INDIVIDUAL);
-
-        AccountingDocument document = new AccountingDocument(
-                DocumentId.generate(), orderId, invoiceTitle, buyer, seller,
-                totalAmount, issueDate, dueDate, authorizedIssuer);
-
-        document.registerEvent(new InvoiceCreatedEvent(
-                UUID.randomUUID(), document.id.value(), orderId.value(), Instant.now()));
-        return document;
+        LocalDate issue = LocalDate.now();
+        LocalDate due = issue.plusDays(buyer.isCorporate() ? DUE_DAYS_CORPORATE : DUE_DAYS_INDIVIDUAL);
+        return new AccountingDocument(DocumentId.generate(), orderId, invoiceTitle, buyer, seller,
+                totalAmount, issue, due, authorizedIssuer, DocumentStatus.DRAFT);
     }
 
-    public void markAsIssued() {
-        if (this.status == DocumentStatus.ISSUED) {
-            throw new IllegalStateException("Document is already issued.");
-        }
+    
+    public byte[] generatePdf() {
         if (this.status == DocumentStatus.ERROR) {
-            throw new IllegalStateException("Cannot issue a document in ERROR state.");
+            throw new IllegalStateException("Cannot render a document in ERROR state.");
+        }
+        String body = "INVOICE\n"
+                + "Title: " + this.invoiceTitle + "\n"
+                + "Nr dokumentu: " + this.id.value() + "\n"
+                + "Order: " + this.orderId.value() + "\n"
+                + "Sprzedawca: " + this.seller.name() + " (NIP " + this.seller.nip() + ")\n"
+                + "Buyer: " + this.buyer.name() + " (tax ID " + this.buyer.nip() + ")\n"
+                + "Kwota: " + this.totalAmount.amount().toPlainString() + " " + this.totalAmount.currency() + "\n"
+                + "Issue date: " + this.issueDate + "\n"
+                + "Due date: " + this.dueDate + "\n"
+                + "Issued by: " + this.authorizedIssuer + "\n";
+        return body.getBytes(StandardCharsets.UTF_8);
+    }
+
+    
+    public void markAsIssued() {
+        if (this.status != DocumentStatus.DRAFT) {
+            throw new salon.billing.application.domain.exception.IllegalSettlementStateException(
+                    "Only a document in the DRAFT state can be issued (current: " + this.status + ").");
         }
         this.status = DocumentStatus.ISSUED;
     }
 
+    
     public void markAsError() {
         this.status = DocumentStatus.ERROR;
     }
 
-    public DocumentId getId() {
-        return this.id;
+    public DocumentId id() {
+        return id;
     }
 
-    public OrderId getOrderId() {
-        return this.orderId;
+    public OrderId orderId() {
+        return orderId;
     }
 
-    public String getInvoiceTitle() {
-        return this.invoiceTitle;
+    public String invoiceTitle() {
+        return invoiceTitle;
     }
 
-    public BuyerDetails getBuyer() {
-        return this.buyer;
+    public BuyerDetails buyer() {
+        return buyer;
     }
 
-    public SellerDetails getSeller() {
-        return this.seller;
+    public SellerDetails seller() {
+        return seller;
     }
 
-    public Money getTotalAmount() {
-        return this.totalAmount;
+    public Money totalAmount() {
+        return totalAmount;
     }
 
-    public LocalDate getIssueDate() {
-        return this.issueDate;
+    public LocalDate issueDate() {
+        return issueDate;
     }
 
-    public LocalDate getDueDate() {
-        return this.dueDate;
+    public LocalDate dueDate() {
+        return dueDate;
     }
 
-    public String getAuthorizedIssuer() {
-        return this.authorizedIssuer;
+    public String authorizedIssuer() {
+        return authorizedIssuer;
     }
 
-    public DocumentStatus getStatus() {
-        return this.status;
+    public DocumentStatus status() {
+        return status;
     }
 }

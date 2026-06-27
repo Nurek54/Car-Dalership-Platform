@@ -1,7 +1,7 @@
 package salon.sales.application.domain.exception;
 
-/** Zewnętrzny moduł (Katalog/Inwentarz/Księgowość) jest chwilowo niedostępny. */
 public class ExternalServiceUnavailableException extends RuntimeException {
+
     public ExternalServiceUnavailableException(String message) {
         super(message);
     }

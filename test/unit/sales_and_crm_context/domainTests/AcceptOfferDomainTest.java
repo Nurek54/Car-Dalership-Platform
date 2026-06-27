@@ -13,31 +13,33 @@ import salon.common.model.OrderId;
 import salon.common.model.SpecificationId;
 
 import static org.assertj.core.api.Assertions.*;
-/** UC-CRM-03: Zatwierdzenie oferty i utworzenie zamówienia */
+/** UC-CRM-03: Akceptacja oferty i utworzenie zamówienia */
 class AcceptOfferDomainTest {
 
     @Test
     void shouldAcceptOfferAndAllowOrderCreation() {
-        // Posiadamy ofertę
-        Offer offer = new Offer(new OfferId("O-1"), new CustomerId("C-1"), new SpecificationId("S-1"));
+        // Mamy ofertę
+        Offer offer = new Offer(new OfferId("O-1"), new CustomerId("C-1"),
+                new SpecificationId("S-1"), Money.of(150000, "PLN"));
         offer.publishOffer();
 
         // Klient akceptuje ofertę, a my generujemy na jej podstawie zamówienie
         offer.accept();
-        Order order = new Order(new OrderId("ORD-1"), offer.getId(), Money.of(150000, "PLN"));
+        Order order = new Order(new OrderId("ORD-1"), offer.id(), Money.of(150000, "PLN"));
 
         // Oferta przechodzi w stan ACCEPTED
-        assertThat(offer.getState()).isEqualTo(OfferState.ACCEPTED);
+        assertThat(offer.state()).isEqualTo(OfferState.ACCEPTED);
 
-        // Zamówienie inicjuje się poprawnie w początkowym stanie DRAFT_CREATED
-        assertThat(order.getOfferId()).isEqualTo(new OfferId("O-1"));
-        assertThat(order.getState()).isEqualTo(OrderState.DRAFT_CREATED);
+        // Zamówienie poprawnie inicjuje się w początkowym stanie DRAFT_CREATED
+        assertThat(order.offerId()).isEqualTo(new OfferId("O-1"));
+        assertThat(order.state()).isEqualTo(OrderState.DRAFT_CREATED);
     }
 
     @Test
     void shouldRejectAcceptanceWhenOfferIsAlreadyRejected() {       // Scenariusz alternatywny
-        // Klient wcześniej zrezygnował i oferta została oznaczona jako odrzucona
-        Offer offer = new Offer(new OfferId("O-2"), new CustomerId("C-2"), new SpecificationId("S-2"));
+        // Klient wcześniej się wycofał, a oferta została oznaczona jako odrzucona
+        Offer offer = new Offer(new OfferId("O-2"), new CustomerId("C-2"),
+                new SpecificationId("S-2"), Money.of(150000, "PLN"));
         offer.publishOffer();
         offer.reject();
 

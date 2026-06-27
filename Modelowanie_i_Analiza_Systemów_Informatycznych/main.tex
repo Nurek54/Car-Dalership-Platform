@@ -1,0 +1,121 @@
+
+
+\documentclass[a4paper]{article}
+
+\usepackage{svg}
+\usepackage[polish]{babel}
+\usepackage{booktabs}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{titling}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{colortbl}
+\usepackage{changepage}
+\usepackage{parskip}
+\usepackage{float}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage[
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=black,
+    citecolor=black
+]{hyperref}
+\usepackage[none]{hyphenat}
+
+\geometry{margin=2.5cm}
+
+\title{Zintegrowany system zarządzania nowoczesnym salonem samochodowym i obsługą posprzedażową}
+\author{Kierownik projektu -- Kamil Sromek 272903, \\Kierownik strategii -- Miłosz Halicki 272874, \\Kierownik taktyki -- Jakub Brzozowski 273009, \\Kierownik testowania -- Mateusz Bukowski 272946, \\Kierownik implementacji -- Grzegorz Sienkiewicz 272868}
+\date{April 2026}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    \includegraphics[width=\textwidth]{logo.png}
+
+    \vspace{1.5cm}
+    
+    {\Huge\bfseries\thetitle\par}
+
+    \vspace{0.5cm}
+    {\large Modelowanie i Analiza Systemów Informatycznych}
+
+    \vspace{1.5cm}
+    
+    {\normalsize\itshape\theauthor\par}
+    
+    \vfill
+    
+    {\large\thedate\par}
+
+    \vspace*{2cm}
+
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Wprowadzenie}
+
+Celem projektu jest analiza oraz modelowanie zintegrowanego systemu wspierającego działalność nowoczesnego salonu samochodowego wraz z obsługą posprzedażową. System obejmuje procesy związane ze sprzedażą pojazdów, konfiguracją zamówień, zarządzaniem flotą, obsługą serwisową oraz finansowaniem.
+
+Projekt został podzielony na kilka kontekstów domenowych zgodnie z podejściem Domain-Driven Design (DDD), co pozwala na wyraźne rozdzielenie odpowiedzialności poszczególnych modułów systemu.
+
+\section{Analiza domenowa}
+
+\subsection{Opis domeny biznesowej}
+
+Przedmiotem opracowania jest zintegrowany system informatyczny zaprojektowany do kompleksowego zarządzania nowoczesnym salonem samochodowym. Rozwiązanie wspiera pełen cykl życia pojazdu w organizacji od wstępnej konfiguracji i zamówienia, poprzez logistykę i jego wydanie.
+
+Nadrzędnym celem biznesowym systemu jest eliminacja zjawiska izolacji informacyjnej pomiędzy poszczególnymi działami salonu samochodowego oraz zapewnienie płynnego, zautomatyzowanego przepływu procesów.
+
+
+% --- Analiza domenowa | Określenie dziedziny i kontekstów ograniczonych
+
+\input{sections/analiza-domenowa/okreslenie-dziedziny-i-kontekstow}
+
+\subsection{Context Mapping}
+\input{sections/analiza-domenowa/context-mapping}
+
+% --- Analiza domenowa | Język wszechobecny
+\subsection{Język wszechobecny}
+\input{sections/analiza-domenowa/jez-wszechob}
+
+% --- Analiza domenowa | Wizja wymagań :?
+
+\input{sections/analiza-domenowa/wizja-wymagan}
+
+% --- Analiza domenowa | DDD Storytelling
+
+\input{sections/analiza-domenowa/ddd-storytelling}
+
+\subsection{Bounded context canvas}
+\input{sections/analiza-domenowa/bounded-context-canvas}
+
+
+\subsection{Event storming}
+\input{sections/analiza-domenowa/eventstorming}
+
+% --- Analiza domenowa | Przypadki uzycia
+
+\input{sections/analiza-domenowa/przypadki-uzycia}
+
+\subsection{Diagram przypadków użycia}
+\input{sections/analiza-domenowa/use-case-diagram/use-case-diagram}
+\input{sections/analiza-domenowa/mapowanie-kontekstow-ograniczonych}
+
+\newpage
+\section{Architektura modelu}
+\input{sections/modelowanie-taktyczne/modelowanie-taktyczne}
+
+\end{document}

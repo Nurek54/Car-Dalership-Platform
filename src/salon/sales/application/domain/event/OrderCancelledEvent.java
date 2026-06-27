@@ -5,16 +5,14 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * "ZamowienieAnulowane" — klient zrezygnował z zamówienia (z podanym powodem).
- * Nasłuchują: Kontekst Rozliczeń (rozliczenie zadatku) oraz Inwentarz (zwolnienie blokady).
- */
-public record OrderCancelledEvent(UUID eventId,
-                                  String orderId,
-                                  String reason,
-                                  Instant occurredOn) implements DomainEvent {
+public record OrderCancelledEvent(String orderId, String reason,
+                                  UUID eventId, Instant occurredOn) implements DomainEvent {
 
-    public String getReason() {
-        return this.reason;
+    public OrderCancelledEvent(String orderId, String reason) {
+        this(orderId, reason, UUID.randomUUID(), Instant.now());
+    }
+
+    public OrderCancelledEvent(UUID eventId, String orderId, String reason, Instant occurredOn) {
+        this(orderId, reason, eventId, occurredOn);
     }
 }

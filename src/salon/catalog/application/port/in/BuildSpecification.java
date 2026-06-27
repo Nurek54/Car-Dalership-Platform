@@ -1,13 +1,22 @@
 package salon.catalog.application.port.in;
 
-import salon.common.model.SpecificationId;
+import salon.catalog.application.command.AddOptionCommand;
+import salon.catalog.application.command.FinalizeSpecificationCommand;
+import salon.catalog.application.command.InitiateConfiguratorSessionCommand;
+import salon.catalog.application.command.RemoveOptionCommand;
+import salon.catalog.application.dto.SpecificationView;
 
-/**
- * Port wejsciowy (driving) dla UC-KON-01 (konfiguracja pojazdu), zgodnie z diagramem (Rys. 28).
- * Realizowany przez BuildSpecificationService.
- */
 public interface BuildSpecification {
-    SpecificationId startSpecification(String catalogId);
-    void addOption(String specificationId, String catalogId, String optionCode);
-    void finalizeSpecification(String specificationId);
+
+    
+    SpecificationView initiate(InitiateConfiguratorSessionCommand command);
+
+    
+    SpecificationView addOption(AddOptionCommand command);
+
+    
+    SpecificationView removeOption(RemoveOptionCommand command);
+
+    
+    SpecificationView finalizeSpecification(FinalizeSpecificationCommand command);
 }

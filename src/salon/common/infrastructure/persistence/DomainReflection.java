@@ -3,11 +3,6 @@ package salon.common.infrastructure.persistence;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 
-/**
- * Pomocnik infrastruktury (warstwa sterowana): pozwala wiernie odtworzyć niemutowalne agregaty
- * domenowe z encji JPA BEZ modyfikowania kodu kontekstów (brak setterów/konstruktorów odtwarzających
- * w domenie). Refleksja jest tu świadomą decyzją adaptera persystencji — domena zostaje czysta.
- */
 public final class DomainReflection {
 
     private DomainReflection() {

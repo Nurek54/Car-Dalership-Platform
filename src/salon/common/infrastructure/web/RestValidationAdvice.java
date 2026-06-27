@@ -11,13 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Globalny mapping błędów walidacji wejścia (Bean Validation) na 400 Bad Request
- * w kształcie { "fieldErrors": { "<pole>": "<komunikat>" } }. Wspólny dla adapterów REST.
- *
- * Błędy DZIEDZINOWE (np. OfferExpiredException) mapują lokalne @ExceptionHandler w kontrolerach,
- * bo ten sam wyjątek bywa różnym kodem HTTP zależnie od zasobu (404 vs 409).
- */
 @RestControllerAdvice
 public class RestValidationAdvice {
 

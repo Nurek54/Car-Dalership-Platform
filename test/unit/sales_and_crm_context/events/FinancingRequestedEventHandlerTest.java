@@ -22,7 +22,7 @@ class FinancingRequestedEventHandlerTest {
 
     @Test
     void shouldInitiateCreditCheckWhenFinancingIsRequested() {
-        // Klient wnioskuje o finansowanie zewnętrzne (kredyt/leasing)
+        // Klient wnioskuje o zewnętrzne finansowanie (kredyt/leasing)
         FinancingRequestedEvent event = new FinancingRequestedEvent(
                 UUID.randomUUID(),
                 "ORD-600",
@@ -32,7 +32,7 @@ class FinancingRequestedEventHandlerTest {
 
         eventHandler.handle(event);
 
-        // Wywołujemy port modułu Finansowego, aby uruchomił proces sprawdzania zdolności
+        // Wołamy port modułu Finansowania, aby rozpocząć proces badania zdolności kredytowej
         verify(financePort).startCreditCheckProcess("ORD-600");
     }
 }

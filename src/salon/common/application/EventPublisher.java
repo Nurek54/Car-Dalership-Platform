@@ -4,11 +4,6 @@ import salon.common.event.DomainEvent;
 
 import java.util.List;
 
-/**
- * Port wyjściowy: publikacja Zdarzeń Dziedziny na magistralę (EventBusAdapter).
- * publishAll pozwala usłudze aplikacyjnej opublikować całą paczkę zdarzeń
- * ściągniętych z agregatu w jednym wywołaniu (po zatwierdzeniu transakcji).
- */
 public interface EventPublisher {
 
     void publish(DomainEvent event);

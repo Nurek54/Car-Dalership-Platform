@@ -1,0 +1,215 @@
+@startuml CatalogDomainModel
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<domain service>> Wheat
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<factory>> Lavender
+    BackgroundColor<<event>> PaleGreen
+    BackgroundColor<<exception>> LightPink
+    BackgroundColor<<policy>> PapayaWhip
+}
+
+package "salon" {
+  package "catalog" {
+    package "application" {
+      package "domain" {
+
+        package "service" {
+          class RuleValidationService <<domain service>> {
+            + validateSelection(specification, catalog)
+            + validateComplete(specification, catalog)
+            + validateCatalogConsistency(catalog)
+          }
+        }
+
+        package "policy" {
+          interface Specification<T> {
+            + isSatisfiedBy(candidate : T) : boolean
+          }
+          class OptionCombinationSpecification <<policy>> {
+            - rules : List<CatalogRule>
+            + isSatisfiedBy(pickedOptions : Set<OptionCode>) : boolean
+            + violations(pickedOptions : Set<OptionCode>) : List<String>
+          }
+        }
+
+        package "model" {
+
+          package "catalog" {
+            class ProductCatalog <<aggregate root>> {
+              - id : CatalogId
+              - modelYear : ModelYear
+              - version : int
+              - state : CatalogState
+              - options : List<CatalogOption>
+              - rules : List<CatalogRule>
+              + archive()
+              + containsOption(code) : boolean
+              + priceOf(code) : Money
+              + currencyCode() : String
+            }
+            class CatalogId <<value object>> {
+              - value : UUID
+              + generate() : CatalogId$
+              + of(value) : CatalogId$
+            }
+            class ModelYear <<value object>> {
+              - year : int
+              + of(year) : ModelYear$
+            }
+            class CatalogOption <<value object>> {
+              - code : OptionCode
+              - basePrice : Money
+            }
+            class CatalogRule <<value object>> {
+              - sourceCode : OptionCode
+              - targetCode : OptionCode
+              - type : RuleType
+            }
+            enum CatalogState {
+              ACTIVE
+              ARCHIVED
+            }
+            enum RuleType {
+              REQUIRES
+              EXCLUDES
+            }
+            class ProductCatalogFactory <<factory>> {
+              + createNew(modelYear, options, rules) : ProductCatalog
+              + createNextVersion(modelYear, version, options, rules) : ProductCatalog
+              + reconstitute(...) : ProductCatalog
+            }
+          }
+
+          package "specification" {
+            class VehicleSpecification <<aggregate root>> {
+              - id : SpecificationId
+              - catalogId : CatalogId
+              - totalPrice : Money
+              - state : SpecificationState
+              - optionsPicked : Set<OptionCode>
+              + addOption(code, catalog)
+              + removeOption(code, catalog)
+              + finalizeSpecification()
+              + pickedAsSet() : Set<OptionCode>
+            }
+            class SpecificationId <<value object>> {
+              - value : UUID
+              + generate() : SpecificationId$
+              + of(value) : SpecificationId$
+            }
+            enum SpecificationState {
+              DRAFT
+              IN_PROGRESS
+              FINAL
+            }
+            class VehicleSpecificationFactory <<factory>> {
+              + createDraft(catalogId, currencyCode) : VehicleSpecification
+              + reconstitute(...) : VehicleSpecification
+            }
+          }
+
+          package "shared" {
+            class Money <<value object>> {
+              - amount : BigDecimal
+              - currency : Currency
+              + of(amount, currencyCode) : Money$
+              + zero(currencyCode) : Money$
+              + add(other) : Money
+              + subtract(other) : Money
+            }
+            class OptionCode <<value object>> {
+              - value : String
+              + of(value) : OptionCode$
+            }
+          }
+
+          package "event" {
+            interface DomainEvent {
+              + occurredOn() : Instant
+              + eventName() : String
+            }
+            class CatalogUpdated <<event>> {
+              - catalogId : CatalogId
+              - modelYear : ModelYear
+              - version : int
+              - occurredOn : Instant
+            }
+            class CatalogUpdateFailed <<event>> {
+              - reason : String
+              - occurredOn : Instant
+            }
+            class SpecificationCompleted <<event>> {
+              - specificationId : SpecificationId
+              - catalogId : CatalogId
+              - totalPrice : Money
+              - optionsPicked : List<OptionCode>
+              - occurredOn : Instant
+            }
+          }
+        }
+
+        package "exception" {
+          class CatalogNotFoundException <<exception>> {
+            + CatalogNotFoundException(message)
+          }
+          class CatalogValidationException <<exception>> {
+            + CatalogValidationException(message)
+            + CatalogValidationException(message, cause)
+          }
+          class CombinationNotAllowedException <<exception>> {
+            + CombinationNotAllowedException(message)
+          }
+          class SpecificationNotFoundException <<exception>> {
+            + SpecificationNotFoundException(id)
+          }
+        }
+
+      }
+    }
+  }
+}
+
+' ProductCatalog aggregate
+ProductCatalog "1" *-- "*" CatalogOption
+ProductCatalog "1" *-- "*" CatalogRule
+ProductCatalog --> CatalogId
+ProductCatalog --> ModelYear
+ProductCatalog --> CatalogState
+CatalogRule --> RuleType
+ProductCatalogFactory ..> ProductCatalog : <<creates>>
+
+' VehicleSpecification aggregate
+VehicleSpecification --> SpecificationId
+VehicleSpecification --> CatalogId
+VehicleSpecification --> SpecificationState
+VehicleSpecificationFactory ..> VehicleSpecification : <<creates>>
+
+' Cross-aggregate reference by id
+VehicleSpecification ..> ProductCatalog : <<uses via id>>
+
+' Shared value objects
+CatalogOption --> OptionCode
+CatalogOption --> Money
+CatalogRule --> OptionCode
+
+' Policy
+OptionCombinationSpecification ..|> Specification
+OptionCombinationSpecification --> CatalogRule
+
+' Domain service
+RuleValidationService ..> VehicleSpecification
+RuleValidationService ..> ProductCatalog
+RuleValidationService ..> OptionCombinationSpecification
+
+' Events
+CatalogUpdated ..|> DomainEvent
+CatalogUpdateFailed ..|> DomainEvent
+SpecificationCompleted ..|> DomainEvent
+
+@enduml

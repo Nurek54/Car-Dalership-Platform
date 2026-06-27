@@ -5,12 +5,13 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * "PojazdWydany" (UC-CRM-05) — klient odebrał pojazd z salonu.
- * Nasłuchują: Kontekst Rozliczeń (domknięcie salda — handler VehicleHandedOverEventHandler)
- * oraz obsługa posprzedażowa.
- */
-public record VehicleHandedOverEvent(UUID eventId,
-                                     String orderId,
-                                     Instant occurredOn) implements DomainEvent {
+public record VehicleHandedOverEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public VehicleHandedOverEvent(String orderId) {
+        this(orderId, UUID.randomUUID(), Instant.now());
+    }
+
+    public VehicleHandedOverEvent(UUID eventId, String orderId, Instant occurredOn) {
+        this(orderId, eventId, occurredOn);
+    }
 }

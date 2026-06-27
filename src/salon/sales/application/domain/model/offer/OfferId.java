@@ -13,4 +13,9 @@ public record OfferId(String value) {
     public static OfferId generate() {
         return new OfferId("OFF-" + UUID.randomUUID());
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

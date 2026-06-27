@@ -32,7 +32,7 @@ class OrderPlacedEventHandlerTest {
 
         eventHandler.handle(event);
 
-        // Komunikujemy się z Inwentarzem, aby zarezerwować slot
+        // Komunikujemy się z Magazynem, aby zarezerwować slot
         verify(inventoryPort).allocateVehicleOrProductionSlot("ORD-100");
     }
 }

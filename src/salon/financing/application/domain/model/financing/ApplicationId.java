@@ -13,4 +13,9 @@ public record ApplicationId(String value) {
     public static ApplicationId generate() {
         return new ApplicationId("FIN-" + UUID.randomUUID());
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

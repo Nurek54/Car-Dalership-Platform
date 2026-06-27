@@ -1,85 +1,59 @@
 package salon.catalog.application.domain.service;
 
-import salon.catalog.application.port.out.CatalogDatabaseRepository;
-import salon.catalog.application.domain.model.catalog.CatalogId;
+import salon.catalog.application.domain.exception.CatalogValidationException;
+import salon.catalog.application.domain.exception.CombinationNotAllowedException;
 import salon.catalog.application.domain.model.catalog.CatalogRule;
-import salon.catalog.application.domain.model.catalog.OptionCode;
 import salon.catalog.application.domain.model.catalog.ProductCatalog;
 import salon.catalog.application.domain.model.catalog.RuleType;
-import salon.catalog.application.domain.model.specification.RuleViolationException;
+import salon.catalog.application.domain.model.shared.OptionCode;
 import salon.catalog.application.domain.model.specification.VehicleSpecification;
+import salon.catalog.application.domain.policy.OptionCombinationSpecification;
 
 import java.util.List;
-import java.util.Optional;
 
-/**
- * Serwis dziedzinowy (UC-KON-01): łączy specyfikację z cennikiem.
- * Zgodnie z diagramem architektury to ON czyta reguły z CatalogDatabaseRepository — sam pobiera
- * ProductCatalog (po identyfikatorze ze specyfikacji) i podaje go agregatowi, dzięki czemu
- * agregat nie zna bazy, a walidacja reguł (Fail-fast) dzieje się w domenie (addOption).
- *
- * Bezstanowy: koordynuje dodawanie opcji (EXCLUDES, Fail-fast) oraz ocenia kompletność
- * konfiguracji przed finalizacją (REQUIRES).
- */
 public class RuleValidationService {
 
-    private final CatalogDatabaseRepository catalogRepository;
-
-    public RuleValidationService(CatalogDatabaseRepository catalogRepository) {
-        if (catalogRepository == null) {
-            throw new IllegalArgumentException("catalogRepository must not be null.");
+    
+    public void validateSelection(VehicleSpecification specification, ProductCatalog catalog) {
+        OptionCombinationSpecification spec = new OptionCombinationSpecification(catalog.rules());
+        List<String> violations = spec.violations(specification.pickedAsSet());
+        if (!violations.isEmpty()) {
+            throw new CombinationNotAllowedException(
+                    "Disallowed option combination: " + String.join("; ", violations));
         }
-        this.catalogRepository = catalogRepository;
     }
 
-    /**
-     * UC-KON-01: koordynacja dodania opcji bez podawania cennika z zewnątrz.
-     * Serwis sam pobiera właściwy cennik z repozytorium (po identyfikatorze ze specyfikacji),
-     * a następnie zleca agregatowi dodanie opcji (pełna walidacja: obecność + wykluczenia + cena).
-     */
-    public void validateAndAddOption(VehicleSpecification specification, OptionCode option) {
-        if (specification == null) {
-            throw new IllegalArgumentException("specification must not be null.");
+    
+    public void validateComplete(VehicleSpecification specification, ProductCatalog catalog) {
+        if (specification.optionsPicked().isEmpty()) {
+            throw new CombinationNotAllowedException("The specification does not contain any option");
         }
-        if (option == null) {
-            throw new IllegalArgumentException("option must not be null.");
-        }
-        specification.addOption(option, loadCatalog(specification));
+        validateSelection(specification, catalog);
     }
 
-    /**
-     * UC-KON-01 (reguła finalizacji): ocena kompletności konfiguracji względem reguł cennika.
-     * Sprawdzamy reguły REQUIRES — jeśli wybrano opcję źródłową, musi też być obecna opcja wymagana.
-     * Złamanie kompletności blokuje finalizację (RuleViolationException).
-     *
-     * Uwaga: kompletność grup kardynalnych (silnik/skrzynia/kolor) wymaga kategoryzacji opcji,
-     * której bieżący model (CatalogOption = kod + cena) nie posiada — egzekwujemy tu zależności REQUIRES.
-     */
-    public void assertComplete(VehicleSpecification specification) {
-        if (specification == null) {
-            throw new IllegalArgumentException("specification must not be null.");
-        }
-        ProductCatalog catalog = loadCatalog(specification);
-        List<OptionCode> picked = specification.getSelectedOptions();
-        List<CatalogRule> rules = catalog.getRules();
-        for (int i = 0; i < rules.size(); i++) {
-            CatalogRule rule = rules.get(i);
-            if (rule.type() != RuleType.REQUIRES) {
-                continue;
-            }
-            if (picked.contains(rule.sourceCode()) && !picked.contains(rule.targetCode())) {
-                throw new RuleViolationException("Option " + rule.sourceCode().value()
-                        + " requires " + rule.targetCode().value() + " to be selected.");
+    
+    public void validateCatalogConsistency(ProductCatalog catalog) {
+        List<CatalogRule> rules = catalog.rules();
+        for (CatalogRule rule : rules) {
+            for (CatalogRule other : rules) {
+                if (rule == other) {
+                    continue;
+                }
+                boolean samePair = pairMatches(rule, other);
+                if (samePair && rule.type() != other.type()) {
+                    throw new CatalogValidationException(
+                            "Conflicting rules for the pair " + rule.sourceCode() + "/" + rule.targetCode()
+                                    + ": " + RuleType.REQUIRES + " and " + RuleType.EXCLUDES);
+                }
             }
         }
     }
 
-    private ProductCatalog loadCatalog(VehicleSpecification specification) {
-        CatalogId catalogId = specification.getCatalogId();
-        Optional<ProductCatalog> found = catalogRepository.findById(catalogId);
-        if (found.isEmpty()) {
-            throw new IllegalStateException("Catalog not found: " + catalogId.value());
-        }
-        return found.get();
+    private boolean pairMatches(CatalogRule a, CatalogRule b) {
+        OptionCode as = a.sourceCode();
+        OptionCode at = a.targetCode();
+        OptionCode bs = b.sourceCode();
+        OptionCode bt = b.targetCode();
+        return (as.equals(bs) && at.equals(bt)) || (as.equals(bt) && at.equals(bs));
     }
 }

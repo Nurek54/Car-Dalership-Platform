@@ -27,30 +27,30 @@ class ReleaseVehicleDomainTest {
 
     @Test
     void shouldConfirmHandoverAndCompleteOrder() { // SCENARIUSZ GŁÓWNY
-        // Przekazanie umówione
+        // Wydanie jest umówione
         Order order = prepareScheduledOrder();
 
-        // Użytkownik potwierdza fizyczne wydanie kluczyków klientowi
+        // Użytkownik potwierdza fizyczne przekazanie kluczyków klientowi
         order.confirmHandover();
 
-        // Agregat przechodzi do końcowego, niemutowalnego stanu COMPLETED
-        assertThat(order.getState()).isEqualTo(OrderState.COMPLETED);
-        // Generuje się zdarzenie zamykające
-        assertThat(order.getDomainEvents()).hasAtLeastOneElementOfType(OrderCompletedEvent.class);
+        // Agregat przechodzi w finalny, niemutowalny stan COMPLETED
+        assertThat(order.state()).isEqualTo(OrderState.COMPLETED);
+        // Generowane jest zdarzenie zamykające
+        assertThat(order.domainEvents()).hasAtLeastOneElementOfType(OrderCompletedEvent.class);
     }
 
     @Test
     void shouldRevertToReadyForHandoverWhenInventoryReleaseFails() {
 
         Order order = prepareScheduledOrder();
-        order.confirmHandover(); // Stan ostateczny: COMPLETED
+        order.confirmHandover(); // Stan końcowy: COMPLETED
         order.pullDomainEvents();
 
-        // Moduł CRM odbiera z modułu Inwentarza zdarzenie błędu (VehicleInventoryReleasedError),
+        // Moduł CRM otrzymuje zdarzenie błędu z modułu Magazynu (VehicleInventoryReleasedError),
         order.revertToReadyForHandover();
 
-        assertThat(order.getState()).isEqualTo(OrderState.READY_FOR_HANDOVER);
+        assertThat(order.state()).isEqualTo(OrderState.READY_FOR_HANDOVER);
 
-        assertThat(order.getHandoverDate()).isNull();
+        assertThat(order.handoverDate()).isNull();
     }
 }

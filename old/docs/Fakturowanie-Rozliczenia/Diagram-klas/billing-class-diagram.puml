@@ -1,0 +1,336 @@
+@startuml billing-class-diagram
+'==================================================================
+' Diagram klas — kontekst Fakturowanie i Rozliczenia (Billing)
+' Wygenerowany na podstawie kodu: src/salon/billing
+' Styl spójny z "Rysunek 7: Diagram klas — kontekst rezerwacje"
+'==================================================================
+
+title Diagram klas — kontekst Fakturowanie i Rozliczenia (Billing)
+
+skinparam shadowing false
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam wrapWidth 260
+hide empty members
+
+skinparam class {
+  BorderColor #4A4A4A
+  ArrowColor #4A4A4A
+  BackgroundColor<<AggregateRoot>> #9DC3E6
+  BackgroundColor<<Entity>> #CFE2F3
+  BackgroundColor<<ValueObject>> #FFF2CC
+  BackgroundColor<<Factory>> #F9CB9C
+  BackgroundColor<<DomainService>> #F9CB9C
+  BackgroundColor<<ApplicationService>> #F6B26B
+  BackgroundColor<<Port>> #FFFFFF
+  BackgroundColor<<Command>> #EAD1DC
+  BackgroundColor<<Exception>> #F4CCCC
+  BackgroundColor<<SharedKernel>> #D9D2E9
+}
+skinparam enum {
+  BackgroundColor #FFF2CC
+  BorderColor #4A4A4A
+}
+
+package "salon.billing" {
+
+  package "application.domain.model" #F2F7FB {
+
+    '------------------ Agregat 1: Settlement ------------------
+    class Settlement <<AggregateRoot>> {
+      - id : SettlementId
+      - orderId : OrderId
+      - totalAmount : Money
+      - payments : List<Payment>
+      - status : SettlementStatus
+      - advanceRequested : boolean
+      --
+      + requestAdvancePayment() : void
+      + registerPayment(transactionId : String, amount : Money) : void
+      - recalculateBalance() : void
+      + outstandingBalance() : Money
+      + status() : SettlementStatus
+      + payments() : List<Payment>
+    }
+
+    class Payment <<Entity>> {
+      - transactionId : String
+      - amount : Money
+      - paymentDate : LocalDateTime
+    }
+
+    class SettlementId <<ValueObject>> {
+      - value : String
+      + {static} generate() : SettlementId
+    }
+
+    enum SettlementStatus {
+      OPEN
+      PARTIAL_PAYMENT
+      SETTLED
+    }
+
+    class SettlementFactory <<Factory>> {
+      + createNew(orderId : OrderId, totalAmount : Money) : Settlement
+    }
+
+    '------------------ Agregat 2: AccountingDocument ------------------
+    class AccountingDocument <<AggregateRoot>> {
+      - id : DocumentId
+      - orderId : OrderId
+      - invoiceTitle : String
+      - buyer : BuyerDetails
+      - seller : SellerDetails
+      - totalAmount : Money
+      - issueDate : LocalDate
+      - dueDate : LocalDate
+      - authorizedIssuer : String
+      - status : DocumentStatus
+      --
+      + {static} createInvoice(orderId : OrderId, buyer : BuyerDetails, seller : SellerDetails,\n totalAmount : Money, invoiceTitle : String, authorizedIssuer : String) : AccountingDocument
+      + generatePdf() : byte[]
+      + markAsIssued() : void
+      + markAsError() : void
+    }
+
+    class DocumentId <<ValueObject>> {
+      - value : String
+      + {static} generate() : DocumentId
+    }
+
+    class BuyerDetails <<ValueObject>> {
+      - name : String
+      - nip : String
+      + isCorporate() : boolean
+    }
+
+    class SellerDetails <<ValueObject>> {
+      - name : String
+      - nip : String
+    }
+
+    enum DocumentStatus {
+      DRAFT
+      ISSUED
+      ERROR
+    }
+
+    class AccountingDocumentFactory <<Factory>> {
+      + createInvoice(orderId : OrderId, buyer : BuyerDetails, seller : SellerDetails,\n totalAmount : Money, invoiceTitle : String, authorizedIssuer : String) : AccountingDocument
+    }
+  }
+
+  package "application.domain.service" #FBF1E6 {
+    class InvoiceCalculationService <<DomainService>> {
+      - {static} ADVANCE_RATE : BigDecimal
+      + calculateAdvanceAmount(settlement : Settlement) : Money
+      + calculateFinalInvoiceAmount(settlement : Settlement) : Money
+    }
+  }
+
+  package "application.domain.event" #EAF4E5 {
+    interface DomainEvent <<SharedKernel>> {
+      + eventId() : UUID
+      + occurredOn() : Instant
+    }
+    class AdvancePaymentRequestedEvent <<DomainEvent>> {
+      + orderId : String
+    }
+    class AdvancePaymentRegisteredEvent <<DomainEvent>> {
+      + orderId : String
+    }
+    class PaymentRegisteredEvent <<DomainEvent>> {
+      + orderId : String
+    }
+    class SettlementCompletedEvent <<DomainEvent>> {
+      + orderId : String
+    }
+    class InvoiceCreatedEvent <<DomainEvent>> {
+      + orderId : String
+    }
+    class ErrorDuringInvoiceCreationEvent <<DomainEvent>> {
+      + orderId : String
+      + reason : String
+    }
+    class ErrorDuringPaymentRequestEvent <<DomainEvent>> {
+      + orderId : String
+      + reason : String
+    }
+  }
+
+  package "application.service" #FCEFE0 {
+    class DocumentGenerationService <<ApplicationService>> {
+      + generateAdvance(command : GenerateAdvanceCommand) : String
+      + generateInvoice(command : GenerateInvoiceCommand) : String
+      - issueAndNotify(document : AccountingDocument) : String
+      - loadSettlement(orderId : String) : Settlement
+    }
+    class PaymentProcessService <<ApplicationService>> {
+      + initializeSettlement(orderId : OrderId, totalAmount : Money) : void
+      + processPayment(command : ProcessPaymentCommand) : void
+      + sendPaymentReminders() : void
+    }
+  }
+
+  package "application.port.in" #FFFFFF {
+    interface GenerateAdvance <<Port>> {
+      + generateAdvance(command : GenerateAdvanceCommand) : String
+    }
+    interface GenerateInvoice <<Port>> {
+      + generateInvoice(command : GenerateInvoiceCommand) : String
+    }
+    interface ProcessPayment <<Port>> {
+      + initializeSettlement(orderId : OrderId, totalAmount : Money) : void
+      + processPayment(command : ProcessPaymentCommand) : void
+      + sendPaymentReminders() : void
+    }
+  }
+
+  package "application.port.out" #FFFFFF {
+    interface SettlementDatabaseRepository <<Port>> {
+      + save(settlement : Settlement) : void
+      + findByOrderId(orderId : OrderId) : Optional<Settlement>
+      + findAll() : List<Settlement>
+    }
+    interface DocumentDatabaseRepository <<Port>> {
+      + save(document : AccountingDocument) : void
+      + findById(id : DocumentId) : Optional<AccountingDocument>
+      + findByOrderId(orderId : OrderId) : List<AccountingDocument>
+    }
+    interface PdfGeneration <<Port>> {
+      + generatePdf(document : AccountingDocument) : byte[]
+    }
+    interface NotificationGeneration <<Port>> {
+      + notifyInvoiceIssued(document : AccountingDocument, pdf : byte[]) : void
+      + notifyPaymentReminder(orderId : OrderId, outstanding : Money) : void
+    }
+    interface SalesIntegration <<Port>> {
+      + buyerDetailsFor(orderId : String) : BuyerDetails
+    }
+  }
+
+  package "application.command" #F4E7EE {
+    class GenerateAdvanceCommand <<Command>> {
+      + orderId : String
+      + authorizedIssuer : String
+    }
+    class GenerateInvoiceCommand <<Command>> {
+      + orderId : String
+      + invoiceTitle : String
+      + authorizedIssuer : String
+    }
+    class ProcessPaymentCommand <<Command>> {
+      + orderId : String
+      + transactionId : String
+      + amount : BigDecimal
+      + currency : String
+    }
+  }
+
+  package "application.domain.exception" #FBEAEA {
+    class SettlementNotFoundException <<Exception>>
+    class IllegalSettlementStateException <<Exception>>
+    class DocumentGenerationException <<Exception>>
+  }
+}
+
+package "salon.common (Shared Kernel)" #EFECF7 {
+  class Money <<SharedKernel>> {
+    - amount : BigDecimal
+    - currency : String
+    + add(other : Money) : Money
+    + subtract(other : Money) : Money
+    + isNegative() : boolean
+  }
+  class OrderId <<SharedKernel>> {
+    - value : String
+  }
+  abstract class AbstractAggregateRoot <<SharedKernel>> {
+    # registerEvent(event : DomainEvent) : void
+    + pullDomainEvents() : List<DomainEvent>
+    + getDomainEvents() : List<DomainEvent>
+  }
+  interface EventPublisher <<Port>> {
+    + publish(event : DomainEvent) : void
+    + publishAll(events : List<DomainEvent>) : void
+  }
+}
+
+'==================== RELACJE ====================
+
+' --- Agregat Settlement ---
+Settlement --|> AbstractAggregateRoot
+Settlement "1" *-- "0..*" Payment
+Settlement --> "1" SettlementStatus
+Settlement --> "1" SettlementId
+Settlement --> "1" OrderId
+Settlement ..> Money
+SettlementFactory ..> Settlement : <<creates>>
+Payment --> Money
+
+' --- Agregat AccountingDocument ---
+AccountingDocument "1" *-- "1" BuyerDetails
+AccountingDocument "1" *-- "1" SellerDetails
+AccountingDocument --> "1" DocumentStatus
+AccountingDocument --> "1" DocumentId
+AccountingDocument --> "1" OrderId
+AccountingDocument ..> Money
+AccountingDocumentFactory ..> AccountingDocument : <<creates>>
+
+' --- Domain service ---
+InvoiceCalculationService ..> Settlement
+InvoiceCalculationService ..> Money
+
+' --- Zdarzenia ---
+DomainEvent <|.. AdvancePaymentRequestedEvent
+DomainEvent <|.. AdvancePaymentRegisteredEvent
+DomainEvent <|.. PaymentRegisteredEvent
+DomainEvent <|.. SettlementCompletedEvent
+DomainEvent <|.. InvoiceCreatedEvent
+DomainEvent <|.. ErrorDuringInvoiceCreationEvent
+DomainEvent <|.. ErrorDuringPaymentRequestEvent
+Settlement ..> AdvancePaymentRequestedEvent : <<emits>>
+Settlement ..> AdvancePaymentRegisteredEvent : <<emits>>
+Settlement ..> PaymentRegisteredEvent : <<emits>>
+Settlement ..> SettlementCompletedEvent : <<emits>>
+
+' --- Application services: porty wejsciowe ---
+DocumentGenerationService ..|> GenerateAdvance
+DocumentGenerationService ..|> GenerateInvoice
+PaymentProcessService ..|> ProcessPayment
+
+' --- DocumentGenerationService: zaleznosci ---
+DocumentGenerationService ..> SettlementDatabaseRepository
+DocumentGenerationService ..> DocumentDatabaseRepository
+DocumentGenerationService ..> InvoiceCalculationService
+DocumentGenerationService ..> AccountingDocumentFactory
+DocumentGenerationService ..> PdfGeneration
+DocumentGenerationService ..> NotificationGeneration
+DocumentGenerationService ..> SalesIntegration
+DocumentGenerationService ..> EventPublisher
+DocumentGenerationService ..> SellerDetails
+DocumentGenerationService ..> InvoiceCreatedEvent : <<publishes>>
+DocumentGenerationService ..> ErrorDuringInvoiceCreationEvent : <<publishes>>
+DocumentGenerationService ..> ErrorDuringPaymentRequestEvent : <<publishes>>
+
+' --- PaymentProcessService: zaleznosci ---
+PaymentProcessService ..> SettlementDatabaseRepository
+PaymentProcessService ..> SettlementFactory
+PaymentProcessService ..> DocumentDatabaseRepository
+PaymentProcessService ..> NotificationGeneration
+PaymentProcessService ..> EventPublisher
+
+' --- Porty: kontrakty na typach dziedzinowych ---
+PdfGeneration ..> AccountingDocument
+NotificationGeneration ..> AccountingDocument
+SalesIntegration ..> BuyerDetails
+SettlementDatabaseRepository ..> Settlement
+DocumentDatabaseRepository ..> AccountingDocument
+EventPublisher ..> DomainEvent
+
+' --- Komendy ---
+GenerateAdvance ..> GenerateAdvanceCommand
+GenerateInvoice ..> GenerateInvoiceCommand
+ProcessPayment ..> ProcessPaymentCommand
+
+@enduml

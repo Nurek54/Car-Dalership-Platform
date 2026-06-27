@@ -1,0 +1,159 @@
+@startuml CatalogOutbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<repository>> LightSalmon
+    BackgroundColor<<output port>> LightGray
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<outbound adapter>> Honeydew
+}
+
+package "salon" {
+  package "catalog" {
+
+    package "infrastructure" {
+      package "out" {
+
+        package "persistence" {
+          class CatalogDatabaseRepository <<outbound adapter>> {
+            - dbAdapter : DbAdapter
+            - mapper : ProductCatalogPersistenceMapper
+            + save(catalog)
+            + findById(id) : Optional<ProductCatalog>
+            + findActiveByModelYear(modelYear) : Optional<ProductCatalog>
+          }
+          class SpecificationDatabaseRepository <<outbound adapter>> {
+            - dbAdapter : DbAdapter
+            - mapper : VehicleSpecificationPersistenceMapper
+            + save(specification)
+            + findById(id) : Optional<VehicleSpecification>
+          }
+          interface DbAdapter <<output port>> {
+            + upsert(collection, id, record)
+            + findById(collection, id) : Optional<Object>
+            + findAll(collection) : List<Object>
+          }
+          class InMemoryDbAdapter <<outbound adapter>>
+        }
+
+        package "acl" {
+          class ImporterAclAdapter <<outbound adapter>> {
+            - client : ImporterServiceClient
+            - translator : ImporterCatalogTranslator
+            + fetchLatestCatalog() : ImportedCatalogData
+          }
+          interface ImporterServiceClient <<output port>> {
+            + downloadLatestPackage() : ExternalCatalogPackage
+          }
+          class ImporterCatalogTranslator {
+            + translate(external : ExternalCatalogPackage) : ImportedCatalogData
+          }
+        }
+
+        package "messaging" {
+          class RabbitMqEventPublisher <<outbound adapter>> {
+            - broker : MessageBroker
+            + publish(event)
+          }
+          interface MessageBroker <<output port>> {
+            + send(routingKey, payload)
+          }
+        }
+
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class BuildSpecificationService <<application service>> {
+          + initiate(command) : SpecificationView
+          + addOption(command) : SpecificationView
+          + removeOption(command) : SpecificationView
+          + finalizeSpecification(command) : SpecificationView
+        }
+        class UpdateCatalogService <<application service>> {
+          + update()
+        }
+      }
+
+      package "port" {
+        package "out" {
+          interface ProductCatalogRepository <<repository>> {
+            + save(catalog)
+            + findById(id) : Optional<ProductCatalog>
+            + findActiveByModelYear(modelYear) : Optional<ProductCatalog>
+          }
+          interface VehicleSpecificationRepository <<repository>> {
+            + save(specification)
+            + findById(id) : Optional<VehicleSpecification>
+          }
+          interface CatalogImporterPort <<output port>> {
+            + fetchLatestCatalog() : ImportedCatalogData
+          }
+          interface EventPublisher <<output port>> {
+            + publish(event : DomainEvent)
+          }
+        }
+      }
+
+      package "domain" {
+        package "model" {
+          class ProductCatalog <<aggregate root>> {
+            - id : CatalogId
+            - modelYear : ModelYear
+            - version : int
+            - state : CatalogState
+            + archive()
+            + containsOption(code) : boolean
+            + priceOf(code) : Money
+          }
+          class VehicleSpecification <<aggregate root>> {
+            - id : SpecificationId
+            - catalogId : CatalogId
+            - totalPrice : Money
+            - state : SpecificationState
+            + addOption(code, catalog)
+            + removeOption(code, catalog)
+            + finalizeSpecification()
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Service -> port dependencies
+BuildSpecificationService --> ProductCatalogRepository
+BuildSpecificationService --> VehicleSpecificationRepository
+BuildSpecificationService --> EventPublisher
+
+UpdateCatalogService --> CatalogImporterPort
+UpdateCatalogService --> ProductCatalogRepository
+UpdateCatalogService --> EventPublisher
+
+' Adapter implementations
+CatalogDatabaseRepository ..|> ProductCatalogRepository
+SpecificationDatabaseRepository ..|> VehicleSpecificationRepository
+ImporterAclAdapter ..|> CatalogImporterPort
+RabbitMqEventPublisher ..|> EventPublisher
+InMemoryDbAdapter ..|> DbAdapter
+
+' Adapter internal dependencies
+CatalogDatabaseRepository --> DbAdapter
+SpecificationDatabaseRepository --> DbAdapter
+ImporterAclAdapter --> ImporterServiceClient
+ImporterAclAdapter --> ImporterCatalogTranslator
+RabbitMqEventPublisher --> MessageBroker
+
+' Repository -> aggregate
+ProductCatalogRepository "1" --> "*" ProductCatalog : <<repository for>>
+VehicleSpecificationRepository "1" --> "*" VehicleSpecification : <<repository for>>
+
+@enduml

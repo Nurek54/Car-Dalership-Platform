@@ -1,0 +1,165 @@
+% =====================================================
+% Język Wszechobecny - Sprzedaż i CRM
+% =====================================================
+\subsubsection{Kontekst: Sprzedaż i CRM}
+
+\begin{longtable}{|p{4cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endhead
+
+Oferta & Offer & Sformalizowana, niewiążąca propozycja handlowa zawierająca specyfikację pojazdu oraz warunki finansowe. Służy do negocjacji i kalkulacji rabatów. \\
+\hline
+
+Zamówienie & Order & Formalne, twarde zobowiązanie zakupu pojazdu, powstające wyłącznie po akceptacji oferty przez klienta. Stanowi podstawę do uruchomienia procesów logistycznych i finansowych. \\
+\hline
+
+Sesja Konfiguratora & Configurator Session & Zewnętrzny proces technicznego doboru wyposażenia pojazdu, inicjowany przez CRM dla konkretnego klienta, kończący się zwróceniem gotowej specyfikacji. \\
+\hline
+
+Wydanie Pojazdu & Vehicle Handover & Finalna operacja w salonie (podpisanie protokołu i przekazanie kluczyków), zamykająca zamówienie i wymuszająca wyksięgowanie pojazdu z inwentarza. \\
+\hline
+\end{longtable}
+
+% =====================================================
+% Język Wszechobecny - Katalog i Konfigurator
+% =====================================================
+\subsubsection{Kontekst: Katalog i Konfigurator}
+
+\begin{longtable}{|p{4cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endhead
+
+Katalog Produktów & Product Catalog & Kompletny zbiór opcji, pakietów i reguł zależności przypisany do danego rocznika modelowego. Pobierany zewnętrznie, obiekt ściśle niemutowalny w danej wersji. \\
+\hline
+
+Pakiet Wyposażenia & Equipment Package & Predefiniowany zbiór produktów (opcji) ułatwiający konfigurację, zapobiegający tzw. mikrozarządzaniu pojedynczymi elementami wyposażenia. \\
+\hline
+
+Układ Napędowy & Powertrain & Wymagana, podstawowa kombinacja wybranego silnika oraz kompatybilnej z nim skrzyni biegów. \\
+\hline
+
+Reguła Katalogowa & Catalog Rule & Zależność biznesowa blokująca tworzenie niedozwolonych przez fabrykę kombinacji sprzętowych lub wymuszająca dobranie brakujących opcji. \\
+\hline
+
+Specyfikacja & Vehicle Specification & Unikalna, budowana przez klienta konfiguracja pojazdu. Po osiągnięciu stanu kompletności staje się podstawą do wygenerowania oferty. \\
+\hline
+\end{longtable}
+
+% =====================================================
+% Język Wszechobecny - Inwentarz i Logistyka Pojazdów
+% =====================================================
+\subsubsection{Kontekst: Inwentarz i Logistyka Pojazdów}
+
+\begin{longtable}{|p{4cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endhead
+
+Egzemplarz Pojazdu & Inventory Vehicle & Reprezentuje cykl życia pojazdu w ekosystemie dealera – łącząc fazę wirtualną (w produkcji) z fazą fizyczną (na placu). Identyfikowany przez numer VIN. \\
+\hline
+
+Plac & Stock & Lokalna baza pojazdów dostępnych fizycznie w salonie samochodowym. \\
+\hline
+
+Rezerwacja & Reservation & Przypisanie konkretnego numeru VIN do konkretnego zamówienia. Gwarantuje blokadę auta przed sprzedażą innemu klientowi. \\
+\hline
+
+Zlecenie Produkcji & Factory Order & Żądanie wysłane do zewnętrznego systemu fabryki w sytuacji, gdy samochodu o żądanej specyfikacji brakuje na lokalnym placu. \\
+\hline
+
+Timeout Rezerwacji & Reservation Timeout & Automatyczne zwolnienie rezerwacji pojazdu wywołane przekroczeniem terminu wpłaty zadatku lub zapłaty końcowej. \\
+\hline
+
+Wyksięgowanie & Inventory Release & Ostateczna zmiana statusu pojazdu zamykająca jego obecność na aktywnym stanie magazynowym dealera po wydaniu klientowi. \\
+\hline
+\end{longtable}
+
+% =====================================================
+% Język Wszechobecny - Finansowanie
+% =====================================================
+\subsubsection{Kontekst: Finansowanie}
+
+\begin{longtable}{|p{4cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endhead
+
+Wniosek o Finansowanie & Financing Application & Zagregowany pakiet danych klienta i zamawianego pojazdu, wysyłany do zewnętrznej instytucji w celu weryfikacji zdolności kredytowej/leasingowej. \\
+\hline
+
+Decyzja Finansowa & Financing Decision & Ostateczny status (pozytywny lub negatywny) nadany przez bank, warunkujący możliwość kontynuowania procesu sprzedaży. \\
+\hline
+
+Warstwa Tłumacząca & Anti-Corruption Layer & Mechanizm izolujący rdzeń systemu, tłumaczący wewnętrzne zdarzenia domenowe na formaty zrozumiałe dla API konkretnego banku i odwrotnie. \\
+\hline
+
+System Bankowy & Bank System & Zewnętrzny decydent w kwestii przyznania środków; jedyne źródło prawdy o ostatecznym statusie wniosku kredytowego/leasingowego. \\
+\hline
+\end{longtable}
+
+% =====================================================
+% Język Wszechobecny - Fakturowanie i Rozliczenia
+% =====================================================
+\subsubsection{Kontekst: Fakturowanie i Rozliczenia}
+
+\begin{longtable}{|p{4cm}|p{4cm}|p{8cm}|}
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Nazwa (PL)} & \textbf{Odpowiednik w kodzie (EN)} & \textbf{Opis} \\
+\hline
+\endhead
+
+Rozliczenie & Settlement & Agregat będący centralnym mechanizmem kontroli finansowej kontraktu. Śledzi wpłaty i pilnuje, czy zamówienie zostało w pełni opłacone. \\
+\hline
+
+Proforma & Proforma & Dokument skarbowy, pełniący rolę wezwania do zapłaty (wygenerowany na potrzeby wpłaty zadatku). \\
+\hline
+
+Faktura & Invoice & Prawnie wiążący dokument sprzedaży wystawiany po potwierdzeniu rezerwacji pojazdu. \\
+\hline
+
+Zadatek & Advance Payment & Bezzwrotna wpłata początkowa, wymagana do potwierdzenia zamówienia produkcyjnego lub rezerwacji auta z placu. \\
+\hline
+
+Należność & Receivable & Całkowita kwota pieniędzy z tytułu kontraktu, której dealer oczekuje od klienta. \\
+\hline
+
+Saldo & Balance & Obliczana na bieżąco różnica pomiędzy całkowitą należnością a sumą dotychczas zaksięgowanych wpłat. \\
+\hline
+
+Płatność Częściowa & Partial Payment & Status rozliczenia oznaczający, że zarejestrowana wpłata (lub wpłaty) jest niższa od całkowitej oczekiwanej kwoty salda. \\
+\hline
+
+Rozliczone & Settled & Docelowy stan rozliczenia, w którym saldo zamówienia wynosi równe 0 PLN, co stanowi zielone światło do fizycznego wydania pojazdu. \\
+\hline
+\end{longtable}

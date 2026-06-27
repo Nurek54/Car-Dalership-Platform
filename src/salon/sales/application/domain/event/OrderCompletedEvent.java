@@ -5,11 +5,13 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * "ZamowienieZrealizowane" (UC-CRM-05) — zamówienie osiągnęło końcowy,
- * niemutowalny stan COMPLETED (protokół wydania podpisany).
- */
-public record OrderCompletedEvent(UUID eventId,
-                                  String orderId,
-                                  Instant occurredOn) implements DomainEvent {
+public record OrderCompletedEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public OrderCompletedEvent(String orderId) {
+        this(orderId, UUID.randomUUID(), Instant.now());
+    }
+
+    public OrderCompletedEvent(UUID eventId, String orderId, Instant occurredOn) {
+        this(orderId, eventId, occurredOn);
+    }
 }

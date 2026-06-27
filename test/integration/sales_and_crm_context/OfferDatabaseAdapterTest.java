@@ -6,10 +6,10 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import salon.sales.infrastructure.out.persistence.OfferDatabaseAdapter;
+import salon.sales.application.domain.model.customer.CustomerId;
 import salon.sales.application.domain.model.offer.Offer;
 import salon.sales.application.domain.model.offer.OfferState;
 import salon.sales.application.domain.model.offer.OfferId;
-import salon.common.model.CustomerId;
 import salon.common.model.SpecificationId;
 import salon.common.model.Money;
 
@@ -32,26 +32,26 @@ class OfferDatabaseAdapterTest {
         databaseAdapter.save(offer);
         Optional<Offer> loadedOffer = databaseAdapter.findById(offerId);
 
-        // Zapisane dane są te same przy odczycie
+        // Zapisane dane są takie same przy odczycie
         assertThat(loadedOffer).isPresent();
-        assertThat(loadedOffer.get().getState()).isEqualTo(OfferState.DRAFT);
-        assertThat(loadedOffer.get().getFinalPrice()).isEqualTo(Money.of(150000, "PLN"));
+        assertThat(loadedOffer.get().state()).isEqualTo(OfferState.DRAFT);
+        assertThat(loadedOffer.get().finalPrice()).isEqualTo(Money.of(150000, "PLN"));
     }
 
     @Test
     void shouldUpdateOfferStateToPublished() {
-        // Posiadamy zapisaną ofertę
+        // Mamy zapisaną ofertę
         OfferId offerId = new OfferId("OFF-DB-2");
         Offer offer = new Offer(offerId, new CustomerId("C-2"), new SpecificationId("S-2"), Money.of(200000, "PLN"));
         databaseAdapter.save(offer);
 
-        // Wyciągamy ją, zmieniamy stan (publikujemy) i zapisujemy
+        // Pobieramy ją, zmieniamy jej stan (publikacja) i zapisujemy
         Offer savedOffer = databaseAdapter.findById(offerId).orElseThrow();
         savedOffer.publishOffer();
         databaseAdapter.save(savedOffer);
 
         Optional<Offer> updatedOffer = databaseAdapter.findById(offerId);
-        assertThat(updatedOffer.get().getState()).isEqualTo(OfferState.PUBLISHED);
+        assertThat(updatedOffer.get().state()).isEqualTo(OfferState.PUBLISHED);
     }
 
     @Test

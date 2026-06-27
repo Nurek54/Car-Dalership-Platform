@@ -5,12 +5,10 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * "ZlecenieProdukcjiZlozone" (UC-INW-02) — zlecenie produkcji wysłane do API
- * Importera/Fabryki, zamówienie oznaczone lokalnie statusem "W produkcji".
- */
-public record FactoryOrderPlacedEvent(UUID eventId,
-                                      String orderId,
-                                      String vin,
-                                      Instant occurredOn) implements DomainEvent {
+public record FactoryOrderPlacedEvent(String orderId, String vin,
+                                      UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public FactoryOrderPlacedEvent(String orderId, String vin) {
+        this(orderId, vin, UUID.randomUUID(), Instant.now());
+    }
 }

@@ -1,12 +1,8 @@
 package salon.sales.application.handler;
 
-import salon.sales.application.port.out.NotificationIntegrationPort;
 import salon.sales.application.domain.event.OrderReadyForHandoverEvent;
+import salon.sales.application.port.out.NotificationIntegrationPort;
 
-/**
- * Handler zdarzenia OrderReadyForHandover (UC-CRM-04, krok 2): system generuje
- * powiadomienie dla Handlowca, aby umówił z klientem termin odbioru pojazdu.
- */
 public class OrderReadyForHandoverEventHandler {
 
     private final NotificationIntegrationPort notificationPort;
@@ -16,11 +12,9 @@ public class OrderReadyForHandoverEventHandler {
     }
 
     public void handle(OrderReadyForHandoverEvent event) {
-        if (event == null) {
-            throw new IllegalArgumentException("event must not be null.");
-        }
+        
         this.notificationPort.sendAlertToSalesperson(
                 event.orderId(),
-                "Zamówienie jest gotowe do wydania. Skontaktuj się z klientem, aby umówić termin.");
+                "The order is ready for handover. Contact the customer to schedule a date.");
     }
 }

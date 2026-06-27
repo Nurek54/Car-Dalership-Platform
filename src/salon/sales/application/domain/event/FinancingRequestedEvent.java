@@ -5,13 +5,14 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * "ZawnioskowanoOFinansowanie" (UC-CRM-03, krok 5) — komunikat integracyjny dla
- * Kontekstu Finansowania (UC-FIN-01): uruchamia weryfikację zdolności kredytowej
- * przez ACL banku (handler FinancingRequestedEventHandler).
- */
-public record FinancingRequestedEvent(UUID eventId,
-                                      String orderId,
-                                      String customerId,
-                                      Instant occurredOn) implements DomainEvent {
+public record FinancingRequestedEvent(String orderId, String customerId,
+                                      UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public FinancingRequestedEvent(String orderId, String customerId) {
+        this(orderId, customerId, UUID.randomUUID(), Instant.now());
+    }
+
+    public FinancingRequestedEvent(UUID eventId, String orderId, String customerId, Instant occurredOn) {
+        this(orderId, customerId, eventId, occurredOn);
+    }
 }

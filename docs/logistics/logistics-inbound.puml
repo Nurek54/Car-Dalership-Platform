@@ -1,0 +1,121 @@
+@startuml LogisticsInbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<use case>> LightYellow
+    BackgroundColor<<inbound adapter>> MistyRose
+    BackgroundColor<<output port>> LightGray
+}
+
+package "salon" {
+  package "logistics" {
+
+    package "infrastructure" {
+      package "in" {
+        package "messaging" {
+          class BillingEventSubscriberAdapter <<inbound adapter>> {
+            - reserveVehicle : ReserveVehicle
+            - prepareForHandover : PrepareForHandover
+            - releaseVehicle : ReleaseVehicle
+            + handleAdvancePaymentRegistered(event)
+            + handleSettlementCompleted(event)
+            + handlePaymentDeadlineExpired(event)
+          }
+          class FinancingEventSubscriberAdapter <<inbound adapter>> {
+            - reserveVehicle : ReserveVehicle
+            + handleFinancingApproved(event)
+            + handleBankTransferDeclared(event)
+          }
+          class SalesEventSubscriberAdapter <<inbound adapter>> {
+            - catalogIntegration : CatalogIntegration
+            - releaseVehicle : ReleaseVehicle
+            + handleOrderPlaced(event)
+            + handleReleaseVehicle(command)
+          }
+          class CatalogEventSubscriberAdapter <<inbound adapter>> {
+            - catalogIntegration : CatalogIntegration
+            + handleSpecificationCompleted(event)
+          }
+        }
+        package "web" {
+          class VehicleArrivalRestAdapter <<inbound adapter>> {
+            - receiveVehicle : ReceiveVehicle
+            + onVehicleArrival(request)
+          }
+        }
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class InventoryManagementService <<application service>> {
+          - vehicleRepository : VehicleDatabaseRepository
+          - catalogIntegration : CatalogIntegration
+          - importerAcl : ImporterACL
+          - eventPublisher : EventPublisher
+          - vehicleFactory : InventoryVehicleFactory
+          + reserveVehicleForOrder(orderId)
+          + orderVehicleFromFactory(orderId)
+          + receiveVehicle(vin)
+          + releaseVehicle(orderId)
+          + releaseReservation(orderId)
+          + prepareVehicleForHandover(orderId)
+        }
+      }
+
+      package "port" {
+        package "in" {
+          interface ReserveVehicle <<use case>> {
+            + reserveVehicleForOrder(orderId)
+            + orderVehicleFromFactory(orderId)
+          }
+          interface ReceiveVehicle <<use case>> {
+            + receiveVehicle(vin)
+          }
+          interface ReleaseVehicle <<use case>> {
+            + releaseVehicle(orderId)
+            + releaseReservation(orderId)
+          }
+          interface PrepareForHandover <<use case>> {
+            + prepareVehicleForHandover(orderId)
+          }
+        }
+        package "out" {
+          interface CatalogIntegration <<output port>> {
+            + saveSpecification(specificationId, optionCodes)
+            + linkOrderToSpecification(orderId, specificationId)
+            + findSpecificationByOrder(orderId) : Optional<String>
+            + findOptionCodes(specificationId) : List<String>
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Implementations
+InventoryManagementService ..|> ReserveVehicle
+InventoryManagementService ..|> ReceiveVehicle
+InventoryManagementService ..|> ReleaseVehicle
+InventoryManagementService ..|> PrepareForHandover
+
+' Messaging adapters -> input ports
+BillingEventSubscriberAdapter --> ReserveVehicle
+BillingEventSubscriberAdapter --> PrepareForHandover
+BillingEventSubscriberAdapter --> ReleaseVehicle
+FinancingEventSubscriberAdapter --> ReserveVehicle
+SalesEventSubscriberAdapter --> ReleaseVehicle
+VehicleArrivalRestAdapter --> ReceiveVehicle
+
+' Adapters writing to CatalogIntegration (event-carried state transfer)
+CatalogEventSubscriberAdapter --> CatalogIntegration
+SalesEventSubscriberAdapter --> CatalogIntegration
+
+@enduml

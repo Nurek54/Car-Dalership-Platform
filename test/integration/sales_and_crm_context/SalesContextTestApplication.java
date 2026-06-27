@@ -10,13 +10,13 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 
 /**
- * Kotwica konfiguracji Springa dla testów pakietu integration.sales_and_crm_context
+ * Kotwica konfiguracji Springa dla testów w pakiecie integration.sales_and_crm_context
  * (@SpringBootTest, @DataJpaTest, @WebMvcTest).
  *
  * Produkcyjny korzeń kompozycji (salon.bootstrap.SalonApplication) leży poza drzewem
- * pakietów testów, więc Spring Boot by go nie odnalazł. Kotwica odtwarza zachowanie
- * @SpringBootApplication (TypeExcludeFilter pozwala plasterkom filtrować beany),
- * a @AutoConfigurationPackage wskazuje encje i repozytoria JPA w drzewie salon.*.
+ * pakietów testowych, więc Spring Boot by jej nie znalazł. Kotwica odwzorowuje zachowanie
+ * @SpringBootApplication (TypeExcludeFilter pozwala wycinkom filtrować beany),
+ * a @AutoConfigurationPackage wskazuje encje JPA i repozytoria w drzewie salon.*.
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration

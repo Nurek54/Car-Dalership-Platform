@@ -1,9 +1,5 @@
 package salon.sales.application.domain.model.customer;
 
-/**
- * Value Object: adres Klienta. Niemutowalny (rekord) — patrz
- * docs/Agregate/Guidelines/value-object-audit.md.
- */
 public record Address(String street, String postalCode, String city, String country) {
 
     public Address {

@@ -1,0 +1,101 @@
+@startuml CatalogInbound
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam class {
+    BackgroundColor<<application service>> PaleGreen
+    BackgroundColor<<domain service>> Wheat
+    BackgroundColor<<use case>> LightYellow
+    BackgroundColor<<inbound adapter>> MistyRose
+}
+
+package "salon" {
+  package "catalog" {
+
+    package "infrastructure" {
+      package "in" {
+        package "event" {
+          class ConfiguratorEventListener <<inbound adapter>> {
+            - buildSpecification : BuildSpecification
+            + onInitiateConfiguratorSession(message)
+          }
+        }
+        package "scheduler" {
+          class CatalogUpdateScheduler <<inbound adapter>> {
+            - updateCatalog : UpdateCatalog
+            + triggerCatalogUpdate()
+          }
+        }
+      }
+    }
+
+    package "application" {
+
+      package "service" {
+        class BuildSpecificationService <<application service>> {
+          - catalogRepository : ProductCatalogRepository
+          - specificationRepository : VehicleSpecificationRepository
+          - ruleValidationService : RuleValidationService
+          - specificationFactory : VehicleSpecificationFactory
+          - eventPublisher : EventPublisher
+          - clock : Clock
+          + initiate(command) : SpecificationView
+          + addOption(command) : SpecificationView
+          + removeOption(command) : SpecificationView
+          + finalizeSpecification(command) : SpecificationView
+        }
+        class UpdateCatalogService <<application service>> {
+          - catalogImporter : CatalogImporterPort
+          - catalogRepository : ProductCatalogRepository
+          - ruleValidationService : RuleValidationService
+          - catalogFactory : ProductCatalogFactory
+          - eventPublisher : EventPublisher
+          - clock : Clock
+          + update()
+        }
+      }
+
+      package "port" {
+        package "in" {
+          interface BuildSpecification <<use case>> {
+            + initiate(command : InitiateConfiguratorSessionCommand) : SpecificationView
+            + addOption(command : AddOptionCommand) : SpecificationView
+            + removeOption(command : RemoveOptionCommand) : SpecificationView
+            + finalizeSpecification(command : FinalizeSpecificationCommand) : SpecificationView
+          }
+          interface UpdateCatalog <<use case>> {
+            + update()
+          }
+        }
+      }
+
+      package "domain" {
+        package "service" {
+          class RuleValidationService <<domain service>> {
+            + validateSelection(specification, catalog)
+            + validateComplete(specification, catalog)
+            + validateCatalogConsistency(catalog)
+          }
+        }
+      }
+
+    }
+  }
+}
+
+' Implementations
+BuildSpecificationService ..|> BuildSpecification
+UpdateCatalogService ..|> UpdateCatalog
+
+' Adapter -> port
+ConfiguratorEventListener --> BuildSpecification
+CatalogUpdateScheduler --> UpdateCatalog
+
+' Service -> domain service
+BuildSpecificationService --> RuleValidationService
+UpdateCatalogService --> RuleValidationService
+
+@enduml

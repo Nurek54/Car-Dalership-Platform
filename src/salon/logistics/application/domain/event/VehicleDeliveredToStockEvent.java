@@ -5,13 +5,10 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * "PojazdDostarczonyNaStan" (UC-INW-03) — fizyczny pojazd z fabryki dotarł na plac
- * i został sparowany z oczekującym zamówieniem (status: Zarezerwowany).
- * Nasłuchują: Sprzedaż i CRM oraz Fakturowanie i rozliczenia (wg kanwy Inwentarza).
- */
-public record VehicleDeliveredToStockEvent(UUID eventId,
-                                           String orderId,
-                                           String vin,
-                                           Instant occurredOn) implements DomainEvent {
+public record VehicleDeliveredToStockEvent(String orderId, String vin,
+                                           UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public VehicleDeliveredToStockEvent(String orderId, String vin) {
+        this(orderId, vin, UUID.randomUUID(), Instant.now());
+    }
 }

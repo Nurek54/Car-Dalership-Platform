@@ -1,85 +1,72 @@
 package salon.sales.infrastructure.out.external;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
-import salon.sales.application.port.out.InventoryIntegration;
+import org.springframework.web.client.RestClient;
 import salon.sales.application.domain.exception.ExternalServiceUnavailableException;
 import salon.sales.application.domain.exception.InventoryLockedException;
+import salon.sales.application.port.out.InventoryIntegration;
 
 import java.util.Map;
 
-/**
- * Adapter wyjściowy (ExternalApiAdapter) portu {@link InventoryIntegration} —
- * klient HTTP do Kontekstu Inwentarza i Logistyki.
- *
- * HTTP 409 (konflikt rezerwacji/brak slotów) -> InventoryLockedException z powodem z JSON,
- * HTTP 5xx/timeout -> ExternalServiceUnavailableException.
- */
 @Component
 public class InventoryExternalApiAdapter implements InventoryIntegration {
 
-    private static final int TIMEOUT_MILLIS = 2000;
+    private final RestClient restClient;
 
-    private final RestTemplate restTemplate;
-    private final String baseUrl;
-
-    public InventoryExternalApiAdapter(@Value("${wiremock.server.port:8080}") int inventoryPort) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(TIMEOUT_MILLIS);
-        factory.setReadTimeout(TIMEOUT_MILLIS);
-        this.restTemplate = new RestTemplate(factory);
-        this.baseUrl = "http://localhost:" + inventoryPort;
+    public InventoryExternalApiAdapter(@Value("${sales.inventory.base-url:http://localhost:8082}") String baseUrl) {
+        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
     }
 
-    /** UC-CRM-03 -> UC-INW-01/02: rezerwacja pojazdu z placu lub slotu produkcyjnego. */
     @Override
     public void allocateVehicleOrProductionSlot(String orderId) {
         try {
-            this.restTemplate.postForEntity(this.baseUrl + "/api/inventory/allocations",
-                    Map.of("orderId", orderId), Void.class);
-        } catch (HttpClientErrorException.Conflict e) {
-            throw new InventoryLockedException(extractReason(e.getResponseBodyAsString()));
-        } catch (HttpServerErrorException | ResourceAccessException e) {
-            throw new ExternalServiceUnavailableException(
-                    "Inventory system is temporarily unavailable", e);
+            this.restClient.post()
+                    .uri("/api/inventory/allocations")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("orderId", orderId))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException.Conflict ex) {
+            throw new InventoryLockedException(extractReason(ex));
+        } catch (HttpServerErrorException | ResourceAccessException ex) {
+            throw new ExternalServiceUnavailableException("Inventory system is temporarily unavailable", ex);
         }
     }
 
-    /** UC-CRM-05, krok 3: komenda ReleaseVehicle (UC-INW-06). Brak VIN = brak fizycznej blokady. */
     @Override
-    public void releasePhysicalVehicle(String vehicleId) {
-        if (vehicleId == null || vehicleId.isBlank()) {
-            return; // pojazd nie został jeszcze przypisany — nie ma czego zwalniać
-        }
+    public void releasePhysicalVehicle(String orderId) {
         try {
-            this.restTemplate.postForEntity(this.baseUrl + "/api/inventory/releases",
-                    Map.of("vehicleId", vehicleId), Void.class);
-        } catch (HttpClientErrorException.Conflict e) {
-            throw new InventoryLockedException(extractReason(e.getResponseBodyAsString()));
-        } catch (HttpServerErrorException | ResourceAccessException e) {
-            throw new ExternalServiceUnavailableException(
-                    "Inventory system is temporarily unavailable", e);
+            this.restClient.post()
+                    .uri("/api/inventory/releases")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("orderId", orderId))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpServerErrorException | ResourceAccessException ex) {
+            throw new ExternalServiceUnavailableException("Inventory system is temporarily unavailable", ex);
         }
     }
 
-    // Wyciąga pole "reason" z prostego JSON-a błędu ({"reason": "..."}).
-    private String extractReason(String body) {
-        if (body != null) {
-            int idx = body.indexOf("\"reason\"");
-            if (idx >= 0) {
-                int colon = body.indexOf(':', idx);
-                int firstQuote = body.indexOf('"', colon + 1);
-                int lastQuote = body.indexOf('"', firstQuote + 1);
-                if (firstQuote >= 0 && lastQuote > firstQuote) {
-                    return body.substring(firstQuote + 1, lastQuote);
-                }
+    @Override
+    public void releaseVehicle(String orderId) {
+        releasePhysicalVehicle(orderId);
+    }
+
+    private String extractReason(HttpClientErrorException ex) {
+        try {
+            JsonNode body = ex.getResponseBodyAs(JsonNode.class);
+            if (body != null && body.has("reason")) {
+                return body.get("reason").asText();
             }
+        } catch (Exception ignored) {
+            
         }
-        return "Inventory rejected the operation";
+        return "Inventory rejected the allocation (409 Conflict)";
     }
 }

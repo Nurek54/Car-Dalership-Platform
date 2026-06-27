@@ -1,0 +1,97 @@
+% =====================================================
+\textbf{UC-FIN-01: Złożenie wniosku o finansowanie}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-FIN-01 \\
+\hline
+
+Nazwa & Złożenie wniosku o finansowanie \\
+\hline
+
+Opis & 
+Proces zebrania danych z zamówienia, ich translacji i wysłania zapytania o zdolność kredytową/leasingową klienta do systemu bankowego. \\
+\hline
+
+Aktor główny & System (Kontekst Finansowania i Ubezpieczeń) \\
+\hline
+
+Aktorzy pomocniczy & System zewnętrzny banku \\
+\hline
+
+Warunki wstępne & 
+Kontekst otrzymał zdarzenie \textit{FinancingRequestedEvent} (Klient w CRM zdecydował się na leasing/kredyt i podał wymagane dane). \\
+\hline
+
+Warunki końcowe & 
+Wniosek zostaje wysłany do systemu zewnętrznego banku, a system oczekuje na decyzję (status finansowania: Oczekujący). \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Kontekst reaguje na zdarzenie \textit{FinancingRequestedEvent}.
+    \item System agreguje dane pojazdu (cena, VIN/model) oraz dane klienta (NIP, dochody).
+    \item System tłumaczy (poprzez ACL) dane na strukturę wymaganą przez API banku (np. dedykowany JSON/XML).
+    \item System wysyła żądanie autoryzacji do systemu zewnętrznego banku.
+    \item System oznacza wniosek lokalnie statusem "W trakcie weryfikacji bankowej".
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Błąd komunikacji z bankiem: API banku nie odpowiada, system zawiesza proces i ponawia próbę po określonym czasie.
+    \item [A2] Odrzucenie walidacji po stronie banku: System banku natychmiast zwraca błąd o braku wymaganych danych (np. błędny NIP). System emituje zdarzenie \textit{FinancingApplicationFailed}, aby handlowiec poprawił wniosek wraz z Klientem.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-FIN-02: Przetworzenie decyzji o finansowaniu}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-FIN-02 \\
+\hline
+
+Nazwa & Przetworzenie decyzji o finansowaniu \\
+\hline
+
+Opis & 
+Odbiór i procesowanie asynchronicznej decyzji z banku oraz ogłoszenie jej wyniku wewnątrz systemu. \\
+\hline
+
+Aktor główny & System (Kontekst Finansowania i Ubezpieczeń) \\
+\hline
+
+Aktorzy pomocniczy & Adapter bankowy \\
+\hline
+
+Warunki wstępne & 
+W systemie istnieje wniosek o finansowanie o statusie "W trakcie weryfikacji bankowej". Kontekst otrzymał zdarzenie z adaptera bankowego \textit{FinancingDecisionReceivedFromBank}. \\
+\hline
+
+Warunki końcowe & 
+Decyzja zapisana w systemie, wyemitowane odpowiednie zdarzenie końcowe \textit{FinancingApprovedEvent} lub \textit{FinancingRejectedEvent}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item System reaguje na zdarzenie \textit{FinancingDecisionReceivedFromBank}.
+    \item System bankowy przekazuje pozytywną decyzję o finansowaniu.
+    \item System weryfikuje odpowiedź i aktualizuje status wniosku w lokalnej bazie.
+    \item System emituje zdarzenie \textit{FinancingApprovedEvent}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Decyzja odmowna: W kroku 2 system zewnętrzny banku przekazuje decyzję negatywną. System (po weryfikacji) emituje zdarzenie \textit{FinancingRejectedEvent}.
+\end{itemize} \\
+\hline
+\end{longtable}

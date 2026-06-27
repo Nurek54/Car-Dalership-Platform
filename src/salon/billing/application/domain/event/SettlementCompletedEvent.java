@@ -5,9 +5,10 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-/** "RozliczenieZakonczone" (UC-FIR-03) — należność pokryta w całości (saldo zerowe). */
-public record SettlementCompletedEvent(UUID eventId,
-                                       String settlementId,
-                                       String orderId,
-                                       Instant occurredOn) implements DomainEvent {
+public record SettlementCompletedEvent(String orderId, UUID eventId, Instant occurredOn)
+        implements DomainEvent {
+
+    public SettlementCompletedEvent(String orderId) {
+        this(orderId, UUID.randomUUID(), Instant.now());
+    }
 }

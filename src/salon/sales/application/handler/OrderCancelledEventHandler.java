@@ -1,12 +1,8 @@
 package salon.sales.application.handler;
 
-import salon.sales.application.port.out.BillingIntegration;
 import salon.sales.application.domain.event.OrderCancelledEvent;
+import salon.sales.application.port.out.BillingIntegration;
 
-/**
- * Handler zdarzenia OrderCancelled: przekazuje powód anulowania do Kontekstu Rozliczeń
- * (rozliczenie zadatku wg winy rezygnacji).
- */
 public class OrderCancelledEventHandler {
 
     private final BillingIntegration billingPort;
@@ -16,9 +12,6 @@ public class OrderCancelledEventHandler {
     }
 
     public void handle(OrderCancelledEvent event) {
-        if (event == null) {
-            throw new IllegalArgumentException("event must not be null.");
-        }
-        this.billingPort.processCancelledOrderBilling(event.orderId(), event.getReason());
+        this.billingPort.processCancelledOrderBilling(event.orderId(), event.reason());
     }
 }

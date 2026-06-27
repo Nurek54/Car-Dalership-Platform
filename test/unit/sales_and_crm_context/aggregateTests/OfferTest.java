@@ -16,18 +16,19 @@ class OfferTest {
 
     @Test
     void shouldSuccessfullyPublishDraftOffer() {
-        // Nowo utworzona oferta, zawsze powstaje jako DRAFT
+        // Świeżo utworzona oferta zawsze zaczyna jako DRAFT
         Offer offer = new Offer(
                 new OfferId("O-200"),
                 new CustomerId("C-001"),
-                new SpecificationId("SPEC-1")
+                new SpecificationId("SPEC-1"),
+                Money.of(120000, "PLN")
         );
 
-        // Handlowiec kończy uzupełniać ofertę i ją publikuje
+        // Sprzedawca kończy wypełnianie oferty i publikuje ją
         offer.publishOffer();
 
         // Stan zmienia się na PUBLISHED
-        assertThat(offer.getState()).isEqualTo(OfferState.PUBLISHED);
+        assertThat(offer.state()).isEqualTo(OfferState.PUBLISHED);
     }
 
     @Test
@@ -35,17 +36,18 @@ class OfferTest {
         Offer offer = new Offer(
                 new OfferId("O-201"),
                 new CustomerId("C-001"),
-                new SpecificationId("SPEC-1")
+                new SpecificationId("SPEC-1"),
+                Money.of(120000, "PLN")
         );
 
         // Próba akceptacji przez klienta musi zostać zablokowana
-        // Zabezpiecza to przed sytuacją, w której klient akceptuje warunki będące "w trakcie edycji"
+        // To zabezpiecza przed sytuacją, w której klient akceptuje warunki, które są „w trakcie edycji"
         assertThatThrownBy(() -> offer.accept())
                 .isInstanceOf(InvalidOfferStateException.class)
                 .hasMessageContaining("Only PUBLISHED offers can be accepted");
 
         // Stan pozostaje niezmieniony
-        assertThat(offer.getState()).isEqualTo(OfferState.DRAFT);
+        assertThat(offer.state()).isEqualTo(OfferState.DRAFT);
     }
 
     @Test
@@ -62,7 +64,7 @@ class OfferTest {
         offer.reject();
 
         // Stan zmienia się na REJECTED
-        assertThat(offer.getState()).isEqualTo(OfferState.REJECTED);
+        assertThat(offer.state()).isEqualTo(OfferState.REJECTED);
     }
 
     @Test
@@ -71,7 +73,8 @@ class OfferTest {
         Offer offer = new Offer(
                 new OfferId("O-203"),
                 new CustomerId("C-001"),
-                new SpecificationId("SPEC-1")
+                new SpecificationId("SPEC-1"),
+                Money.of(120000, "PLN")
         );
         offer.publishOffer();
         offer.reject();

@@ -6,14 +6,18 @@ import salon.common.model.Money;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * "ZadeklarowanoPrzelew" (UC-CRM-03, krok 5) — klient wybrał płatność przelewem.
- * Niesie zadeklarowaną kwotę kontraktu; nasłuchują: Kontekst Rozliczeń (proforma
- * z danymi do przelewu — handler BankTransferDeclaredEventHandler) oraz Inwentarz
- * (UC-INW-01 — weryfikacja dostępności i rezerwacja pojazdu).
- */
-public record BankTransferDeclaredEvent(UUID eventId,
-                                        String orderId,
-                                        Money declaredAmount,
-                                        Instant occurredOn) implements DomainEvent {
+public record BankTransferDeclaredEvent(String orderId, Money amount,
+                                        UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public BankTransferDeclaredEvent(String orderId) {
+        this(orderId, null, UUID.randomUUID(), Instant.now());
+    }
+
+    public BankTransferDeclaredEvent(String orderId, Money amount) {
+        this(orderId, amount, UUID.randomUUID(), Instant.now());
+    }
+
+    public BankTransferDeclaredEvent(UUID eventId, String orderId, Money amount, Instant occurredOn) {
+        this(orderId, amount, eventId, occurredOn);
+    }
 }

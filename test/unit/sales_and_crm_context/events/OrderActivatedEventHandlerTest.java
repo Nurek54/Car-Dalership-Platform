@@ -22,7 +22,7 @@ class OrderActivatedEventHandlerTest {
 
     @Test
     void shouldTriggerRealizationProcessWhenActivated() {
-        // Zaksięgowano wpłatę, aktywacja udana
+        // Płatność została zaksięgowana, aktywacja się powiodła
         OrderActivatedEvent event = new OrderActivatedEvent(
                 UUID.randomUUID(),
                 "ORD-200",
@@ -31,7 +31,7 @@ class OrderActivatedEventHandlerTest {
 
         eventHandler.handle(event);
 
-        // Rusza realizacja (np. zlecenie na taśmę produkcyjną)
+        // Rusza realizacja (np. zlecenie na linię produkcyjną)
         verify(manufacturingPort).startVehicleRealization("ORD-200");
     }
 }

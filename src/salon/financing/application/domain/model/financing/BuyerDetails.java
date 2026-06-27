@@ -4,11 +4,10 @@ public record BuyerDetails(String name, String nip) {
 
     public BuyerDetails {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Buyer name is required.");
+            throw new IllegalArgumentException("name must not be blank.");
         }
-    }
-
-    public boolean isCorporate() {
-        return this.nip != null && !this.nip.isBlank();
+        if (nip == null || nip.isBlank()) {
+            throw new IllegalArgumentException("nip must not be blank.");
+        }
     }
 }

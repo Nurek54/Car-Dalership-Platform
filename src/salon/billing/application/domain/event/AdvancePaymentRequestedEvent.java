@@ -5,9 +5,9 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-/** "ZadatekZazadany" (UC-FIR-01) — agregat Settlement zażądał wpłaty zadatku. */
-public record AdvancePaymentRequestedEvent(UUID eventId,
-                                           String settlementId,
-                                           String orderId,
-                                           Instant occurredOn) implements DomainEvent {
+public record AdvancePaymentRequestedEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public AdvancePaymentRequestedEvent(String orderId) {
+        this(orderId, UUID.randomUUID(), Instant.now());
+    }
 }

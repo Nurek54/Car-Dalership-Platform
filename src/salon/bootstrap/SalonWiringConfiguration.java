@@ -16,6 +16,9 @@ import salon.billing.application.domain.model.settlement.SettlementFactory;
 import salon.billing.application.domain.service.InvoiceCalculationService;
 import salon.billing.infrastructure.out.integration.SalesCrmIntegrationAdapter;
 import salon.billing.infrastructure.in.messaging.SettlementEventListener;
+import salon.billing.infrastructure.out.mock.InMemoryDocumentRepository;
+import salon.billing.infrastructure.out.mock.InMemorySettlementRepository;
+import salon.billing.infrastructure.out.mock.InProcessEventPublisherAdapter;
 import salon.billing.infrastructure.out.mock.NotificationAdapter;
 import salon.billing.infrastructure.out.mock.PdfGeneratorMockAdapter;
 import salon.billing.infrastructure.in.scheduling.PaymentReminderCronJobAdapter;
@@ -28,47 +31,71 @@ import salon.financing.infrastructure.out.mock.BankIntegrationMockAdapter;
 import salon.financing.infrastructure.out.mock.InMemoryFinancingRepository;
 import salon.financing.infrastructure.in.messaging.FinancingEventListener;
 
-import salon.catalog.application.service.BuildSpecificationService;
-import salon.catalog.application.service.UpdateCatalogService;
-import salon.catalog.application.service.ArchiveCatalogService;
-import salon.catalog.application.domain.model.catalog.ProductCatalogFactory;
-import salon.catalog.application.domain.service.RuleValidationService;
-import salon.catalog.infrastructure.out.mock.InMemorySpecificationRepository;
-import salon.catalog.infrastructure.out.mock.InMemoryCatalogRepository;
-import salon.catalog.infrastructure.out.mock.ImporterApiMockAdapter;
-import salon.catalog.infrastructure.in.scheduling.CatalogUpdateJobAdapter;
-import salon.catalog.infrastructure.in.messaging.CatalogVersionPublishedEventListener;
-
 import salon.logistics.application.service.InventoryManagementService;
-import salon.logistics.application.port.out.FactoryIntegrationAclPort;
+import salon.logistics.application.port.out.ImporterACL;
 import salon.logistics.application.port.out.VehicleDatabaseRepository;
-import salon.logistics.application.port.out.SpecificationReadModelPort;
+import salon.logistics.application.port.out.CatalogIntegration;
 import salon.logistics.infrastructure.in.messaging.FinancingEventSubscriberAdapter;
 import salon.logistics.infrastructure.out.mock.FactoryIntegrationMockAdapter;
 import salon.logistics.infrastructure.out.mock.InMemoryInventoryRepository;
 import salon.logistics.infrastructure.out.mock.InMemorySpecificationReadModelAdapter;
 
 import salon.sales.api.SalesQueryFacade;
-import salon.sales.application.port.out.FinancingIntegrationPort;
-import salon.sales.application.port.out.SpecificationPriceReadModelPort;
-import salon.sales.application.service.SalesService;
-import salon.sales.infrastructure.out.integration.FinancingEventBusAdapter;
-import salon.sales.infrastructure.in.messaging.LogisticsEventSubscriberAdapter;
-import salon.sales.infrastructure.out.mock.InMemorySpecificationPriceReadModelAdapter;
+import salon.sales.application.port.out.CustomerDatabaseRepository;
+import salon.sales.application.port.out.OfferDatabaseRepository;
+import salon.sales.application.port.out.OrderDatabaseRepository;
+import salon.sales.application.service.SalesQueryService;
+import salon.sales.infrastructure.out.persistence.InMemoryCustomerRepository;
+import salon.sales.infrastructure.out.persistence.InMemoryOfferRepository;
+import salon.sales.infrastructure.out.persistence.InMemoryOrderRepository;
 
 import salon.common.application.EventPublisher;
 
-/**
- * Korzeń kompozycji (Composition Root) dla uruchomienia produkcyjnego pod Springiem.
- *
- * Usługi i adaptery Kontekstu Sprzedaży są beanami komponentowymi (@Service/@Component) —
- * tu spinamy pozostałe konteksty (Rozliczenia, Logistykę, Finansowanie, Katalog), które
- * pozostają czystymi POJO, oraz adaptery międzykontekstowe (ACL do CRM, subskrybenty zdarzeń).
- */
 @Configuration
 public class SalonWiringConfiguration {
 
-    // --- Porty wyjściowe spoza persystencji bazodanowej (na czas startu: implementacje mock) ---
+    // --- Common ---
+
+    @Bean
+    public EventPublisher eventPublisher() {
+        return new InProcessEventPublisherAdapter();
+    }
+
+    // --- Sales ---
+
+    @Bean
+    public CustomerDatabaseRepository customerRepository() {
+        return new InMemoryCustomerRepository();
+    }
+
+    @Bean
+    public OfferDatabaseRepository offerRepository() {
+        return new InMemoryOfferRepository();
+    }
+
+    @Bean
+    public OrderDatabaseRepository orderRepository() {
+        return new InMemoryOrderRepository();
+    }
+
+    @Bean
+    public SalesQueryFacade salesQueryFacade(OrderDatabaseRepository orderRepository,
+                                              OfferDatabaseRepository offerRepository,
+                                              CustomerDatabaseRepository customerRepository) {
+        return new SalesQueryService(orderRepository, offerRepository, customerRepository);
+    }
+
+    @Bean
+    public salon.sales.application.domain.model.offer.OfferFactory offerFactory() {
+        return new salon.sales.application.domain.model.offer.OfferFactory();
+    }
+
+    @Bean
+    public salon.sales.application.domain.model.order.OrderFactory orderFactory() {
+        return new salon.sales.application.domain.model.order.OrderFactory();
+    }
+
+    // --- Logistics ---
 
     @Bean
     public VehicleDatabaseRepository inventoryRepository() {
@@ -76,27 +103,35 @@ public class SalonWiringConfiguration {
     }
 
     @Bean
-    public FactoryIntegrationAclPort factoryIntegrationAclPort() {
-        return new FactoryIntegrationMockAdapter();
-    }
-
-    /**
-     * Lokalny read model specyfikacji Inwentarza — zasilany asynchronicznie zdarzeniami
-     * SpecificationCompleted (Katalog) i OrderPlaced (Sprzedaż), zamiast synchronicznego
-     * odpytywania innych kontekstów.
-     */
-    @Bean
-    public SpecificationReadModelPort specificationReadModelPort() {
+    public CatalogIntegration catalogIntegration() {
         return new InMemorySpecificationReadModelAdapter();
     }
 
-    /**
-     * Lokalny read model wyceny specyfikacji Sprzedaży — zasilany asynchronicznie zdarzeniem
-     * SpecificationCompleted (Katalog), zamiast synchronicznego odpytywania Katalogu o cenę (UC-CRM-02).
-     */
     @Bean
-    public SpecificationPriceReadModelPort specificationPriceReadModelPort() {
-        return new InMemorySpecificationPriceReadModelAdapter();
+    public ImporterACL importerAcl() {
+        return new FactoryIntegrationMockAdapter();
+    }
+
+    @Bean
+    public InventoryManagementService inventoryManagementAppService(
+            VehicleDatabaseRepository inventoryRepository,
+            CatalogIntegration catalogIntegration,
+            ImporterACL importerAcl,
+            EventPublisher eventPublisherPort) {
+        return new InventoryManagementService(inventoryRepository,
+                catalogIntegration, importerAcl, eventPublisherPort);
+    }
+
+    // --- Billing ---
+
+    @Bean
+    public SettlementDatabaseRepository settlementRepository() {
+        return new InMemorySettlementRepository();
+    }
+
+    @Bean
+    public DocumentDatabaseRepository documentRepository() {
+        return new InMemoryDocumentRepository();
     }
 
     @Bean
@@ -109,50 +144,10 @@ public class SalonWiringConfiguration {
         return new PdfGeneratorMockAdapter();
     }
 
-    /**
-     * UC-FIR-01/02: dane nabywcy dociągane z Kontekstu Sprzedaży (ACL, Query po OrderId).
-     * Adapter zależy wyłącznie od publicznej fasady Sprzedaży (Published Language),
-     * a nie od jej repozytoriów i agregatów.
-     */
-    @Bean
-    public SalesIntegration crmIntegrationPort(SalesQueryFacade salesQueryFacade) {
-        return new SalesCrmIntegrationAdapter(salesQueryFacade);
-    }
-
     @Bean
     public SettlementFactory settlementFactory() {
         return new SettlementFactory();
     }
-
-    @Bean
-    public BankIntegrationAcl bankIntegrationAclPort() {
-        return new BankIntegrationMockAdapter();
-    }
-
-    @Bean
-    public FinancingApplicationDatabaseRepository financingRepository() {
-        return new InMemoryFinancingRepository();
-    }
-
-    /** Zapytanie o zdolność: adapter publikuje FinancingRequestedEvent (UC-CRM-03 -> UC-FIN-01). */
-    @Bean
-    public FinancingIntegrationPort financingIntegrationPort(EventPublisher eventPublisherPort) {
-        return new FinancingEventBusAdapter(eventPublisherPort);
-    }
-
-    // --- Inwentarz i Logistyka: scentralizowana usługa aplikacyjna (UC-INW-01..06) ---
-
-    @Bean
-    public InventoryManagementService inventoryManagementAppService(
-            VehicleDatabaseRepository inventoryRepository,
-            SpecificationReadModelPort specificationReadModelPort,
-            FactoryIntegrationAclPort factoryIntegrationAclPort,
-            EventPublisher eventPublisherPort) {
-        return new InventoryManagementService(inventoryRepository,
-                specificationReadModelPort, factoryIntegrationAclPort, eventPublisherPort);
-    }
-
-    // --- Fakturowanie i Rozliczenia ---
 
     @Bean
     public PaymentProcessService settlementAppService(SettlementDatabaseRepository settlementRepository,
@@ -178,12 +173,27 @@ public class SalonWiringConfiguration {
     }
 
     @Bean
+    public SalesIntegration crmIntegrationPort(SalesQueryFacade salesQueryFacade) {
+        return new SalesCrmIntegrationAdapter(salesQueryFacade);
+    }
+
+    @Bean
     public PaymentReminderCronJobAdapter paymentReminderCronJobAdapter(
             PaymentProcessService settlementAppService) {
         return new PaymentReminderCronJobAdapter(settlementAppService);
     }
 
-    // --- Finansowanie ---
+    // --- Financing ---
+
+    @Bean
+    public FinancingApplicationDatabaseRepository financingRepository() {
+        return new InMemoryFinancingRepository();
+    }
+
+    @Bean
+    public BankIntegrationAcl bankIntegrationAclPort() {
+        return new BankIntegrationMockAdapter();
+    }
 
     @Bean
     public salon.financing.application.port.out.SalesIntegration financingCrmIntegrationPort(
@@ -200,94 +210,26 @@ public class SalonWiringConfiguration {
                 financingCrmIntegrationPort, bankIntegrationAclPort, eventPublisherPort);
     }
 
-    /** Finansowanie <- Sprzedaż: FinancingRequestedEvent wyzwala UC-FIN-01 (złożenie wniosku). */
     @Bean
     public FinancingEventListener financingEventListener(ProcessFinancingService financingAppService) {
         return new FinancingEventListener(financingAppService);
     }
 
-    // --- Katalog i Konfigurator (UC-KON-01/02) ---
-    // Usługi konstruowane jawnie z lokalnymi adapterami in-memory, aby nie kolidować
-    // z @Primary CatalogDatabaseRepository (ACL Sprzedaży) i nie wymagać źródła danych przy starcie.
-
-    @Bean
-    public BuildSpecificationService specificationAppService(EventPublisher eventPublisherPort) {
-        return new BuildSpecificationService(
-                new InMemorySpecificationRepository(),
-                new RuleValidationService(new InMemoryCatalogRepository()),
-                eventPublisherPort);
-    }
-
-    /**
-     * Repozytorium cennika współdzielone przez publikację NOWEJ wersji (UpdateCatalogService)
-     * i archiwizację POPRZEDNIEJ (ArchiveCatalogService) — obie usługi muszą operować na tym samym
-     * źródle, aby handler odnalazł poprzedni cennik. Lokalna implementacja in-memory, by nie kolidować
-     * z @Primary CatalogDatabaseRepository (ACL Sprzedaży) i nie wymagać źródła danych przy starcie.
-     */
-    private final InMemoryCatalogRepository catalogStateRepository = new InMemoryCatalogRepository();
-
-    @Bean
-    public UpdateCatalogService catalogAppService(EventPublisher eventPublisherPort) {
-        return new UpdateCatalogService(
-                catalogStateRepository, new ImporterApiMockAdapter(),
-                new ProductCatalogFactory(), eventPublisherPort);
-    }
-
-    /** UC-KON-02: archiwizacja poprzedniej wersji w osobnej transakcji (eventual consistency). */
-    @Bean
-    public ArchiveCatalogService archiveCatalogAppService() {
-        return new ArchiveCatalogService(catalogStateRepository);
-    }
-
-    /** UC-KON-02: cykliczna synchronizacja cennika (adapter cron). */
-    @Bean
-    public CatalogUpdateJobAdapter catalogUpdateJobAdapter(UpdateCatalogService catalogAppService) {
-        return new CatalogUpdateJobAdapter(catalogAppService);
-    }
-
-    /**
-     * Katalog <- Katalog: CatalogVersionPublished wyzwala archiwizację poprzedniej wersji cennika
-     * (osobna transakcja, jeden agregat na transakcję — złota zasada DDD).
-     */
-    @Bean
-    public CatalogVersionPublishedEventListener catalogVersionPublishedEventListener(
-            ArchiveCatalogService archiveCatalogAppService) {
-        return new CatalogVersionPublishedEventListener(archiveCatalogAppService);
-    }
-
-    // --- Adaptery sterujące (subskrybenty zdarzeń) jako beany ---
-
-    @Bean
-    public salon.sales.infrastructure.in.messaging.BillingEventSubscriberAdapter
-    salesBillingEventSubscriberAdapter(SalesService salesAppService) {
-        return new salon.sales.infrastructure.in.messaging.BillingEventSubscriberAdapter(salesAppService);
-    }
-
-    /** Sprzedaż <- Katalog: SpecificationCompleted zasila lokalny read model wyceny (UC-CRM-02). */
-    @Bean
-    public salon.sales.infrastructure.in.messaging.CatalogEventSubscriberAdapter
-    catalogEventSubscriberAdapter(SalesService salesAppService) {
-        return new salon.sales.infrastructure.in.messaging.CatalogEventSubscriberAdapter(salesAppService);
-    }
-
-    @Bean
-    public LogisticsEventSubscriberAdapter logisticsEventSubscriberAdapter(SalesService salesAppService) {
-        return new LogisticsEventSubscriberAdapter(salesAppService);
-    }
+    // --- Event subscribers ---
 
     @Bean
     public salon.logistics.infrastructure.in.messaging.SalesEventSubscriberAdapter
-    logisticsSalesEventSubscriberAdapter(InventoryManagementService inventoryManagementAppService) {
+    logisticsSalesEventSubscriberAdapter(CatalogIntegration catalogIntegration,
+                                         InventoryManagementService inventoryManagementAppService) {
         return new salon.logistics.infrastructure.in.messaging.SalesEventSubscriberAdapter(
-                inventoryManagementAppService, inventoryManagementAppService);
+                catalogIntegration, inventoryManagementAppService);
     }
 
-    /** Inwentarz <- Katalog: SpecificationCompleted zasila lokalny read model specyfikacji. */
     @Bean
     public salon.logistics.infrastructure.in.messaging.CatalogEventSubscriberAdapter
-    logisticsCatalogEventSubscriberAdapter(InventoryManagementService inventoryManagementAppService) {
+    logisticsCatalogEventSubscriberAdapter(CatalogIntegration catalogIntegration) {
         return new salon.logistics.infrastructure.in.messaging.CatalogEventSubscriberAdapter(
-                inventoryManagementAppService);
+                catalogIntegration);
     }
 
     @Bean
@@ -307,7 +249,7 @@ public class SalonWiringConfiguration {
     public salon.billing.infrastructure.in.messaging.BillingEventSubscriberAdapter
     billingEventSubscriberAdapter(DocumentGenerationService documentAppService) {
         return new salon.billing.infrastructure.in.messaging.BillingEventSubscriberAdapter(
-                documentAppService, documentAppService, "ksiegowy@salon.pl");
+                documentAppService, documentAppService, "accountant@salon.pl");
     }
 
     @Bean

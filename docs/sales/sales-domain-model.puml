@@ -1,0 +1,180 @@
+@startuml SalesDomainModel
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<value object>> LightCyan
+    BackgroundColor<<factory>> Lavender
+    BackgroundColor<<event>> PaleGreen
+    BackgroundColor<<exception>> LightPink
+}
+
+package "salon" {
+  package "sales" {
+    package "application" {
+      package "domain" {
+
+        package "model" {
+          package "customer" {
+            class Customer <<aggregate root>> {
+              - id : CustomerId
+              - fullName : String
+              - nip : String
+              - address : Address
+              - contact : ContactData
+              + updateContactDetails(address, contact)
+              + verifyTaxId()
+            }
+            class CustomerId <<value object>> {
+              - value : String
+              + generate() : CustomerId
+            }
+            class Address <<value object>> {
+              - street : String
+              - postalCode : String
+              - city : String
+              - country : String
+            }
+            class ContactData <<value object>> {
+              - email : String
+              - phone : String
+            }
+          }
+
+          package "offer" {
+            class Offer <<aggregate root>> {
+              - id : OfferId
+              - customerId : CustomerId
+              - specificationId : SpecificationId
+              - basePrice : Money
+              - finalPrice : Money
+              - state : OfferState
+              - validityDate : LocalDate
+              + applyDiscount(discount)
+              + publishOffer()
+              + accept()
+              + reject()
+            }
+            class OfferId <<value object>> {
+              - value : String
+              + generate() : OfferId
+            }
+            class Discount <<value object>> {
+              - percentage : BigDecimal
+            }
+            enum OfferState {
+              DRAFT
+              PUBLISHED
+              ACCEPTED
+              REJECTED
+            }
+            class OfferFactory <<factory>> {
+              + createProforma(customerId, specificationId, basePrice) : Offer
+            }
+          }
+
+          package "order" {
+            class Order <<aggregate root>> {
+              - id : OrderId
+              - sourceOfferId : OfferId
+              - paymentMethod : PaymentMethod
+              - handoverDate : LocalDate
+              - state : OrderState
+              + declarePaymentMethod(method)
+              + markAsReady()
+              + scheduleHandover(date)
+              + confirmHandover()
+              + revertToReadyForHandover()
+            }
+            enum OrderState {
+              IN_PROGRESS
+              READY_FOR_HANDOVER
+              HANDOVER_SCHEDULED
+              COMPLETED
+            }
+            enum PaymentMethod {
+              BANK_TRANSFER
+              FINANCING
+            }
+            class OrderFactory <<factory>> {
+              + createFromOffer(offer) : Order
+            }
+          }
+        }
+
+        package "event" {
+          class BankTransferDeclaredEvent <<event>> {
+            - orderId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class FinancingRequestedEvent <<event>> {
+            - orderId : String
+            - customerId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class InitiateConfiguratorSessionEvent <<event>> {
+            - sessionId : String
+            - customerId : String
+            - salespersonId : String
+            - modelYear : int
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class OfferCreatedEvent <<event>> {
+            - offerId : String
+            - customerId : String
+            - specificationId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class OrderPlacedEvent <<event>> {
+            - orderId : String
+            - offerId : String
+            - specificationId : String
+            - customerId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+        }
+
+        package "exception" {
+          class IllegalOrderStateException <<exception>> {
+            + IllegalOrderStateException(message)
+          }
+          class InvalidOfferStateException <<exception>> {
+            + InvalidOfferStateException(message)
+          }
+          class OfferExpiredException <<exception>> {
+            + OfferExpiredException(message)
+          }
+        }
+
+      }
+    }
+  }
+}
+
+' Customer aggregate
+Customer --> CustomerId
+Customer --> Address
+Customer --> ContactData
+
+' Offer aggregate
+Offer --> OfferId
+Offer --> OfferState
+Offer --> Discount
+OfferFactory ..> Offer : <<creates>>
+
+' Order aggregate
+Order --> OrderState
+Order --> PaymentMethod
+OrderFactory ..> Order : <<creates>>
+OrderFactory ..> Offer : <<reads>>
+
+@enduml

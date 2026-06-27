@@ -1,0 +1,46 @@
+package salon.catalog.application.domain.model.specification;
+
+import java.util.Objects;
+import java.util.UUID;
+
+public final class SpecificationId {
+
+    private final UUID value;
+
+    private SpecificationId(UUID value) {
+        this.value = Objects.requireNonNull(value, "SpecificationId cannot be null");
+    }
+
+    public static SpecificationId generate() {
+        return new SpecificationId(UUID.randomUUID());
+    }
+
+    public static SpecificationId of(UUID value) {
+        return new SpecificationId(value);
+    }
+
+    public static SpecificationId of(String value) {
+        return new SpecificationId(UUID.fromString(value));
+    }
+
+    public UUID value() {
+        return value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SpecificationId that)) return false;
+        return value.equals(that.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value);
+    }
+
+    @Override
+    public String toString() {
+        return value.toString();
+    }
+}

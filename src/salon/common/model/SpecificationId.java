@@ -2,10 +2,6 @@ package salon.common.model;
 
 import java.util.UUID;
 
-/**
- * Value Object: globalny identyfikator Specyfikacji Pojazdu.
- * Wspólny rdzeń: Katalog go "wystawia", Sprzedaż się do niego odwołuje (referencja).
- */
 public record SpecificationId(String value) {
 
     public SpecificationId {

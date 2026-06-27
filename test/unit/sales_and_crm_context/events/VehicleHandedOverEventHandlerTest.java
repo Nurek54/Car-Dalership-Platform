@@ -24,7 +24,7 @@ class VehicleHandedOverEventHandlerTest {
 
     @Test
     void shouldNotifyBillingAndAfterSalesWhenVehicleIsHandedOver() {
-        // Klient odjechał autem z salonu
+        // Klient odjechał samochodem z salonu
         VehicleHandedOverEvent event = new VehicleHandedOverEvent(
                 UUID.randomUUID(),
                 "ORD-999",
@@ -33,7 +33,7 @@ class VehicleHandedOverEventHandlerTest {
 
         eventHandler.handle(event);
 
-        // Zlecamy domknięcie salda do kontekstu Rozliczeń
+        // Instruujemy kontekst Rozliczeń, aby zamknął saldo
         verify(billingPort).closeOrderBalance("ORD-999");
     }
 }

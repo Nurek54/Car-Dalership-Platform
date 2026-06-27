@@ -13,7 +13,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest
+@SpringBootTest(classes = CatalogExternalApiAdapter.class)
 @AutoConfigureWireMock(port = 8081)
 class CatalogExternalApiAdapterTest {
 
@@ -27,34 +27,34 @@ class CatalogExternalApiAdapterTest {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"amount\": 150000, \"currency\": \"PLN\"}")));
 
-        // Adapter uderza przez HTTP
-        Money price = catalogAdapter.getSpecificationPrice("SPEC-OK");
+        // Adapter woła przez HTTP
+        Money price = catalogAdapter.specificationPrice("SPEC-OK");
 
-        // JSON z zewnątrz zamienia się w hermetyczny Value Object
+        // Zewnętrzny JSON zamienia się w hermetyzowany Value Object
         assertThat(price.amount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(150000));
         assertThat(price.currency()).isEqualTo("PLN");
     }
 
     @Test
     void shouldThrowDomainExceptionWhenSpecificationIsNotFound404() {
-        // Handlowiec podał nieistniejącą specyfikację, Katalog zwraca HTTP 404
+        // Sprzedawca podał nieistniejącą specyfikację, Katalog zwraca HTTP 404
         stubFor(get(urlEqualTo("/api/catalog/specifications/SPEC-MISSING/price"))
                 .willReturn(aResponse().withStatus(404)));
 
-        // Zamiast brzydkiego błędu HTTP, wyrzucamy kontrolowany błąd biznesowy
-        assertThatThrownBy(() -> catalogAdapter.getSpecificationPrice("SPEC-MISSING"))
+        // Zamiast brzydkiego błędu HTTP rzucamy kontrolowany błąd biznesowy
+        assertThatThrownBy(() -> catalogAdapter.specificationPrice("SPEC-MISSING"))
                 .isInstanceOf(SpecificationNotFoundException.class)
                 .hasMessageContaining("Specification SPEC-MISSING not found in Catalog");
     }
 
     @Test
     void shouldThrowInfrastructureExceptionWhenCatalogIsDown500() {
-        // Baza danych modułu Katalogu nie działa (HTTP 500)
+        // Baza modułu Katalogu jest niedostępna (HTTP 500)
         stubFor(get(urlEqualTo("/api/catalog/specifications/SPEC-TIMEOUT/price"))
                 .willReturn(aResponse().withStatus(500)));
 
-        // Aplikacja musi zasygnalizować brak dostępu do zewnętrznej usługi
-        assertThatThrownBy(() -> catalogAdapter.getSpecificationPrice("SPEC-TIMEOUT"))
+        // Aplikacja musi zasygnalizować niedostępność usługi zewnętrznej
+        assertThatThrownBy(() -> catalogAdapter.specificationPrice("SPEC-TIMEOUT"))
                 .isInstanceOf(ExternalServiceUnavailableException.class)
                 .hasMessageContaining("Catalog service is currently unavailable");
     }

@@ -1,14 +1,13 @@
 package salon.logistics.application.domain.model.vehicle;
 
-/**
- * Dane tożsamości pojazdu przetłumaczone przez ACL z systemu Importera (UC-INW-01, krok 2).
- * Czysty, niemutowalny obiekt domenowy — agregat nie zna formatu API Importera.
- */
-public record ImporterData(String vin) {
+import java.util.List;
+
+public record ImporterData(VinNumber vin, SpecificationId specificationId, List<String> optionCodes) {
 
     public ImporterData {
-        if (vin == null || vin.isBlank()) {
-            throw new IllegalArgumentException("ImporterData.vin must not be blank.");
+        if (vin == null) {
+            throw new IllegalArgumentException("vin must not be null.");
         }
+        optionCodes = optionCodes == null ? List.of() : List.copyOf(optionCodes);
     }
 }

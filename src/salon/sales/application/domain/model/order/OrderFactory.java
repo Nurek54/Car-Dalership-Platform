@@ -1,21 +1,27 @@
 package salon.sales.application.domain.model.order;
 
+import salon.common.model.OrderId;
+import salon.sales.application.domain.exception.InvalidOfferStateException;
+import salon.sales.application.domain.model.offer.Offer;
 import salon.sales.application.domain.model.offer.OfferId;
 import salon.sales.application.domain.model.offer.OfferSnapshot;
-import salon.common.model.OrderId;
+import salon.sales.application.domain.model.offer.OfferState;
 
-/**
- * Fabryka agregatu Order (węzeł "OrderFactory" w docs/Architecture/SalesArchitecture.md,
- * PDF rozdz. 3.3.3 "Transformacja Agregatów").
- *
- * Buduje poprawne Zamówienie z migawki zaakceptowanej oferty ({@link OfferSnapshot}).
- * Zgodnie z docs/Agregate/Guidelines/value-object-audit.md fabryka wyciąga z oferty
- * wyłącznie niemutowalne obiekty wartości (OfferId, finalPrice) — NIE przyjmuje
- * referencji do agregatu Offer. Regułę "tylko z oferty ACCEPTED" egzekwuje sam
- * agregat Offer w metodzie toSnapshot().
- */
 public class OrderFactory {
 
+    
+    public Order createFromOffer(Offer offer) {
+        if (offer == null) {
+            throw new IllegalArgumentException("offer must not be null.");
+        }
+        if (offer.state() != OfferState.ACCEPTED) {
+            throw new InvalidOfferStateException(
+                    "An order can be created only from an ACCEPTED offer (current: " + offer.state() + ").");
+        }
+        return new Order(OrderId.generate(), offer.id(), offer.finalPrice());
+    }
+
+    
     public Order createFromOffer(OfferId offerId, OfferSnapshot snapshot) {
         if (offerId == null) {
             throw new IllegalArgumentException("offerId must not be null.");
@@ -24,15 +30,8 @@ public class OrderFactory {
             throw new IllegalArgumentException("snapshot must not be null.");
         }
         if (!offerId.equals(snapshot.offerId())) {
-            throw new IllegalArgumentException(
-                    "Snapshot offerId does not match the provided offerId");
+            throw new IllegalArgumentException("Snapshot offerId does not match the provided offerId");
         }
-        // requiredDeposit = finalPrice z oferty (może być null, jeśli nie wyceniono).
-        // specificationId z migawki — popłynie w OrderPlacedEvent do Inwentarza (UC-INW-01/02).
-        Order order = new Order(OrderId.generate(), offerId,
-                snapshot.specificationId(), snapshot.finalPrice());
-        // Formalne złożenie zamówienia ogłasza agregat (OrderPlacedEvent — m.in. dla Rozliczeń).
-        order.markPlaced();
-        return order;
+        return new Order(OrderId.generate(), offerId, snapshot.finalPrice());
     }
 }

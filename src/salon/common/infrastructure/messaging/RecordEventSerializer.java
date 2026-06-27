@@ -6,15 +6,6 @@ import java.lang.reflect.RecordComponent;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Zamienia dowolne zdarzenie (które jest rekordem) na płaską mapę pól, a potem na JSON.
- *
- * Wszystkie nasze zdarzenia to rekordy o płaskich polach (String/UUID/Instant). Zamiast pisać
- * osobny serializator dla każdego z nich, czytamy komponenty rekordu i zapisujemy je jako tekst.
- * Dodajemy pole "type" = prosta nazwa klasy, po którym subskrybent rozpozna rodzaj zdarzenia.
- *
- * To jedyne miejsce w całym module, gdzie używamy refleksji — i tylko po to, by nie powielać kodu.
- */
 public class RecordEventSerializer implements EventSerializer {
 
     @Override

@@ -4,7 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, String> {
+public interface OrderJpaRepository extends JpaRepository<OrderEntity, String> {
 
-    Optional<OrderJpaEntity> findBySourceOfferId(String sourceOfferId);
+    Optional<OrderEntity> findBySourceOfferId(String sourceOfferId);
 }

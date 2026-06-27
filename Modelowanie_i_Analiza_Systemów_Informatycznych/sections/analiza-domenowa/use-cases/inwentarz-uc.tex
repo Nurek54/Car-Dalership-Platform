@@ -1,0 +1,291 @@
+% =====================================================
+\textbf{UC-INW-01: Weryfikacja dostępności i rezerwacja pojazdu z placu}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-INW-01 \\
+\hline
+
+Nazwa & Weryfikacja dostępności i rezerwacja pojazdu z placu \\
+\hline
+
+Opis & 
+Sprawdzenie fizycznej dostępności pojazdu o wybranej specyfikacji na placu salonu samochodowego i założenie twardej blokady (rezerwacji) na konkretny numer VIN. \\
+\hline
+
+Aktor główny & System (Kontekst Inwentarza i Logistyki) \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Kontekst otrzymał zdarzenie potwierdzające gotowość do realizacji zamówienia \textit{FinancingApproved} LUB \textit{BankTransferDeclared}. \\
+\hline
+
+Warunki końcowe & 
+Pojazd zostaje zarezerwowany, system emituje zdarzenie \textit{VehicleReservedFromStock} (dla samochodu na placu) LUB \textit{VehicleIsNotOnStock} (jeśli nie ma samochodu na stanie magazynowym). \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item System reaguje na zdarzenie inicjujące proces realizacji.
+    \item System przeszukuje lokalną bazę pojazdów dostępnych na placu (status "Wolny") pod kątem specyfikacji z zamówienia.
+    \item System znajduje pasujący pojazd i przypisuje jego numer VIN do zamówienia.
+    \item System zmienia status pojazdu na "Zarezerwowany".
+    \item Kontekst emituje zdarzenie \textit{VehicleReservedFromStockEvent}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Samochodu nie ma na placu: W kroku 2 system nie znajduje wolnego pojazdu o wymaganej specyfikacji. System wstrzymuje rezerwację i emituje zdarzenie \textit{VehicleIsNotOnStock}.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-INW-02: Zlecenie produkcji pojazdu w fabryce}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-INW-02 \\
+\hline
+
+Nazwa & Zlecenie produkcji pojazdu w fabryce \\
+\hline
+
+Opis & 
+Zautomatyzowane wysłanie zlecenia produkcji do systemu zewnętrznego fabryki/importera po opłaceniu wymaganego zadatku przez klienta. \\
+\hline
+
+Aktor główny & System (Kontekst Inwentarza i Logistyki) \\
+\hline
+
+Aktorzy pomocniczy & System zewnętrzny (API Importera) \\
+\hline
+
+Warunki wstępne & 
+Samochód o określonej specyfikacji nie znajduje się na stanie magazynowym salonu samochodowego. Kontekst otrzymał zdarzenie z \textit{AdvancePaymentRegistered}. \\
+\hline
+
+Warunki końcowe & 
+Zamówienie produkcyjne zostaje wysłane, a system emituje zdarzenie \textit{FactoryOrderPlacedEvent}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+\item System reaguje na zdarzenie o opłaceniu zadatku.
+    \item System generuje żądanie produkcyjne na podstawie zatwierdzonej specyfikacji.
+    \item System komunikuje się z API Importera/Fabryki i wysyła zlecenie.
+    \item System odbiera z API Importera techniczne potwierdzenie przyjęcia zlecenia (\textit{FactoryOrderAcknowledged}).
+    \item System oznacza to zamówienie lokalnie statusem "W produkcji".
+    \item Kontekst emituje zdarzenie \textit{FactoryOrderPlacedEvent}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Fabryka odrzuca zlecenie: W kroku 3 API fabryki zwraca błąd (np. problem z połączeniem). System emituje zdarzenie \textit{FactoryOrderFailed}.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-INW-03: Przyjęcie pojazdu na stan magazynowy}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-INW-03 \\
+\hline
+
+Nazwa & Przyjęcie pojazdu na stan magazynowy \\
+\hline
+
+Opis & 
+Rejestracja fizycznego pojazdu, który przyjechał z fabryki na plac salonu samochodowego, oraz powiązanie jego numeru VIN z oczekującym zamówieniem. \\
+\hline
+
+Aktor główny & Pracownik \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Fizyczny pojazd dotarł na plac salonu samochodowego. W systemie istnieje zamówienie o statusie "W produkcji". \\
+\hline
+
+Warunki końcowe & 
+Pojazd jest zarejestrowany na stanie, otrzymuje status "Zarezerwowany" (przypisany do klienta), a system emituje zdarzenie \textit{VehicleDeliveredToStock}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Pracownik placu rejestruje zjazd auta z lawety (skanując VIN).
+    \item System tworzy nową kartotekę pojazdu w lokalnym inwentarzu.
+    \item System automatycznie paruje ten numer VIN z oczekującym zamówieniem klienta.
+    \item System zmienia status pojazdu na "Zarezerwowany".
+    \item Kontekst emituje zdarzenie \textit{VehicleDeliveredToStock}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Auto nieprzypisane: W kroku 3 system nie znajduje zamówienia dla danej specyfikacji (np. auto zamówione "na stock"). Pojazd otrzymuje status "Wolny". Zdarzenie końcowe \textit{VehicleDeliveredToStock} nie jest emitowane.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-INW-04: Zwolnienie blokady pojazdu}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-INW-04 \\
+\hline
+
+Nazwa & Zwolnienie blokady pojazdu \\
+\hline
+
+Opis & 
+Automatyczne zdjęcie rezerwacji z numeru VIN w przypadku braku uregulowania płatności końcowej w wyznaczonym terminie. \\
+\hline
+
+Aktor główny & System (Kontekst Inwentarza i Logistyki) \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Kontekst otrzymał zdarzenie \textit{PaymentDeadlineExpired}. \\
+\hline
+
+Warunki końcowe & 
+Pojazd wraca na plac do ponownej sprzedaży, emitowane jest zdarzenie \textit{VehicleReservationCancelledEvent}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item System reaguje na zdarzenie \textit{PaymentDeadlineExpired}.
+    \item System wyszukuje numer VIN zablokowany dla tego zamówienia.
+    \item System usuwa powiązanie VIN z zamówieniem i zmienia status pojazdu na "Wolny".
+    \item Kontekst emituje zdarzenie \textit{VehicleReservationCancelledEvent}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Pojazd nie istnieje w rezerwacjach: Zablokowany pojazd został wcześniej usunięty/wydany.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-INW-05: Przygotowanie pojazdu do wydania po rozliczeniu}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-INW-05 \\
+\hline
+
+Nazwa & Przygotowanie pojazdu do wydania po rozliczeniu \\
+\hline
+
+Opis & 
+Systemowa zmiana statusu pojazdu na "Gotowy do wydania" po otrzymaniu potwierdzenia pełnego rozliczenia zamówienia. \\
+\hline
+
+Aktor główny & System (Kontekst Inwentarza) \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Pojazd ma status 'Zarezerwowany', kontekst otrzymał zdarzenie \textit{SettlementCompleted}. \\
+\hline
+
+Warunki końcowe & 
+Status pojazdu zmieniony na 'Gotowy do wydania', emitowane zdarzenie \textit{VehicleReadyForHandover}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item System reaguje na zdarzenie \textit{SettlementCompleted}.
+    \item System weryfikuje, czy dla danego VIN-u istnieje aktywna rezerwacja.
+    \item System zmienia status pojazdu z 'Zarezerwowany' na 'Gotowy do wydania'.
+    \item Kontekst emituje zdarzenie \textit{VehicleReadyForHandoverEvent}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [] Brak.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-INW-06: Zdjęcie pojazdu ze stanu magazynowego}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-INW-06 \\
+\hline
+
+Nazwa & Wyksięgowanie pojazdu ze stanu magazynowego \\
+\hline
+
+Opis & 
+Automatyczna operacja zmiany statusu pojazdu na "Wydany" w Inwentarzu, wywołana komendą z modułu Sprzedaży/CRM. \\
+\hline
+
+Aktor główny & System (Kontekst Inwentarza i Logistyki) \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Pojazd ma status "Gotowy do wydania". Kontekst otrzymał komendę oznaczającą fizyczne wydanie auta \textit{ReleaseVehicle}. \\
+\hline
+
+Warunki końcowe & 
+Status pojazdu zmieniony na "Wydany", emitowane zdarzenie \textit{VehicleInventoryReleased}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item System Inwentarza odbiera komendę \textit{ReleaseVehicle}.
+    \item System weryfikuje status pojazdu pod kątem gotowości do wydania.
+    \item System zdejmuje pojazd z aktywnego stanu magazynowego, zmieniając jego status na "Wydany".
+    \item Kontekst emituje zdarzenie \textit{VehicleInventoryReleased}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Niewłaściwy status pojazdu: W kroku 2 pojazd ma status inny niż "Gotowy do wydania". System odrzuca komendę i emituje zdarzenie \textit{VehicleInventoryReleasedError}.
+\end{itemize} \\
+\hline
+\end{longtable}

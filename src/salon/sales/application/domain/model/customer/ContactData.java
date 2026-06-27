@@ -1,6 +1,5 @@
 package salon.sales.application.domain.model.customer;
 
-/** Obiekt wartości: dane kontaktowe klienta (e-mail + telefon). Niemutowalny. */
 public record ContactData(String email, String phone) {
 
     public ContactData {
@@ -12,11 +11,8 @@ public record ContactData(String email, String phone) {
         }
     }
 
-    public String getEmail() {
-        return this.email;
-    }
-
-    public String getPhoneNumber() {
-        return this.phone;
+    
+    public String phoneNumber() {
+        return phone;
     }
 }

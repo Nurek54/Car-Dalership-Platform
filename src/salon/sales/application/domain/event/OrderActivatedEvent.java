@@ -5,8 +5,13 @@ import salon.common.event.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-// "ZamowienieAktywowane" — Sprzedaż ogłasza, że po zaksięgowaniu zadatku ruszyła realizacja.
-public record OrderActivatedEvent(UUID eventId,
-                                  String orderId,
-                                  Instant occurredOn) implements DomainEvent {
+public record OrderActivatedEvent(String orderId, UUID eventId, Instant occurredOn) implements DomainEvent {
+
+    public OrderActivatedEvent(String orderId) {
+        this(orderId, UUID.randomUUID(), Instant.now());
+    }
+
+    public OrderActivatedEvent(UUID eventId, String orderId, Instant occurredOn) {
+        this(orderId, eventId, occurredOn);
+    }
 }

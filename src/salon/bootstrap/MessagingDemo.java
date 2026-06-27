@@ -15,19 +15,22 @@ import salon.billing.infrastructure.out.mock.InMemoryDocumentRepository;
 import salon.billing.infrastructure.out.mock.InMemorySettlementRepository;
 import salon.billing.infrastructure.out.mock.NotificationMockAdapter;
 import salon.billing.infrastructure.out.mock.PdfGeneratorMockAdapter;
-import salon.sales.application.service.SalesService;
-import salon.sales.application.service.SalesQueryService;
-import salon.sales.application.command.StartConfiguratorSessionCommand;
+import salon.sales.application.command.AcceptOfferCommand;
 import salon.sales.application.domain.model.customer.Address;
 import salon.sales.application.domain.model.customer.ContactData;
 import salon.sales.application.domain.model.customer.Customer;
 import salon.sales.application.domain.model.customer.CustomerId;
-import salon.sales.application.domain.model.offer.OfferId;
+import salon.sales.application.domain.model.offer.OfferFactory;
+import salon.sales.application.domain.model.order.OrderFactory;
+import salon.sales.application.domain.model.order.PaymentMethod;
+import salon.sales.application.service.SalesService;
+import salon.sales.application.service.SalesQueryService;
 import salon.sales.infrastructure.in.messaging.SalesDepositListener;
-import salon.sales.infrastructure.out.mock.InMemoryCustomerRepository;
-import salon.sales.infrastructure.out.mock.InMemoryOfferRepository;
-import salon.sales.infrastructure.out.mock.InMemoryOrderRepository;
-import salon.sales.infrastructure.out.mock.InMemorySpecificationPriceReadModelAdapter;
+import salon.sales.infrastructure.out.integration.BillingIntegrationAdapter;
+import salon.sales.infrastructure.out.integration.InventoryIntegrationAdapter;
+import salon.sales.infrastructure.out.persistence.InMemoryCustomerRepository;
+import salon.sales.infrastructure.out.persistence.InMemoryOfferRepository;
+import salon.sales.infrastructure.out.persistence.InMemoryOrderRepository;
 import salon.common.application.EventPublisher;
 import salon.common.infrastructure.messaging.RabbitMqConfig;
 import salon.common.infrastructure.messaging.RabbitMqConnection;
@@ -41,43 +44,35 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Demo (RabbitMQ): asynchroniczna choreografia UC-CRM-03 cz.2 (Rys. 19/20 PDF) —
- * Rozliczenia księgują zadatek i publikują PaymentRegisteredEvent na brokerze,
- * a SalesDepositListener (idempotentny po eventId) aktywuje zamówienie w CRM.
- *
- * Wymaga uruchomionego brokera (docker-compose up rabbitmq).
- */
 public class MessagingDemo {
 
     public static void main(String[] args) throws Exception {
         try (RabbitMqConnection connection = new RabbitMqConnection()) {
             RecordEventSerializer serializer = new RecordEventSerializer();
 
-            // --- SPRZEDAŻ I CRM: oferta -> zamówienie (DRAFT) + konsument zadatku ---
+            
             InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
             InMemoryOfferRepository offerRepo = new InMemoryOfferRepository();
             InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
             EventPublisher salesPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
             SalesService sales = new SalesService(
-                    customerRepo, offerRepo, orderRepo, salesPublisher,
-                    new InMemorySpecificationPriceReadModelAdapter(), null, null);
+                    customerRepo, offerRepo, orderRepo,
+                    new BillingIntegrationAdapter(), new InventoryIntegrationAdapter(), salesPublisher,
+                    new OfferFactory(), new OrderFactory());
 
             sales.registerCustomer(new Customer(new CustomerId("CUST-DEMO"), "Jan Kowalski",
-                    "1234563218", new Address("Marszałkowska 1", "00-001", "Warszawa", "PL"),
+                    "1234563218", new Address("Main Street 1", "00-001", "Warsaw", "PL"),
                     new ContactData("jan.kowalski@example.com", "+48 600 100 200")));
-            sales.startConfiguratorSession(new StartConfiguratorSessionCommand("CUST-DEMO", "SP-7"));
-            // Wycena katalogowa przyszłaby zdarzeniem SpecificationCompleted (demo pomija konfigurator).
-            sales.registerSpecificationPrice("SPEC-DEMO", Money.of(100000, "PLN"));
-            OfferId offerId = sales.generateOffer("CUST-DEMO", "SPEC-DEMO");
-            String orderId = sales.acceptOfferAndCreateOrder(offerId);
+            
+            String offerId = sales.createProformaOffer("CUST-DEMO", "SPEC-DEMO", Money.of(100000, "PLN"));
+            String orderId = sales.acceptOffer(new AcceptOfferCommand(offerId, PaymentMethod.BANK_TRANSFER));
 
             RabbitMqEventConsumer salesConsumer =
                     new RabbitMqEventConsumer(connection, RabbitMqConfig.SALES_QUEUE);
             salesConsumer.register("PaymentRegisteredEvent", new SalesDepositListener(sales));
             salesConsumer.start();
 
-            // --- FAKTUROWANIE I ROZLICZENIA ---
+            
             EventPublisher billingPublisher = new RabbitMqEventPublisherAdapter(connection, serializer);
             InMemorySettlementRepository settlementRepo = new InMemorySettlementRepository();
             InMemoryDocumentRepository documentRepo = new InMemoryDocumentRepository();
@@ -98,16 +93,16 @@ public class MessagingDemo {
                     new SellerDetails("Salon Samochodowy Sp. z o.o.", "5260000000"));
 
             System.out.println(">> generateAdvance(" + orderId + ") -> AdvancePaymentRequestedEvent (UC-FIR-01)...");
-            docs.generateAdvance(new GenerateAdvanceCommand(orderId, "ksiegowy@salon.pl"));
+            docs.generateAdvance(new GenerateAdvanceCommand(orderId, "accountant@salon.pl"));
 
-            System.out.println(">> processPayment (zadatek) -> PaymentRegisteredEvent na brokerze...");
+            System.out.println(">> processPayment (deposit) -> PaymentRegisteredEvent on the broker...");
             settlements.processPayment(new ProcessPaymentCommand(
                     orderId, "TX-DEMO-1", new BigDecimal("10000"), "PLN"));
 
-            // Dajemy konsumentowi chwilę na odebranie wiadomości z kolejki.
+            
             Thread.sleep(1500);
-            System.out.println(">> Stan zamówienia po przejściu zdarzenia przez kolejkę: "
-                    + orderRepo.findById(new OrderId(orderId)).get().getState());
+            System.out.println(">> Order state after the event passed through the queue: "
+                    + orderRepo.findById(new OrderId(orderId)).get().state());
         }
     }
 }

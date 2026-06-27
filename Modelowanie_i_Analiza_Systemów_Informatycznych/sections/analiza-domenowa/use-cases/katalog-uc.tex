@@ -1,0 +1,100 @@
+% =====================================================
+\textbf{UC-KON-01: Opracowanie i zatwierdzenie specyfikacji pojazdu}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-KON-01 \\
+\hline
+
+Nazwa & Opracowanie i zatwierdzenie specyfikacji pojazdu \\
+\hline
+
+Opis & 
+Proces wyboru parametrów pojazdu oparty na predefiniowanych pakietach wyposażenia, silnikach, skrzyniach biegów oraz kolorach nadwozia, zakończony zatwierdzeniem konfiguracji. \\
+\hline
+
+Aktor główny & Klient \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Kontekst Katalog i Konfigurator otrzymał zdarzenie \textit{InitiateConfiguratorSession}. \\
+\hline
+
+Warunki końcowe & 
+Zatwierdzona specyfikacja zostaje zapisana w lokalnej bazie danych konfiguratora, a system emituje zdarzenie \textit{SpecificationCompleted}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item System otwiera sesję konfiguratora i prezentuje Klientowi interfejs z modelami samochodów, wersjami wyposażenia (np. pakiet A1, A2), silnikami (np. B1, B2), rodzajami skrzyni biegów (np. C1, C2) oraz kolorami.
+    \item Klient wybiera jeden główny pakiet wyposażenia (np. A1).
+    \item Klient dobiera do pakietu silnik (np. B1), rodzaj skrzyni biegów (np. C1) oraz kolor.
+    \item System na bieżąco weryfikuje proste reguły wykluczające (np. silnik B2 nie może być wybrany ze skrzynią biegów C1).
+    \item Klient zatwierdza specyfikację.
+    \item System weryfikuje ostateczną kompletność konfiguracji i kalkuluje cenę.
+    \item System zapisuje specyfikację i emituje zdarzenie \textit{SpecificationCompleted}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Niedozwolona kombinacja: W kroku 4 system wykrywa, że wybrana kombinacja jest zablokowana przez producenta (np. silnik B2 nie może być wybrany ze skrzynią C1). System blokuje możliwość zatwierdzenia i prosi Klienta o zmianę silnika, skrzyni biegów lub pakietu. Kontekst nie emituje zdarzenia końcowego.
+    \item [A2] Przerwanie sesji: Klient opuszcza konfigurator przed zatwierdzeniem. System zapisuje konfigurację jako wersję roboczą.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-KON-02: Automatyczna aktualizacja cennika i katalogu}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-KON-02 \\
+\hline
+
+Nazwa & Automatyczna aktualizacja cennika i katalogu \\
+\hline
+
+Opis & 
+Zautomatyzowany proces pobierania, walidacji i zapisu nowego katalogu modeli oraz cennika, inicjowany przez zewnętrzny system producenta/importera (Blackbox). \\
+\hline
+
+Aktor główny & Zewnętrzny system producenta/importera \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+System zewnętrzny importera/producenta udostępnia nowy pakiet danych katalogowych (np. poprzez webhook, szynę zdarzeń lub API). \\
+\hline
+
+Warunki końcowe & 
+Lokalna baza konfiguratora zostaje zaktualizowana, a kontekst emituje zdarzenie \textit{CatalogUpdated}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Kontekst odbiera sygnał/dane o nowym cenniku z systemu Blackbox (np. poprzez zdarzenie integracyjne lub żądanie API).
+    \item System parsuje otrzymany pakiet danych, wykorzystując warstwę translacji (ACL), aby dostosować format zewnętrzny do modelu lokalnego.
+    \item System przeprowadza walidację strukturalną oraz logiczną (weryfikacja spójności reguł wyposażenia i poprawności cen).
+    \item System zapisuje nowy katalog w lokalnej bazie danych, zastępując bieżące dane (poprzednie zostają oznaczone jako archiwalne).
+    \item Kontekst emituje na szynę danych zdarzenie \textit{CatalogUpdated}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Błąd walidacji lub translacji danych: W kroku 2 lub 3 system wykrywa błędy krytyczne (np. brak cen, niezgodny format). System przerywa aktualizację, odrzuca pakiet i emituje techniczne zdarzenie o błędzie integracji (np. \textit{CatalogUpdateFailed}), logując szczegóły dla wsparcia IT.
+\end{itemize} \\
+\hline
+\end{longtable}

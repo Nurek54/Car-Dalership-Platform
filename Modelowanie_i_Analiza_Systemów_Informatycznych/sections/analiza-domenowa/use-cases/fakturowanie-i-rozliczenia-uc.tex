@@ -1,0 +1,197 @@
+% =====================================================
+\textbf{UC-FIR-01: Wysłanie prośby o zadatek}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-FIR-01 \\
+\hline
+
+Nazwa & Wysłanie prośby o zadatek \\
+\hline
+
+Opis & 
+Przygotowanie danych do przelewu i powiadomienie klienta o konieczności wpłaty zadatku w przypadku braku pojazdu na placu. \\
+\hline
+
+Aktor główny & System (Kontekst Fakturowania) \\
+\hline
+
+Aktorzy pomocniczy & Klient \\
+\hline
+
+Warunki wstępne & 
+Kontekst otrzymał zdarzenie \textit{VehicleIsNotOnStock}. \\
+\hline
+
+Warunki końcowe & 
+Klient został poinformowany o wymaganej wpłacie, emitowane zdarzenie \textit{AdvancePaymentRequested}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Kontekst fakturowania reaguje na zdarzenie \textit{VehicleIsNotOnStock}.
+    \item System generuje numer rachunku bankowego oraz kwotę zadatku dla zamówienia.
+    \item System wysyła do klienta informację (np. e-mail) z danymi do przelewu.
+    \item Kontekst emituje zdarzenie \textit{AdvancePaymentRequested}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Błąd danych: Brak wymaganych informacji do wygenerowania prośby, system emituje \textit{ErrorDuringPaymentRequest}.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-FIR-02: Stworzenie faktury końcowej}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-FIR-02 \\
+\hline
+
+Nazwa & Stworzenie faktury końcowej \\
+\hline
+
+Opis & 
+Automatyczne wystawienie faktury końcowej po potwierdzeniu rezerwacji pojazdu z placu. \\
+\hline
+
+Aktor główny & System (Kontekst Fakturowania) \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+Kontekst otrzymał zdarzenie \textit{VehicleReservedFromStock} lub {VehicleDeliveredToStock}. \\
+\hline
+
+Warunki końcowe & 
+Faktura PDF utworzona i przypisana do zamówienia, emitowane zdarzenie \textit{InvoiceCreated}. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Kontekst fakturowania reaguje na zdarzenie \textit{VehicleReservedFromStock}.
+    \item System tworzy fakturę na kwotę pozostałą do zapłaty (uwzględniając ewentualne wpłaty zadatku).
+    \item System wysyła do klienta informację (np. e-mail) z danymi do przelewu.
+    \item System generuje plik PDF faktury i przypisuje go do zamówienia.
+    \item Kontekst emituje zdarzenie \textit{InvoiceCreated}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Błąd generowania dokumentu: System nie może utworzyć pliku, emituje \textit{ErrorDuringInvoiceCreation}.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\textbf{UC-FIR-03: Procesowanie płatności}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-FIR-03 \\
+\hline
+
+Nazwa & Procesowanie płatności \\
+\hline
+
+Opis & 
+Zaksięgowanie przelewu bankowego i rozliczenie salda zamówienia. \\
+\hline
+
+Aktor główny & Księgowy \\
+\hline
+
+Aktorzy pomocniczy & System fakturowania \\
+\hline
+
+Warunki wstępne & 
+W lokalnej bazie istnieje otwarta należność, księgowy zidentyfikował wpłatę na wyciągu. \\
+\hline
+
+Warunki końcowe & 
+Płatność zarejestrowana, saldo zamówienia zaktualizowane, emitowane \textit{PaymentRegistered} (ewent. \textit{SettlementCompleted}). \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Księgowy importuje plik wyciągu bankowego do systemu.
+    \item System paruje przelew z zamówieniem (po tytule/ID). W przypadku braku dopasowania automatycznego, księgowy dokonuje weryfikacji ręcznej.
+    \item System aktualizuje status płatności na 'REGISTERED'.
+    \item Kontekst emituje zdarzenie \textit{PaymentRegistered}.
+    \item Jeżeli kwota wpłaty jest równa kwocie zadatku system emituje zdarzenie \textit{AdvancePaymentRegistered}
+    \item System weryfikuje sumę wpłat. Jeśli saldo = 0 PLN, kontekst emituje \textit{SettlementCompleted}.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Błędna kwota: Kwota wpłaty różni się od wymaganej, system księguje częściowo, status płatności to \textit{PARTIAL\_PAYMENT}.
+\end{itemize} \\
+\hline
+\end{longtable}
+
+
+% =====================================================
+\textbf{UC-FIR-04: Monitorowanie terminów płatności}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Element} & \textbf{Opis} \\
+\hline
+
+Identyfikator & UC-FIR-04 \\
+\hline
+
+Nazwa & Monitorowanie terminów płatności \\
+\hline
+
+Opis & 
+Zautomatyzowany proces cyklicznie weryfikujący terminy płatności wystawionych faktur. Jeśli płatność jest przeterminowana o 30 dni, system uruchamia procedurę zwalniania rezerwacji. \\
+\hline
+
+Aktor główny & System (Kontekst Fakturowania) \\
+\hline
+
+Aktorzy pomocniczy & - \\
+\hline
+
+Warunki wstępne & 
+W systemie istnieją wygenerowane faktury końcowe (po zdarzeniu \textit{InvoiceCreated}), dla których saldo jest różne od zera. \\
+\hline
+
+Warunki końcowe & 
+Przeterminowane faktury otrzymują odpowiedni status, a system emituje zdarzenie \textit{PaymentDeadlineExpired} dla każdego nieopłaconego w terminie zamówienia. \\
+\hline
+
+Scenariusz główny & 
+\begin{enumerate}
+    \item Harmonogram zadań (np. raz na dobę w nocy) uruchamia proces weryfikacji.
+    \item System wyszukuje wszystkie otwarte faktury ze statusem oczekującym na płatność.
+    \item System weryfikuje datę wystawienia dla każdej z tych faktur.
+    \item System identyfikuje zamówienia, dla których od daty wystawienia faktury upłynęło 30 dni.
+    \item System zmienia wewnętrzny status tych faktur na "Przeterminowana".
+    \item Kontekst emituje zdarzenie \textit{PaymentDeadlineExpired} na szynę danych.
+\end{enumerate} \\
+\hline
+
+Scenariusze alternatywne & 
+\begin{itemize}
+    \item [A1] Brak przeterminowanych faktur: W kroku 4 system nie znajduje żadnej faktury starszej niż 30 dni. Proces kończy się bez żadnych zmian i bez emisji zdarzeń.
+\end{itemize} \\
+\hline
+\end{longtable}

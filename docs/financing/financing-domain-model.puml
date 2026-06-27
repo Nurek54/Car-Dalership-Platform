@@ -1,0 +1,105 @@
+@startuml FinancingDomainModel
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<aggregate root>> LightBlue
+    BackgroundColor<<factory>> Lavender
+    BackgroundColor<<event>> PaleGreen
+    BackgroundColor<<exception>> LightPink
+}
+
+package "salon" {
+  package "financing" {
+    package "application" {
+      package "domain" {
+
+        package "model" {
+          package "financing" {
+            class FinancingApplication <<aggregate root>> {
+              - applicationId : ApplicationId
+              - orderId : OrderId
+              - customerId : CustomerId
+              - buyerDetails : BuyerDetails
+              - moneyForFunding : Money
+              - state : ApplicationState
+              + submitApplication()
+              + approve()
+              + reject()
+            }
+            class ApplicationId <<value object>> {
+              - value : String
+              + generate() : ApplicationId$
+            }
+            class OrderId <<value object>> {
+              - value : String
+            }
+            class CustomerId <<value object>> {
+              - value : String
+            }
+            class BuyerDetails <<value object>> {
+              - name : String
+              - nip : String
+            }
+            enum ApplicationState {
+              DRAFT
+              PENDING
+              APPROVED
+              REJECTED
+            }
+            class FinancingApplicationFactory <<factory>> {
+              + createDraft(orderId, customerId, buyerDetails, moneyForFunding) : FinancingApplication
+            }
+          }
+        }
+
+        package "event" {
+          class FinancingApprovedEvent <<event>> {
+            - orderId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class FinancingRejectedEvent <<event>> {
+            - orderId : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+          class FinancingApplicationFailedEvent <<event>> {
+            - orderId : String
+            - reason : String
+            - eventId : UUID
+            - occurredOn : Instant
+          }
+        }
+
+        package "exception" {
+          class FinancingApplicationNotFoundException <<exception>> {
+            + FinancingApplicationNotFoundException(message)
+          }
+          class IllegalApplicationStateException <<exception>> {
+            + IllegalApplicationStateException(message)
+          }
+        }
+
+      }
+    }
+  }
+}
+
+' FinancingApplication aggregate
+FinancingApplication --> ApplicationId
+FinancingApplication --> OrderId
+FinancingApplication --> CustomerId
+FinancingApplication --> BuyerDetails
+FinancingApplication --> ApplicationState
+FinancingApplicationFactory ..> FinancingApplication : <<creates>>
+
+' Events emitted by service on aggregate commands
+FinancingApplication ..> FinancingApprovedEvent : <<emits>>
+FinancingApplication ..> FinancingRejectedEvent : <<emits>>
+FinancingApplication ..> FinancingApplicationFailedEvent : <<emits>>
+
+@enduml

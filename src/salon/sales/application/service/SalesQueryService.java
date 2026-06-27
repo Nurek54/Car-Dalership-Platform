@@ -1,24 +1,17 @@
 package salon.sales.application.service;
 
 import org.springframework.stereotype.Service;
+import salon.common.model.OrderId;
 import salon.sales.api.CustomerSnapshotDto;
 import salon.sales.api.OfferSnapshotDto;
 import salon.sales.api.SalesQueryFacade;
-import salon.sales.application.port.out.CustomerDatabaseRepository;
-import salon.sales.application.port.out.OfferDatabaseRepository;
-import salon.sales.application.port.out.OrderDatabaseRepository;
 import salon.sales.application.domain.model.customer.Customer;
 import salon.sales.application.domain.model.offer.Offer;
 import salon.sales.application.domain.model.order.Order;
-import salon.common.model.OrderId;
+import salon.sales.application.port.out.CustomerDatabaseRepository;
+import salon.sales.application.port.out.OfferDatabaseRepository;
+import salon.sales.application.port.out.OrderDatabaseRepository;
 
-/**
- * Implementacja fasady zapytań {@link SalesQueryFacade} Kontekstu Sprzedaży i CRM.
- *
- * Nawigacja zamówienie -> oferta źródłowa -> tożsamość klienta -> agregat Klient
- * jest wiedzą domenową Sprzedaży i pozostaje w całości wewnątrz tego kontekstu;
- * na zewnątrz wychodzi wyłącznie {@link CustomerSnapshotDto} (Published Language).
- */
 @Service
 public class SalesQueryService implements SalesQueryFacade {
 
@@ -48,16 +41,11 @@ public class SalesQueryService implements SalesQueryFacade {
         if (orderId == null) {
             throw new IllegalArgumentException("orderId must not be null.");
         }
-        Order order = this.orderRepository.findById(orderId)
+        Offer offer = sourceOfferOf(orderId);
+        Customer customer = this.customerRepository.findById(offer.customerId())
                 .orElseThrow(() -> new IllegalStateException(
-                        "No order in CRM for id " + orderId.value()));
-        Offer offer = this.offerRepository.findById(order.getOfferId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No source offer in CRM for order " + orderId.value()));
-        Customer customer = this.customerRepository.findById(offer.getCustomerId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No customer in CRM for id " + offer.getCustomerId().value()));
-        return new CustomerSnapshotDto(customer.getFullName(), customer.getNip());
+                        "No customer for offer " + offer.id()));
+        return new CustomerSnapshotDto(customer.fullName(), customer.nip());
     }
 
     @Override
@@ -65,16 +53,15 @@ public class SalesQueryService implements SalesQueryFacade {
         if (orderId == null) {
             throw new IllegalArgumentException("orderId must not be null.");
         }
+        Offer offer = sourceOfferOf(orderId);
+        return new OfferSnapshotDto(offer.id().value(), offer.finalPrice());
+    }
+
+    private Offer sourceOfferOf(OrderId orderId) {
         Order order = this.orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalStateException("No order " + orderId.value()));
+        return this.offerRepository.findById(order.sourceOfferId())
                 .orElseThrow(() -> new IllegalStateException(
-                        "No order in CRM for id " + orderId.value()));
-        Offer offer = this.offerRepository.findById(order.getOfferId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No source offer in CRM for order " + orderId.value()));
-        if (offer.getFinalPrice() == null) {
-            throw new IllegalStateException(
-                    "Offer " + offer.getId().value() + " has no final price yet.");
-        }
-        return new OfferSnapshotDto(offer.getId().value(), offer.getFinalPrice());
+                        "No source offer " + order.sourceOfferId() + " for order " + orderId.value()));
     }
 }

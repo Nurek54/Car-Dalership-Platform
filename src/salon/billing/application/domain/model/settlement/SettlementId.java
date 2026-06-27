@@ -2,7 +2,6 @@ package salon.billing.application.domain.model.settlement;
 
 import java.util.UUID;
 
-// Value Object: tożsamość rozliczenia. String (test: new SettlementId("SET-001")).
 public record SettlementId(String value) {
 
     public SettlementId {
@@ -12,6 +11,11 @@ public record SettlementId(String value) {
     }
 
     public static SettlementId generate() {
-        return new SettlementId("SET-" + UUID.randomUUID());
+        return new SettlementId("STL-" + UUID.randomUUID());
+    }
+
+    @Override
+    public String toString() {
+        return value;
     }
 }

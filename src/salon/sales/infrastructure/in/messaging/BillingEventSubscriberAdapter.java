@@ -1,56 +1,26 @@
 package salon.sales.infrastructure.in.messaging;
 
-import salon.billing.application.domain.event.AdvancePaymentRequestedEvent;
-import salon.billing.application.domain.event.InvoiceCreatedEvent;
-import salon.billing.application.domain.event.PaymentRegisteredEvent;
 import salon.sales.application.port.in.ActivateOrderOnDeposit;
 
-/**
- * Adapter sterujący (driving) — subskrybent zdarzeń Kontekstu Fakturowania i Rozliczeń
- * w Kontekście Sprzedaży (komunikacja wg kanwy: AdvancePaymentRequested, InvoiceCreated,
- * PaymentRegistered płyną do Sprzedaży i CRM).
- *
- * PaymentRegistered (pierwsza zaksięgowana wpłata/zadatek) aktywuje zamówienie
- * (UC-CRM-03 cz.2, Rys. 19/20 PDF). Pozostałe zdarzenia służą informowaniu Handlowca
- * o postępie rozliczeń.
- */
 public class BillingEventSubscriberAdapter {
 
-    private final ActivateOrderOnDeposit activateOrder;
+    private final ActivateOrderOnDeposit activateOrderOnDeposit;
 
-    public BillingEventSubscriberAdapter(ActivateOrderOnDeposit activateOrder) {
-        if (activateOrder == null) {
-            throw new IllegalArgumentException("activateOrder must not be null.");
+    public BillingEventSubscriberAdapter(ActivateOrderOnDeposit activateOrderOnDeposit) {
+        if (activateOrderOnDeposit == null) {
+            throw new IllegalArgumentException("activateOrderOnDeposit must not be null.");
         }
-        this.activateOrder = activateOrder;
+        this.activateOrderOnDeposit = activateOrderOnDeposit;
     }
 
-    /** Zaksięgowano wpłatę klienta — aktywacja zamówienia (idempotentna po stronie usługi). */
-    public void handlePaymentRegistered(PaymentRegisteredEvent event) {
-        if (event == null) {
-            throw new IllegalArgumentException("event must not be null.");
+    public void handleAdvancePaymentRegistered(AdvancePaymentRegistered event) {
+        if (event == null || event.orderId() == null || event.orderId().isBlank()) {
+            throw new IllegalArgumentException("orderId must not be blank.");
         }
-        if (event.orderId() == null || event.orderId().isBlank()) {
-            throw new IllegalArgumentException("Identyfikator zamówienia (orderId) jest wymagany");
-        }
-        activateOrder.activateOnDeposit(event.orderId());
+        this.activateOrderOnDeposit.activateOnDeposit(event.orderId());
     }
 
-    /** Rozliczenia poprosiły klienta o zadatek — informacja dla Handlowca (bez zmiany stanu). */
-    public void handleAdvancePaymentRequested(AdvancePaymentRequestedEvent event) {
-        if (event == null) {
-            throw new IllegalArgumentException("event must not be null.");
-        }
-        System.out.println("[BillingEventSubscriberAdapter] Klient zamówienia " + event.orderId()
-                + " został poproszony o wpłatę zadatku.");
-    }
-
-    /** Wystawiono fakturę końcową — informacja dla Handlowca (bez zmiany stanu). */
-    public void handleInvoiceCreated(InvoiceCreatedEvent event) {
-        if (event == null) {
-            throw new IllegalArgumentException("event must not be null.");
-        }
-        System.out.println("[BillingEventSubscriberAdapter] Wystawiono fakturę dla zamówienia "
-                + event.orderId() + ".");
+    
+    public record AdvancePaymentRegistered(String orderId) {
     }
 }
